@@ -53,3 +53,10 @@ This document records significant decisions made during the build of PravahX.
 **Decision:** The local test runner (`make ci-docker` or `make test-docker`) builds a lightweight Linux container (`Dockerfile.test`) containing all dependencies and runs the linter, type checker, and tests inside it.
 
 **Reasoning:** Ensures that local tests run in the same Linux environment as the GitHub Actions CI pipeline and the ultimate deployment target, eliminating host-OS quirks and preventing false negatives during development.
+
+## D002: Module-specific MyPy Ignore for PySTAC Client
+
+**Date:** 2026-10-05
+**Context:** pystac_client currently lacks type stubs, causing mypy strict checking to fail.
+**Decision:** We ignore missing imports for pystac_client.* explicitly in pyproject.toml. Global ignores are strictly forbidden.
+

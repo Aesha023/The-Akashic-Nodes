@@ -69,7 +69,7 @@ def compute_hydraulic_geometry(
 
     # Area is the integral of depth over the width
     depths = stage - valid_hand
-    area = np.sum(depths) * cell_size_m
+    area = float(np.sum(depths, dtype=np.float64)) * cell_size_m
 
     # Wetted perimeter approximation: assuming relatively flat terrain, P ~ W.
     # We could add the vertical walls (stage - hand) at the edges, but W is dominant.
@@ -151,8 +151,8 @@ def find_stage_for_discharge(
         inundated = hand_valid < s
         depths = s - hand_valid[inundated]
 
-        area = (np.sum(depths) * (cell_size**2)) / reach_length_m
-        perimeter = (np.sum(inundated) * (cell_size**2)) / reach_length_m
+        area = float(np.sum(depths, dtype=np.float64) * (cell_size**2)) / reach_length_m
+        perimeter = float(np.sum(inundated, dtype=np.float64) * (cell_size**2)) / reach_length_m
 
         return mannings_discharge(area, perimeter, slope, mannings_n)
 

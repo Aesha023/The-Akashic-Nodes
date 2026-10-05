@@ -26,6 +26,21 @@ def test_froehlich_2008() -> None:
     assert abs(params.peak_discharge_m3s - expected_qp) < 1.0
 
 
+def test_froehlich_2008_hec_ras_regression() -> None:
+    """HEC-RAS regression test for Froehlich 2008.
+    
+    Inputs: V_w = 357.98e6 m3, h_b = 42.9 m, overtopping
+    Outputs: B_avg = 222.76 m, t_f = 2.47 h, bottom width = 179.9 m
+    """
+    vol = 357.98e6
+    h = 42.9
+    params = compute_froehlich_2008(volume_m3=vol, height_m=h, mode="overtopping")
+
+    assert abs(params.average_width_m - 222.76) < 0.1
+    assert abs(params.formation_time_hr - 2.47) < 0.1
+    assert abs(params.bottom_width_m - 179.9) < 0.1
+
+
 def test_hydrograph_integration() -> None:
     """Verify the routed hydrograph integrates to the initial volume."""
     vol = 1_000_000.0

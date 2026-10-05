@@ -10,6 +10,7 @@ class FroehlichParams:
     """Estimated breach parameters using Froehlich (2008)."""
 
     average_width_m: float
+    bottom_width_m: float
     formation_time_hr: float
     peak_discharge_m3s: float
 
@@ -45,6 +46,11 @@ def compute_froehlich_2008(
     # Let's keep tf in hours for convenience.
     t_f_hr = 63.2 * math.sqrt(volume_m3 / (g * (height_m**2))) / 3600.0
 
+    # Bottom breach width (m)
+    # Froehlich 2008 assumes side slope z = 1.0 for overtopping, z = 0.7 for piping
+    z = 1.0 if mode == "overtopping" else 0.7
+    b_bottom = max(0.0, b_avg - z * height_m)
+
     # Peak discharge (m3/s) for reference
     # Qp = 60.7 * (Vw ** 0.295) * (Hw ** 1.24)
     # Assuming Hw (depth of water) is approximately equal to Hb (height of breach)
@@ -52,6 +58,7 @@ def compute_froehlich_2008(
 
     return FroehlichParams(
         average_width_m=b_avg,
+        bottom_width_m=b_bottom,
         formation_time_hr=t_f_hr,
         peak_discharge_m3s=q_p,
     )

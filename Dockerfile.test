@@ -20,4 +20,6 @@ COPY scripts/ ./scripts/
 # Install with dev and backend extras
 RUN pip install --no-cache-dir -e ".[dev,backend]"
 
+ENV AWS_NO_SIGN_REQUEST=YES
+
 CMD ["pytest", "tests/"]

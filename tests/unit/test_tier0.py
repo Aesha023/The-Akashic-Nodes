@@ -44,27 +44,28 @@ class TestTier0HandAdapter:
 
         ctx = RunContext(
             run_id="r1",
-            scenario_id="s1",
             config=None,  # type: ignore
             work_dir=tmp_path,
+            terrain_dir=tmp_path,
+            breach_hydrograph_path=tmp_path / "breach.csv",
         )
 
         engine = Tier0HandAdapter()
 
         # Prepare
         prepared = engine.prepare(ctx)
-        assert "hand.tif" in prepared.input_hashes
+        assert "hand.tif" in prepared.input_file_hashes
 
         # Run
         # Uses default placeholder peak discharge of 5000.0, will inundate everything.
         result = engine.run(prepared)
-        assert result.success is True
+        assert result.status == "success"
 
         out_depth = result.output_dir / "tier0_max_depth.tif"
         assert out_depth.exists()
 
         # Postprocess
-        norm = engine.postprocess(result)
+        norm = engine.postprocess(result, ctx)
         assert len(norm.layers) == 1
         assert norm.layers[0].name == "max_depth"
 

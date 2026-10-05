@@ -129,7 +129,7 @@ def generate_exports(
 ) -> list[Path]:
     """Generate all standard exports for a normalised output."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    generated = []
+    generated: list[Path] = []
 
     try:
         depth_layer = output.get_layer("max_depth")

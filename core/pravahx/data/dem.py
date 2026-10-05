@@ -134,6 +134,8 @@ def fetch_dem(
     if crs != "EPSG:4326":
         logger.info(f"Reprojecting DEM to {crs}...")
         ds = rioxarray.open_rasterio(wgs_path)
+        if isinstance(ds, list):
+            raise ValueError("Expected a single DataArray or Dataset")
         ds_proj = ds.rio.reproject(crs)
         # Crop exactly to the requested projected bbox
         ds_proj = ds_proj.rio.clip_box(*bbox)

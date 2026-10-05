@@ -22,7 +22,7 @@ from pravahx.engines.base import (
     RunContext,
     compute_file_hash,
 )
-from pravahx.engines.tier0_hand.adapter_hand.rating import find_stage_for_discharge
+from pravahx.engines.tier0_hand.rating import find_stage_for_discharge
 from pravahx.errors import EngineError
 
 logger = logging.getLogger(__name__)
@@ -50,8 +50,7 @@ class Tier0HandAdapter(EngineAdapter):
         return PreparedCase(
             engine_name="tier0",
             case_dir=context.work_dir,
-            entrypoint_command="",
-            input_hashes={"hand.tif": compute_file_hash(hand_path)},
+            input_file_hashes={"hand.tif": compute_file_hash(hand_path)},
         )
 
     def run(self, prepared: PreparedCase) -> RawResult:
@@ -109,17 +108,18 @@ class Tier0HandAdapter(EngineAdapter):
 
         return RawResult(
             engine_name="tier0",
+            status=EngineStatus.SUCCESS,
             output_dir=prepared.case_dir,
-            success=True,
+            log_path=prepared.case_dir / "tier0.log",
             wall_time_s=wall_time,
-            output_files=[out_path],
+            exit_code=0,
         )
 
-    def postprocess(self, result: RawResult) -> NormalisedOutput:
+    def postprocess(self, raw: RawResult, ctx: RunContext) -> NormalisedOutput:
         """Convert Tier 0 output to NormalisedOutput."""
         logger.info("Post-processing Tier 0 outputs...")
 
-        depth_file = result.output_dir / "tier0_max_depth.tif"
+        depth_file = raw.output_dir / "tier0_max_depth.tif"
         if not depth_file.exists():
             raise EngineError("Expected output tier0_max_depth.tif not found.", engine="tier0")
 
@@ -142,6 +142,6 @@ class Tier0HandAdapter(EngineAdapter):
             crs=crs,
             grid_resolution_m=res,
             depth_threshold_m=0.1,
-            wall_time_s=result.wall_time_s,
+            wall_time_s=raw.wall_time_s,
             input_hashes={},  # In a full flow, map from run context
         )

@@ -13,13 +13,14 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 import numpy as np
+import numpy.typing as npt
 import rasterio
 
 logger = logging.getLogger(__name__)
 
 
 def compute_hydraulic_geometry(
-    hand_array: np.ndarray,
+    hand_array: npt.NDArray[np.float32],
     cell_size_m: float,
     stage: float,
 ) -> tuple[float, float]:
@@ -101,7 +102,7 @@ def mannings_discharge(
     return (1.0 / mannings_n) * area * (hydraulic_radius ** (2.0 / 3.0)) * (slope**0.5)
 
 
-def find_stage_for_discharge(
+def find_stage_for_discharge(  # type: ignore[no-any-return]
     hand_path: str | Path,
     target_discharge: float,
     slope: float,
@@ -164,7 +165,7 @@ def find_stage_for_discharge(
         logger.warning(
             f"Target discharge {target_discharge} exceeds capacity at max stage {max_stage}"
         )
-        return max_stage
+        return float(max_stage)
 
     while (high - low) > tolerance:
         mid = (low + high) / 2.0
@@ -174,4 +175,4 @@ def find_stage_for_discharge(
         else:
             high = mid
 
-    return (low + high) / 2.0
+    return float((low + high) / 2.0)

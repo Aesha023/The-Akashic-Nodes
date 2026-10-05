@@ -10,6 +10,7 @@ part of the scenario config. See docs/DECISIONS.md #D001.
 from __future__ import annotations
 
 from enum import StrEnum
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
 
 from pydantic import (
@@ -21,7 +22,7 @@ from pydantic import (
 )
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    pass
 
 # ── Enums ────────────────────────────────────────────────────────────────────
 
@@ -401,9 +402,13 @@ def load_scenario_config(path: Path) -> ScenarioConfig:
     if the config is invalid.
     """
     import yaml
+    from yaml.error import YAMLError
 
     text = path.read_text(encoding="utf-8")
-    raw = yaml.safe_load(text)
+    try:
+        raw = yaml.safe_load(text)
+    except YAMLError as e:
+        raise ValueError(f"Invalid YAML syntax: {e}") from e
     if not isinstance(raw, dict):
         msg = f"Expected a YAML mapping at the top level, got {type(raw).__name__}."
         raise ValueError(msg)

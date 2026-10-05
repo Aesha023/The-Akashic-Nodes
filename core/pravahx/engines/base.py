@@ -22,6 +22,10 @@ if TYPE_CHECKING:
 class EngineStatus(StrEnum):
     """Solver execution outcome."""
 
+    IDLE = "idle"
+    PREPARING = "preparing"
+    RUNNING = "running"
+    FINISHED = "finished"
     SUCCESS = "success"
     FAILED = "failed"
     TIMEOUT = "timeout"

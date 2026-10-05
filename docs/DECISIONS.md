@@ -8,6 +8,7 @@ This document records significant decisions made during the build of PravahX.
 | D002 | Tile server vs Map server | 2026-10-05 | Accepted | 0 |
 | D003 | SPH execution modes (GPU constraint) | 2026-10-05 | Accepted | 0 |
 | D004 | Showcase deployment mode | 2026-10-05 | Accepted | 0 |
+| D005 | Linux container for local CI checks | 2026-10-05 | Accepted | 0 |
 
 ---
 
@@ -44,3 +45,11 @@ This document records significant decisions made during the build of PravahX.
 **Decision:** A new system setting `PRAVAHX_DEPLOYMENT_MODE` (`full` or `showcase`) is introduced. In `showcase` mode, all workers and schedulers are disabled (via `docker-compose.showcase.yml`), the API blocks mutating operations, and the frontend displays a banner.
 
 **Reasoning:** Minimises compute usage on the student cloud subscription while allowing interactive demonstrations of precomputed results.
+
+## D005: Linux container for local CI checks
+
+**Context:** Running tests locally on a Windows host caused C compilation failures (e.g., `numpy` builds blocked by Application Control policies), masking whether the Python code was actually sound.
+
+**Decision:** The local test runner (`make ci-docker` or `make test-docker`) builds a lightweight Linux container (`Dockerfile.test`) containing all dependencies and runs the linter, type checker, and tests inside it.
+
+**Reasoning:** Ensures that local tests run in the same Linux environment as the GitHub Actions CI pipeline and the ultimate deployment target, eliminating host-OS quirks and preventing false negatives during development.

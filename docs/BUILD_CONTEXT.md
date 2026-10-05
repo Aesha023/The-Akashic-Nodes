@@ -15,10 +15,10 @@
   - `tests/unit` covering config, engine base, errors, and provenance
   - Docker Compose definitions (base, offline, showcase)
   - GitHub Actions CI workflow
-- Decisions: D001, D002, D003, D004 (see [DECISIONS.md](DECISIONS.md))
+- Decisions: D001, D002, D003, D004, D005 (see [DECISIONS.md](DECISIONS.md))
 - Deviations from the build spec: 
   - `secure_mode` removed from scenario YAML to system-level settings (D001).
-- Tests: Unit tests for config schema, engine base types, error hierarchy, and provenance.
+- Tests: Not yet successfully executed. Docker is not available in the current local terminal. Waiting on GitHub Actions CI run.
 - Measured results: N/A
 - Known issues and limits: None yet
 - Requirement IDs advanced: None yet

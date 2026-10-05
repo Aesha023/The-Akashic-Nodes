@@ -35,7 +35,16 @@ test-e2e: ## Run end-to-end tests
 test-all: ## Run every test including GPU and e2e
 	pytest tests/ --cov --cov-report=term-missing
 
-ci: lint typecheck test ## Full CI check: lint + typecheck + test
+ci: lint typecheck test ## Full CI check (local)
+
+test-docker: ci-docker ## Alias for ci-docker
+
+ci-docker: ## Full CI check inside a Linux container (avoids host OS compilation issues)
+	docker build -t pravahx-test -f Dockerfile.test .
+	docker run --rm pravahx-test ruff check .
+	docker run --rm pravahx-test ruff format --check .
+	docker run --rm pravahx-test mypy core/pravahx backend/app
+	docker run --rm pravahx-test pytest tests/unit/ --cov=core/pravahx --cov-report=term-missing
 
 # ── Run ──────────────────────────────────────────────────────
 run-dev: ## Start all services with Docker Compose

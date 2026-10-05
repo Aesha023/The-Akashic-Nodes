@@ -1,0 +1,22 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies for geospatial libs
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgdal-dev \
+    libgeos-dev \
+    libproj-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy package config and code
+COPY pyproject.toml ./
+COPY core/ ./core/
+COPY backend/ ./backend/
+COPY tests/ ./tests/
+
+# Install with dev and backend extras
+RUN pip install --no-cache-dir -e ".[dev,backend]"
+
+CMD ["pytest", "tests/"]

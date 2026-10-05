@@ -41,12 +41,14 @@ def compute_hand(
     Raises:
         DataError: If WhiteboxTools execution fails.
     """
+    out_dir = out_dir.resolve()
+    dem_path = dem_path.resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # Initialize WhiteboxTools
     wbt = whitebox.WhiteboxTools()
     wbt.set_working_dir(str(out_dir))
-    wbt.set_verbose_mode(False)
+    wbt.set_verbose_mode(True)
 
     # Define paths
     dem = str(dem_path)

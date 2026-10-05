@@ -43,15 +43,16 @@ def main() -> None:
     # 3. Tier 0 Engine run
     ctx = RunContext(
         run_id="phase1_test",
-        scenario_id="scen_1",
         config=None,  # type: ignore
         work_dir=work_dir,
+        terrain_dir=work_dir,
+        breach_hydrograph_path=None,
     )
 
     engine = Tier0HandAdapter()
     prepared = engine.prepare(ctx)
     result = engine.run(prepared)
-    norm_output = engine.postprocess(result)
+    norm_output = engine.postprocess(result, ctx)
 
     # 4. Export
     exports_dir = work_dir / "exports"

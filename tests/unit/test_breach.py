@@ -28,7 +28,7 @@ def test_froehlich_2008() -> None:
 
 def test_froehlich_2008_hec_ras_regression() -> None:
     """HEC-RAS regression test for Froehlich 2008.
-    
+
     Inputs: V_w = 357.98e6 m3, h_b = 42.9 m, overtopping
     Outputs: B_avg = 222.76 m, t_f = 2.47 h, bottom width = 179.9 m
     """

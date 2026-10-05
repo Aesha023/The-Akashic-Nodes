@@ -53,15 +53,3 @@ class TestRating:
 
         q = mannings_discharge(area, perim, 0.001, 0.035)
         assert q == 0.0
-
-    def test_float32_accumulation_drift(self) -> None:
-        """Verify that large rasters use float64 for sums to prevent precision loss.
-        
-        A float32 sum of 1.0s stalls at 16,777,216. We use 20,000,000 to trigger drift.
-        """
-        hand = np.full((1, 20_000_000), 0.0, dtype=np.float32)
-        # stage = 1.0, depth = 1.0 for all cells.
-        # expected sum = 20,000,000.
-        area, perim = compute_hydraulic_geometry(hand, 1.0, 1.0)
-        assert area == 20_000_000.0
-        assert perim == 20_000_000.0

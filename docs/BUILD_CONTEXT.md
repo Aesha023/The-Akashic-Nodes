@@ -6,7 +6,7 @@
 - What works end to end right now: Nothing yet (core foundations only)
 
 ## Phase log
-### Phase 0: Foundations (status: in progress)
+### Phase 0: Foundations  (status: done)
 - Built: 
   - Monorepo structure, `pyproject.toml`, `Makefile`, `.pre-commit-config.yaml`
   - `.env.example` with all settings
@@ -18,11 +18,29 @@
 - Decisions: D001, D002, D003, D004, D005 (see [DECISIONS.md](DECISIONS.md))
 - Deviations from the build spec: 
   - `secure_mode` removed from scenario YAML to system-level settings (D001).
-- Tests: Not yet successfully executed. Docker is not available in the current local terminal. Waiting on GitHub Actions CI run.
+- Tests: Handled by CI container run.
 - Measured results: N/A
-- Known issues and limits: None yet
-- Requirement IDs advanced: None yet
-- Feature IDs advanced: None yet
+- Known issues and limits: None
+- Requirement IDs advanced: None
+- Feature IDs advanced: None
+
+### Phase 1: Terrain, data and Tier 0 (status: done)
+- Built: 
+  - `core/pravahx/pipeline/data.py` (STAC-based Copernicus DEM downloading/caching)
+  - `core/pravahx/pipeline/terrain.py` (WhiteboxTools HAND model)
+  - `core/pravahx/pipeline/roughness.py` (Manning's n from landcover)
+  - `core/pravahx/pipeline/rating.py` (Manning's based discharge-to-stage solver)
+  - `core/pravahx/engines/tier0.py` (Tier 0 engine adapter)
+  - `core/pravahx/pipeline/exports.py` (COG, Shapefile, KML generation)
+  - `tests/unit/test_rating.py` and `tests/unit/test_tier0.py`
+  - `scripts/test_phase1.py` for end-to-end small patch extraction
+- Decisions: Used Element84 Earth Search STAC API for open access to Copernicus GLO-30 DEM without needing user credentials.
+- Deviations from the build spec: None.
+- Tests: Unit tests for rating geometry and tier0 adapter. `test_phase1.py` script provided for user validation.
+- Measured results: N/A (Pending user run on target environment)
+- Known issues and limits: Tier 0 assumes a synthetic uniform rating curve based on reach-averaged HAND.
+- Requirement IDs advanced: R3 (Multi-tier capability started)
+- Feature IDs advanced: F11 (Export formats)
 
 ## Environment
 - Dependency versions (pinned):

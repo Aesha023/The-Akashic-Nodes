@@ -37,7 +37,7 @@ def main() -> None:
     compute_hand(
         dem_path=dem_path,
         out_dir=work_dir,
-        accumulation_threshold=500,  # Smaller threshold for a small patch
+        accumulation_threshold=10,  # Smaller threshold for a small patch
     )
 
     # 3. Tier 0 Engine run

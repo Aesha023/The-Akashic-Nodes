@@ -99,10 +99,10 @@ def mannings_discharge(
         return 0.0
 
     hydraulic_radius = area / perimeter
-    return (1.0 / mannings_n) * area * (hydraulic_radius ** (2.0 / 3.0)) * (slope**0.5)
+    return float((1.0 / mannings_n) * area * (hydraulic_radius ** (2.0 / 3.0)) * (slope**0.5))
 
 
-def find_stage_for_discharge(  # type: ignore[no-any-return]
+def find_stage_for_discharge(
     hand_path: str | Path,
     target_discharge: float,
     slope: float,

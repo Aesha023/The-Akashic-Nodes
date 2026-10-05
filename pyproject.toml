@@ -90,6 +90,9 @@ select = [
 [tool.ruff.lint.isort]
 known-first-party = ["pravahx"]
 
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+
 # ── Mypy ─────────────────────────────────────────────────────
 [tool.mypy]
 python_version = "3.11"

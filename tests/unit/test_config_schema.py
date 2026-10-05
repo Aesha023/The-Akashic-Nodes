@@ -52,6 +52,8 @@ VALID_DAM_BREAK = {
     "breach": {
         "method": "froehlich_2008",
         "ensemble": ["p10", "p50", "p90"],
+        "width_uncertainty_factor": 0.3,
+        "time_uncertainty_factor": 0.3,
     },
     "tiers": {
         "tier0": {"enabled": True},
@@ -101,6 +103,12 @@ class TestValidConfig:
                     "failure_mode": "piping",
                 },
                 "source": {"dam_id": "IND-DAM-123"},
+                "breach": {
+                    "method": "froehlich_2008",
+                    "ensemble": ["p10", "p50", "p90"],
+                    "width_uncertainty_factor": 0.3,
+                    "time_uncertainty_factor": 0.3,
+                },
             }
         )
         assert config.scenario.type == ScenarioType.DAM_BREAK
@@ -119,6 +127,11 @@ class TestValidConfig:
                     "type": "blockage",
                 },
                 "source": {"polygon": "tests/fixtures/lake.geojson"},
+                "breach": {
+                    "method": "froehlich_2008",
+                    "width_uncertainty_factor": 0.3,
+                    "time_uncertainty_factor": 0.3,
+                },
             }
         )
         assert config.scenario.type == ScenarioType.BLOCKAGE
@@ -135,6 +148,11 @@ class TestValidConfig:
                     "failure_mode": "overtopping",
                 },
                 "source": {"point": [78.0, 25.0]},
+                "breach": {
+                    "method": "froehlich_2008",
+                    "width_uncertainty_factor": 0.3,
+                    "time_uncertainty_factor": 0.3,
+                },
                 "tiers": {
                     "dualsphysics": {
                         "mode": "precomputed",
@@ -146,6 +164,26 @@ class TestValidConfig:
         )
         assert config.tiers.dualsphysics.mode == DualSPHysicsMode.PRECOMPUTED
         assert config.tiers.dualsphysics.precomputed_run_date == "2026-09-15"
+
+    def test_path_field_runtime_evaluation(self, tmp_path: Path) -> None:
+        """Ensure Pydantic can evaluate pathlib.Path at runtime."""
+        config = ScenarioConfig.model_validate(
+            {
+                "scenario": {
+                    "id": "path-test-001",
+                    "name": "Path Test",
+                    "type": "blockage",
+                },
+                "source": {"polygon": str(tmp_path / "lake.geojson")},
+                "breach": {
+                    "method": "froehlich_2008",
+                    "width_uncertainty_factor": 0.3,
+                    "time_uncertainty_factor": 0.3,
+                },
+            }
+        )
+        assert config.source.polygon is not None
+        assert config.source.polygon.name == "lake.geojson"
 
 
 # ── Invalid configs ──────────────────────────────────────────────────────────

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 
 from pydantic import (
     BaseModel,
@@ -20,9 +20,6 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-
-if TYPE_CHECKING:
-    pass
 
 # ── Enums ────────────────────────────────────────────────────────────────────
 
@@ -197,6 +194,20 @@ class BreachConfig(BaseModel):
     ensemble: list[EnsembleQuantile] = Field(
         default=[EnsembleQuantile.P10, EnsembleQuantile.P50, EnsembleQuantile.P90],
         description="Ensemble quantiles to compute.",
+    )
+    width_uncertainty_factor: float = Field(
+        ...,
+        description=(
+            "Uncertainty factor for breach width "
+            "(e.g. standard error in log space). No default."
+        ),
+    )
+    time_uncertainty_factor: float = Field(
+        ...,
+        description=(
+            "Uncertainty factor for breach formation time "
+            "(e.g. standard error in log space). No default."
+        ),
     )
     user_hydrograph: Path | None = Field(
         default=None,
@@ -383,7 +394,7 @@ class ScenarioConfig(BaseModel):
     source: SourceConfig
     domain: DomainConfig = Field(default_factory=DomainConfig)
     inputs: InputsConfig = Field(default_factory=InputsConfig)
-    breach: BreachConfig = Field(default_factory=BreachConfig)
+    breach: BreachConfig = Field(...)
     tiers: TiersConfig = Field(default_factory=TiersConfig)
     compare: CompareConfig = Field(default_factory=CompareConfig)
     cascade: CascadeConfig = Field(default_factory=CascadeConfig)

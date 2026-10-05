@@ -165,7 +165,7 @@ def find_stage_for_discharge(
         logger.warning(
             f"Target discharge {target_discharge} exceeds capacity at max stage {max_stage}"
         )
-        return float(max_stage)
+        return max_stage
 
     while (high - low) > tolerance:
         mid = (low + high) / 2.0
@@ -175,4 +175,4 @@ def find_stage_for_discharge(
         else:
             high = mid
 
-    return float((low + high) / 2.0)
+    return (low + high) / 2.0

@@ -15,7 +15,7 @@ class TestRating:
         """Test a flat rectangular channel."""
         # 10x10 grid, cell size 2m.
         # Stream bed (HAND=0) is 3 cells wide.
-        hand = np.full((10, 10), 10.0)
+        hand = np.full((10, 10), 10.0, dtype=np.float32)
         hand[:, 4:7] = 0.0
 
         # Stage = 2.0m.
@@ -46,7 +46,7 @@ class TestRating:
         assert np.isclose(q, expected_q)
 
     def test_zero_stage_zero_discharge(self) -> None:
-        hand = np.zeros((5, 5))
+        hand = np.zeros((5, 5), dtype=np.float32)
         area, perim = compute_hydraulic_geometry(hand, 1.0, 0.0)
         assert area == 0.0
         assert perim == 0.0

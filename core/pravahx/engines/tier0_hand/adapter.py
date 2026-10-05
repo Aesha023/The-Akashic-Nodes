@@ -34,6 +34,10 @@ class Tier0HandAdapter(EngineAdapter):
     def __init__(self) -> None:
         self.status = EngineStatus.IDLE
 
+    @property
+    def name(self) -> str:
+        return "tier0"
+
     def prepare(self, context: RunContext) -> PreparedCase:
         """Prepare the Tier 0 run (verify HAND and inputs)."""
         logger.info("Preparing Tier 0 HAND envelope...")

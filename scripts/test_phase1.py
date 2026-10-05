@@ -9,10 +9,10 @@ import time
 from pathlib import Path
 
 from pravahx.engines.base import RunContext
-from pravahx.engines.tier0 import Tier0Engine
-from pravahx.pipeline.data import fetch_dem
-from pravahx.pipeline.exports import generate_exports
-from pravahx.pipeline.terrain import compute_hand
+from pravahx.engines.tier0_hand.adapter import Tier0HandAdapter
+from pravahx.data.dem import fetch_dem
+from pravahx.export.vector import generate_exports
+from pravahx.terrain.hand import compute_hand
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ def main() -> None:
         work_dir=work_dir,
     )
     
-    engine = Tier0Engine()
+    engine = Tier0HandAdapter()
     prepared = engine.prepare(ctx)
     result = engine.run(prepared)
     norm_output = engine.postprocess(result)

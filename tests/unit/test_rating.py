@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from pravahx.pipeline.rating import compute_hydraulic_geometry, mannings_discharge
+from pravahx.engines.tier0_hand.adapter_hand.rating import compute_hydraulic_geometry, mannings_discharge
 
 
 class TestRating:

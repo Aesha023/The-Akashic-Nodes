@@ -24,12 +24,12 @@ from pravahx.engines.base import (
     compute_file_hash,
 )
 from pravahx.errors import EngineError
-from pravahx.pipeline.rating import find_stage_for_discharge
+from pravahx.engines.tier0_hand.adapter_hand.rating import find_stage_for_discharge
 
 logger = logging.getLogger(__name__)
 
 
-class Tier0Engine(EngineAdapter):
+class Tier0HandAdapter(EngineAdapter):
     """Tier 0 (HAND) rapid inundation engine."""
 
     def __init__(self) -> None:

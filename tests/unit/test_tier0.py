@@ -7,8 +7,8 @@ import numpy as np
 import rasterio
 
 from pravahx.engines.base import RunContext, compute_file_hash, NormalisedOutput, NormalisedLayer
-from pravahx.engines.tier0 import Tier0Engine
-from pravahx.pipeline.exports import generate_exports
+from pravahx.engines.tier0_hand.adapter import Tier0HandAdapter
+from pravahx.export.vector import generate_exports
 
 
 def _create_dummy_hand(path: Path) -> None:
@@ -32,7 +32,7 @@ def _create_dummy_hand(path: Path) -> None:
         dest.write(hand, 1)
 
 
-class TestTier0Engine:
+class TestTier0HandAdapter:
     def test_tier0_lifecycle(self, tmp_path: Path) -> None:
         """Test prepare, run, and postprocess for Tier 0."""
         hand_path = tmp_path / "hand.tif"
@@ -45,7 +45,7 @@ class TestTier0Engine:
             work_dir=tmp_path,
         )
         
-        engine = Tier0Engine()
+        engine = Tier0HandAdapter()
         
         # Prepare
         prepared = engine.prepare(ctx)

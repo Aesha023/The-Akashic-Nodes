@@ -1,0 +1,26 @@
+name: Phase 1 E2E Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-phase1:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build test container
+        run: docker build -t pravahx-test -f Dockerfile.test .
+
+      - name: Run Phase 1 pipeline
+        run: docker run --name phase1-run pravahx-test python scripts/test_phase1.py
+
+      - name: Extract artifacts
+        run: |
+          docker cp phase1-run:/app/test_phase1_output ./output
+
+      - name: Upload outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase1-outputs
+          path: ./output/exports/

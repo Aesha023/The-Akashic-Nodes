@@ -15,6 +15,7 @@ COPY pyproject.toml README.md ./
 COPY core/ ./core/
 COPY backend/ ./backend/
 COPY tests/ ./tests/
+COPY scripts/ ./scripts/
 
 # Install with dev and backend extras
 RUN pip install --no-cache-dir -e ".[dev,backend]"

@@ -198,8 +198,7 @@ class BreachConfig(BaseModel):
     width_uncertainty_factor: float = Field(
         ...,
         description=(
-            "Uncertainty factor for breach width "
-            "(e.g. standard error in log space). No default."
+            "Uncertainty factor for breach width (e.g. standard error in log space). No default."
         ),
     )
     time_uncertainty_factor: float = Field(

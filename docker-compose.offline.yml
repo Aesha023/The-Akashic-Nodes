@@ -1,0 +1,60 @@
+# PravahX — Secure mode (offline) Docker Compose override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.offline.yml up -d
+#
+# This override:
+# 1. Removes external network access from all containers
+# 2. Disables Earth Engine and any outbound fetch
+# 3. All services communicate only on the internal network
+
+services:
+  api:
+    environment:
+      PRAVAHX_SECURE_MODE: "secure"
+    networks:
+      - internal
+    # No ports exposed to external — reverse proxy handles this
+
+  worker-cpu:
+    environment:
+      PRAVAHX_SECURE_MODE: "secure"
+    networks:
+      - internal
+
+  worker-gpu:
+    environment:
+      PRAVAHX_SECURE_MODE: "secure"
+    networks:
+      - internal
+
+  worker-io:
+    environment:
+      PRAVAHX_SECURE_MODE: "secure"
+    networks:
+      - internal
+
+  scheduler:
+    environment:
+      PRAVAHX_SECURE_MODE: "secure"
+    networks:
+      - internal
+
+  db:
+    networks:
+      - internal
+
+  redis:
+    networks:
+      - internal
+
+  minio:
+    networks:
+      - internal
+
+  frontend:
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
+    internal: true   # No outbound internet access

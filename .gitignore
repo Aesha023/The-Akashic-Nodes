@@ -1,0 +1,78 @@
+# ── Secrets ──
+.env
+*.pem
+*.key
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+*.whl
+.venv/
+venv/
+env/
+
+# ── Node ──
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+
+# ── Testing ──
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage/
+
+# ── IDE ──
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Docker ──
+docker-compose.override.yml
+
+# ── Data (large files, working data) ──
+data/*
+!data/README.md
+!data/samples/
+
+# ── Engine outputs ──
+*.nc
+*.map
+*.his
+*.rst
+*.dat
+*.bi4
+*.vtk
+
+# ── Object storage local data ──
+minio_data/
+
+# ── Database local data ──
+pgdata/
+
+# ── Logs ──
+*.log
+logs/
+
+# ── Stitch exports (tracked selectively) ──
+# design/stitch/ contents are committed as provided by the user
+
+# ── Generated files ──
+frontend/src/api/generated/
+docs/API.md

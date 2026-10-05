@@ -1,0 +1,137 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pravahx"
+version = "0.1.0"
+description = "Dam break and river blockage inundation modelling"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.11"
+authors = [
+    {name = "Team The Akashic Nodes"},
+]
+
+dependencies = [
+    "pydantic>=2.10,<3",
+    "pydantic-settings>=2.6,<3",
+    "PyYAML>=6.0.2,<7",
+    "rasterio>=1.4.3,<2",
+    "geopandas>=1.0.1,<2",
+    "shapely>=2.0.6,<3",
+    "pyproj>=3.7.0,<4",
+    "xarray>=2024.11.0",
+    "rioxarray>=0.18.1,<1",
+    "numpy>=1.26,<2",
+    "fiona>=1.10.1,<2",
+    "click>=8.1.7,<9",
+    "structlog>=24.4.0",
+    "rich>=13.9,<14",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3,<9",
+    "pytest-cov>=6.0,<7",
+    "pytest-asyncio>=0.24,<1",
+    "hypothesis>=6.115,<7",
+    "ruff>=0.7.4",
+    "mypy>=1.13,<2",
+    "pre-commit>=4.0,<5",
+    "types-PyYAML>=6.0",
+]
+backend = [
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.32,<1",
+    "celery[redis]>=5.4,<6",
+    "redis>=5.2,<6",
+    "sqlalchemy[asyncio]>=2.0.36,<3",
+    "asyncpg>=0.30,<1",
+    "alembic>=1.14,<2",
+    "geoalchemy2>=0.17,<1",
+    "boto3>=1.35,<2",
+    "argon2-cffi>=23.1,<24",
+    "pyotp>=2.9,<3",
+    "python-multipart>=0.0.12",
+    "pydantic-settings>=2.6,<3",
+    "httpx>=0.27,<1",
+    "opentelemetry-api>=1.28",
+    "opentelemetry-sdk>=1.28",
+    "opentelemetry-instrumentation-fastapi>=0.49b0",
+]
+
+[project.scripts]
+pravahx = "pravahx.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["core/pravahx"]
+
+# ── Ruff ─────────────────────────────────────────────────────
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E", "W",    # pycodestyle
+    "F",          # pyflakes
+    "I",          # isort
+    "N",          # pep8-naming
+    "UP",         # pyupgrade
+    "B",          # flake8-bugbear
+    "SIM",        # flake8-simplify
+    "TCH",        # flake8-type-checking
+    "RUF",        # ruff-specific
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pravahx"]
+
+# ── Mypy ─────────────────────────────────────────────────────
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["pydantic.mypy"]
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "rasterio.*",
+    "fiona.*",
+    "geopandas.*",
+    "shapely.*",
+    "osgeo.*",
+    "xarray.*",
+    "rioxarray.*",
+    "celery.*",
+    "redis.*",
+    "boto3.*",
+    "botocore.*",
+    "geoalchemy2.*",
+    "pyotp.*",
+    "whitebox.*",
+]
+ignore_missing_imports = true
+
+# ── Pytest ───────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers --tb=short -q"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "gpu: marks tests that need a GPU",
+    "integration: marks integration tests",
+    "e2e: marks end-to-end tests",
+]
+
+# ── Coverage ─────────────────────────────────────────────────
+[tool.coverage.run]
+source = ["core/pravahx", "backend/app"]
+omit = ["*/tests/*", "*/fixtures/*"]
+
+[tool.coverage.report]
+fail_under = 0
+show_missing = true

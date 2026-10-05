@@ -1,0 +1,30 @@
+# PravahX — Showcase mode Docker Compose override (constraint C)
+# Usage: docker compose -f docker-compose.yml -f docker-compose.showcase.yml up -d
+#
+# Read-only deployment: frontend + light API serving stored results.
+# No workers, no scheduler, no engine execution.
+# A visible banner states that all runs are precomputed.
+
+services:
+  api:
+    environment:
+      PRAVAHX_DEPLOYMENT_MODE: "showcase"
+    # In showcase mode the API is read-only: no run creation,
+    # no exports generation, no write endpoints.
+
+  # Disable all workers and scheduler in showcase mode
+  worker-cpu:
+    profiles:
+      - disabled
+
+  worker-gpu:
+    profiles:
+      - disabled
+
+  worker-io:
+    profiles:
+      - disabled
+
+  scheduler:
+    profiles:
+      - disabled

@@ -9,18 +9,19 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING
 
 import geopandas as gpd
 import pystac_client
 import rasterio
 import rioxarray
-import xarray as xr
 from rasterio.merge import merge
 from shapely.geometry import box
 
 from pravahx.errors import DataError
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ def fetch_dem(
         DataError: If the STAC search fails or no tiles are found.
     """
     cache_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # If the bbox is not WGS84, we must project it for the STAC search.
     if crs != "EPSG:4326":
         bounds_gdf = gpd.GeoDataFrame({"geometry": [box(*bbox)]}, crs=crs)
@@ -90,25 +91,25 @@ def fetch_dem(
     for item in items:
         if "data" in item.assets:
             urls.append(item.assets["data"].href)
-    
+
     if not urls:
         raise DataError("STAC items found, but missing 'data' asset URLs.")
 
     logger.info(f"Found {len(urls)} DEM tiles. Downloading and merging...")
-    
+
     # Use rasterio to open all remote URLs and merge them
     try:
         src_files_to_mosaic = []
         for url in urls:
             src_files_to_mosaic.append(rasterio.open(url))
-            
+
         mosaic, out_trans = merge(src_files_to_mosaic, bounds=wgs_bounds)
         out_meta = src_files_to_mosaic[0].meta.copy()
-        
+
         # Close remote sources
         for src in src_files_to_mosaic:
             src.close()
-            
+
     except Exception as exc:
         raise DataError(f"Failed to download or merge DEM tiles: {exc}") from exc
 

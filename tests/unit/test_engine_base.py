@@ -7,19 +7,12 @@ from pathlib import Path
 import pytest
 
 from pravahx.engines.base import (
-    REQUIRED_LAYERS,
     EngineAdapter,
-    EngineStatus,
     NormalisedLayer,
     NormalisedOutput,
-    PreparedCase,
-    RawResult,
-    RunContext,
     compute_file_hash,
     validate_normalised_output,
 )
-from pravahx.config.schema import ScenarioConfig
-
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -132,6 +125,8 @@ class TestFileHash:
 class TestEngineProtocol:
     def test_protocol_is_runtime_checkable(self) -> None:
         """The EngineAdapter protocol should be runtime checkable."""
-        assert hasattr(EngineAdapter, "__protocol_attrs__") or hasattr(
-            EngineAdapter, "__abstractmethods__"
-        ) or True  # runtime_checkable is set
+        assert (
+            hasattr(EngineAdapter, "__protocol_attrs__")
+            or hasattr(EngineAdapter, "__abstractmethods__")
+            or True
+        )  # runtime_checkable is set

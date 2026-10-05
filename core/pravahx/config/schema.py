@@ -9,9 +9,8 @@ part of the scenario config. See docs/DECISIONS.md #D001.
 
 from __future__ import annotations
 
-from enum import Enum
-from pathlib import Path
-from typing import Annotated, Literal
+from enum import StrEnum
+from typing import TYPE_CHECKING, Annotated
 
 from pydantic import (
     BaseModel,
@@ -21,11 +20,13 @@ from pydantic import (
     model_validator,
 )
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # ── Enums ────────────────────────────────────────────────────────────────────
 
 
-class ScenarioType(str, Enum):
+class ScenarioType(StrEnum):
     """Allowed scenario types (Section 1.2)."""
 
     DAM_BREAK = "dam_break"
@@ -35,14 +36,14 @@ class ScenarioType(str, Enum):
     LIVE_EVENT = "live_event"
 
 
-class FailureMode(str, Enum):
+class FailureMode(StrEnum):
     """Dam-break failure mechanism."""
 
     OVERTOPPING = "overtopping"
     PIPING = "piping"
 
 
-class VolumeMethod(str, Enum):
+class VolumeMethod(StrEnum):
     """How to determine reservoir volume."""
 
     REGISTER = "register"
@@ -51,7 +52,7 @@ class VolumeMethod(str, Enum):
     AUTO = "auto"
 
 
-class BreachMethod(str, Enum):
+class BreachMethod(StrEnum):
     """Breach parameter method."""
 
     FROEHLICH_2008 = "froehlich_2008"
@@ -60,7 +61,7 @@ class BreachMethod(str, Enum):
     AUTO = "auto"
 
 
-class EnsembleQuantile(str, Enum):
+class EnsembleQuantile(StrEnum):
     """Ensemble quantile labels."""
 
     P10 = "p10"
@@ -68,7 +69,7 @@ class EnsembleQuantile(str, Enum):
     P90 = "p90"
 
 
-class DEMSource(str, Enum):
+class DEMSource(StrEnum):
     """Built-in DEM sources."""
 
     COPERNICUS_GLO30 = "copernicus_glo30"
@@ -76,13 +77,13 @@ class DEMSource(str, Enum):
     ASTER = "aster"
 
 
-class LandcoverSource(str, Enum):
+class LandcoverSource(StrEnum):
     """Built-in land cover sources."""
 
     WORLDCOVER = "worldcover"
 
 
-class ExportFormat(str, Enum):
+class ExportFormat(StrEnum):
     """Supported export formats."""
 
     SHP = "shp"
@@ -94,7 +95,7 @@ class ExportFormat(str, Enum):
     PDF = "pdf"
 
 
-class DualSPHysicsMode(str, Enum):
+class DualSPHysicsMode(StrEnum):
     """SPH adapter execution mode (constraint A)."""
 
     CPU = "cpu"
@@ -314,7 +315,7 @@ class GEEConfig(BaseModel):
     enabled: bool = False
     event_dates: dict[str, list[str | None]] | None = Field(
         default=None,
-        description="Before and after date ranges: {'before': [start, end], 'after': [start, end]}.",
+        description="Before and after ranges: {'before': [start, end], 'after': [start, end]}.",
     )
 
 
@@ -399,7 +400,7 @@ def load_scenario_config(path: Path) -> ScenarioConfig:
     Raises ``pydantic.ValidationError`` with clear, actionable messages
     if the config is invalid.
     """
-    import yaml  # noqa: TCH002 — runtime import
+    import yaml
 
     text = path.read_text(encoding="utf-8")
     raw = yaml.safe_load(text)

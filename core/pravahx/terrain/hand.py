@@ -7,11 +7,14 @@ and compute the Height Above Nearest Drainage (HAND) model.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import whitebox
 
 from pravahx.errors import DataError
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -34,17 +37,17 @@ def compute_hand(
 
     Returns:
         Path to the generated HAND GeoTIFF.
-        
+
     Raises:
         DataError: If WhiteboxTools execution fails.
     """
     out_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Initialize WhiteboxTools
     wbt = whitebox.WhiteboxTools()
     wbt.set_working_dir(str(out_dir))
     wbt.set_verbose_mode(False)
-    
+
     # Define paths
     dem = str(dem_path)
     filled_dem = "filled.tif"
@@ -76,6 +79,6 @@ def compute_hand(
     hand_path = out_dir / hand
     if not hand_path.exists():
         raise DataError("HAND computation finished but output file is missing.")
-        
+
     logger.info(f"HAND raster generated at {hand_path}")
     return hand_path

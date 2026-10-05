@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from pravahx.pipeline.provenance import (
     ArtifactRecord,
@@ -12,6 +12,9 @@ from pravahx.pipeline.provenance import (
     compute_string_sha256,
     verify_artifacts,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestHashing:
@@ -101,9 +104,7 @@ class TestRunManifest:
         assert loaded.artifacts[0].engine == "delft3d_fm"
 
     def test_precomputed_import_recorded(self) -> None:
-        manifest = RunManifest(
-            run_id="r1", scenario_id="s1", scenario_name="T", config_sha256="x"
-        )
+        manifest = RunManifest(run_id="r1", scenario_id="s1", scenario_name="T", config_sha256="x")
         manifest.record_precomputed_import(
             engine="dualsphysics",
             source_dir="/data/sph",
@@ -121,9 +122,7 @@ class TestVerifyArtifacts:
         f.write_bytes(b"raster data")
         sha = compute_file_sha256(f)
 
-        manifest = RunManifest(
-            run_id="r1", scenario_id="s1", scenario_name="T", config_sha256="x"
-        )
+        manifest = RunManifest(run_id="r1", scenario_id="s1", scenario_name="T", config_sha256="x")
         manifest.add_artifact(
             ArtifactRecord(path="out.tif", sha256=sha, size_bytes=11, kind="raster")
         )
@@ -132,13 +131,9 @@ class TestVerifyArtifacts:
         assert issues == []
 
     def test_missing_file(self, tmp_path: Path) -> None:
-        manifest = RunManifest(
-            run_id="r1", scenario_id="s1", scenario_name="T", config_sha256="x"
-        )
+        manifest = RunManifest(run_id="r1", scenario_id="s1", scenario_name="T", config_sha256="x")
         manifest.add_artifact(
-            ArtifactRecord(
-                path="missing.tif", sha256="x", size_bytes=0, kind="raster"
-            )
+            ArtifactRecord(path="missing.tif", sha256="x", size_bytes=0, kind="raster")
         )
         issues = verify_artifacts(manifest, tmp_path)
         assert any("Missing" in i for i in issues)
@@ -147,13 +142,9 @@ class TestVerifyArtifacts:
         f = tmp_path / "corrupted.tif"
         f.write_bytes(b"original")
 
-        manifest = RunManifest(
-            run_id="r1", scenario_id="s1", scenario_name="T", config_sha256="x"
-        )
+        manifest = RunManifest(run_id="r1", scenario_id="s1", scenario_name="T", config_sha256="x")
         manifest.add_artifact(
-            ArtifactRecord(
-                path="corrupted.tif", sha256="wrong_hash", size_bytes=8, kind="raster"
-            )
+            ArtifactRecord(path="corrupted.tif", sha256="wrong_hash", size_bytes=8, kind="raster")
         )
         issues = verify_artifacts(manifest, tmp_path)
         assert any("mismatch" in i for i in issues)

@@ -5,18 +5,14 @@ Phase 0 acceptance: an invalid config produces a clear error.
 
 from __future__ import annotations
 
-from pathlib import Path
-from textwrap import dedent
+from typing import TYPE_CHECKING
 
 import pytest
 import yaml
 from pydantic import ValidationError
 
 from pravahx.config.schema import (
-    BreachMethod,
-    DEMSource,
     DualSPHysicsMode,
-    EnsembleQuantile,
     ExportFormat,
     FailureMode,
     ScenarioConfig,
@@ -25,6 +21,8 @@ from pravahx.config.schema import (
     load_scenario_config,
 )
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # ── Valid config ─────────────────────────────────────────────────────────────
 
@@ -219,7 +217,7 @@ class TestInvalidConfig:
             )
 
     def test_fine_larger_than_coarse(self) -> None:
-        with pytest.raises(ValidationError, match="fine.*smaller"):
+        with pytest.raises(ValidationError, match=r"fine.*smaller"):
             ScenarioConfig.model_validate(
                 {
                     "scenario": {

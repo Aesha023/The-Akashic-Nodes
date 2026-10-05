@@ -8,17 +8,18 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
-from enum import Enum
-from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from enum import StrEnum
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
-from pravahx.config.schema import ScenarioConfig
+if TYPE_CHECKING:
+    from pathlib import Path
 
+    from pravahx.config.schema import ScenarioConfig
 
 # ── Shared types ─────────────────────────────────────────────────────────────
 
 
-class EngineStatus(str, Enum):
+class EngineStatus(StrEnum):
     """Solver execution outcome."""
 
     SUCCESS = "success"
@@ -148,7 +149,7 @@ class NormalisedOutput:
         for layer in self.layers:
             if layer.name == name:
                 return layer
-        msg = f"Layer '{name}' not found. Available: {[l.name for l in self.layers]}"
+        msg = f"Layer '{name}' not found. Available: {[lyr.name for lyr in self.layers]}"
         raise KeyError(msg)
 
     @property

@@ -6,21 +6,21 @@ Never print secrets in logs, test output or the context file (Section 0.2).
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class DeploymentMode(str, Enum):
+class DeploymentMode(StrEnum):
     """Deployment mode (constraint C)."""
 
     FULL = "full"
     SHOWCASE = "showcase"
 
 
-class SecureMode(str, Enum):
+class SecureMode(StrEnum):
     """Secure mode setting (decision D001 — system-level only)."""
 
     ONLINE = "online"

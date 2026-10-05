@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 from pravahx.errors import (
-    AuthError,
     ConfigError,
     ConfigFieldError,
-    CouplingError,
     DataCorruptError,
     DataError,
     EgressBlockedError,

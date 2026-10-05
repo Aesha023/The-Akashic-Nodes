@@ -14,7 +14,7 @@ from pathlib import Path
 import click
 import structlog
 
-from pravahx.config.schema import ScenarioConfig, load_scenario_config
+from pravahx.config.schema import load_scenario_config
 from pravahx.pipeline.provenance import RunManifest, verify_artifacts
 
 logger = structlog.get_logger()
@@ -66,7 +66,12 @@ def validate(config_path: Path) -> None:
 
 @main.command()
 @click.argument("config_path", type=click.Path(exists=True, path_type=Path))
-@click.option("--work-dir", type=click.Path(path_type=Path), default=None, help="Working directory for run outputs.")
+@click.option(
+    "--work-dir",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Working directory for run outputs.",
+)
 def run(config_path: Path, work_dir: Path | None) -> None:
     """Run a scenario from a config file.
 

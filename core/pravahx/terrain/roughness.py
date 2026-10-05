@@ -6,10 +6,13 @@ Maps land cover classes (e.g., ESA WorldCover) to Manning's n values.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import rasterio
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +31,7 @@ WORLDCOVER_TO_MANNINGS = {
     80: 0.030,  # Water
     90: 0.050,  # Wetland
     95: 0.080,  # Mangroves
-    100: 0.030, # Moss/lichen
+    100: 0.030,  # Moss/lichen
 }
 
 DEFAULT_MANNINGS_N = 0.035
@@ -41,27 +44,27 @@ def create_roughness_raster(
     default_n: float = DEFAULT_MANNINGS_N,
 ) -> Path:
     """Create a Manning's n roughness raster.
-    
+
     If landcover_path is provided, maps WorldCover classes to n values.
     Otherwise, creates a uniform raster with default_n.
-    
+
     Args:
         landcover_path: Optional path to land cover raster.
         out_path: Output path for the roughness raster.
         reference_path: Reference raster (e.g., DEM) to match extent/resolution.
         default_n: Default value if no landcover is provided or for unknown classes.
-        
+
     Returns:
         Path to the generated roughness raster.
     """
     logger.info(f"Generating roughness raster at {out_path}")
-    
+
     with rasterio.open(reference_path) as ref:
         meta = ref.meta.copy()
         shape = (ref.height, ref.width)
-        
+
     meta.update(dtype=rasterio.float32, nodata=-9999.0)
-    
+
     if not landcover_path or not landcover_path.exists():
         logger.info(f"No landcover provided, using uniform n={default_n}")
         n_array = np.full(shape, default_n, dtype=np.float32)
@@ -71,17 +74,17 @@ def create_roughness_raster(
         try:
             with rasterio.open(landcover_path) as lc:
                 lc_data = lc.read(1)
-                
+
             # Map classes
             n_array = np.full_like(lc_data, default_n, dtype=np.float32)
             for lc_class, n_val in WORLDCOVER_TO_MANNINGS.items():
                 n_array[lc_data == lc_class] = n_val
-                
+
         except Exception as exc:
             logger.warning(f"Failed to process landcover: {exc}. Using uniform n={default_n}")
             n_array = np.full(shape, default_n, dtype=np.float32)
 
     with rasterio.open(out_path, "w", **meta) as dest:
         dest.write(n_array, 1)
-        
+
     return out_path

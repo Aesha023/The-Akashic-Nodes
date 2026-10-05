@@ -12,10 +12,12 @@ import json
 import platform
 import sys
 from dataclasses import asdict, dataclass, field
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pravahx
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def compute_file_sha256(path: Path) -> str:
@@ -80,9 +82,7 @@ class RunManifest:
     platform: str = field(default_factory=lambda: platform.platform())
     secure_mode: bool = False
     deployment_mode: str = "full"
-    created_at: str = field(
-        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.datetime.now(datetime.UTC).isoformat())
     finished_at: str | None = None
 
     # Versions of external engines used
@@ -127,7 +127,7 @@ class RunManifest:
                 "engine": engine,
                 "source_dir": source_dir,
                 "run_date": run_date,
-                "import_time": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "import_time": datetime.datetime.now(datetime.UTC).isoformat(),
                 "file_hashes": file_hashes,
                 "verified": True,
             }
@@ -136,7 +136,7 @@ class RunManifest:
     def finish(self, status: str) -> None:
         """Mark the run as finished."""
         self.status = status
-        self.finished_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        self.finished_at = datetime.datetime.now(datetime.UTC).isoformat()
 
     def to_dict(self) -> dict[str, Any]:
         """Serialise to a dict suitable for JSON."""

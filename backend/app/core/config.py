@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     )
 
     # Deployment
+    pravahx_repo_url: str = ""
     pravahx_deployment_mode: DeploymentMode = DeploymentMode.FULL
     pravahx_secure_mode: SecureMode = SecureMode.ONLINE
 

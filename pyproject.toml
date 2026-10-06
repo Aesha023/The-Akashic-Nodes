@@ -92,10 +92,21 @@ select = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["pravahx"]
+known-first-party = ["pravahx", "backend"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.params.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+    "fastapi.Security",
+]
 
 [tool.ruff.lint.flake8-type-checking]
-runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+runtime-evaluated-base-classes = ["pydantic.BaseModel", "pydantic_settings.BaseSettings"]
 
 # ── Mypy ─────────────────────────────────────────────────────
 [tool.mypy]

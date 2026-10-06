@@ -150,6 +150,27 @@
 - Requirement IDs advanced: R1, R2, R4, R5, R8
 - Feature IDs advanced: F01, F02, F03, F11
 
+### Phase 7: Backend API, Authentication, and Storage (status: done)
+- Built:
+  - `backend/app/core/security.py` (Argon2id password hashing via `PasswordHasher`, JWT token creation and decoding with HS256, expiration tracking, subject extraction).
+  - `backend/app/core/auth.py` (OAuth2PasswordBearer token extraction, `get_current_user`, `require_role`, `require_viewer`, `require_analyst`, `require_admin` RBAC dependencies).
+  - `backend/app/db/session.py` (Async SQLAlchemy database session factory supporting PostgreSQL via `asyncpg` and SQLite with async adapter interface for local execution).
+  - `backend/app/models/` (`Base`, `User`, `Scenario`, `Run` SQLAlchemy models with timestamps, indexed keys, foreign key constraints, JSON fields).
+  - `backend/app/schemas/` (`UserCreate`, `UserResponse`, `TokenResponse`, `RefreshTokenRequest`, `ScenarioCreate`, `ScenarioUpdate`, `ScenarioResponse`, `ScenarioListResponse`, `RunCreate`, `RunResponse`, `RunListResponse` Pydantic models with RFC regex validation).
+  - `backend/app/api/v1/` (`auth.py`, `scenarios.py`, `runs.py`, `tiles.py`, `system.py`).
+  - `backend/app/main.py` (FastAPI app factory with CORS middleware, lifespan database initialization, and RFC 9457 problem details error handler for `PravahXError`).
+  - `tests/unit/test_auth.py` and `tests/unit/test_api.py` (8 unit tests covering password hashing, JWT creation/validation, RBAC roles, user registration, token exchange, scenario CRUD, run dispatch, manifest download, and tile rendering).
+- Decisions:
+  - Provided synchronous fallback adapter for SQLite while preserving native asyncpg for PostgreSQL production deployments.
+  - Standardized RFC 9457 JSON problem details for domain error translation to HTTP responses.
+  - Enforced Showcase Mode constraints on run dispatch endpoints (returning HTTP 403 Forbidden).
+- Deviations from the build spec: None
+- Tests: 115 unit tests passing across the repository. Mypy (72 source files) and Ruff 100% clean.
+- Measured results: Scenario creation, token authentication, and simulated run dispatch verified with 100% test pass rate.
+- Known issues and limits: None for Phase 7.
+- Requirement IDs advanced: R1, R2, R4, R5, R8
+- Feature IDs advanced: F01, F02, F11
+
 ## Environment
 - Dependency versions (pinned):
   - pydantic>=2.10,<3
@@ -159,6 +180,8 @@
   - hydrolib-core>=0.5.0
   - netcdf4>=1.7.0
   - matplotlib>=3.8
+  - argon2-cffi>=23.1,<24
+  - pyjwt>=2.9,<3
   - (see pyproject.toml for full list)
 - Solver versions and how they were installed: None yet
 - Hardware used for measurements: None yet
@@ -170,6 +193,7 @@
 - None at this time.
 
 ## Next steps
-- Proceed to Phase 7: Backend API, Authentication, and Storage (FastAPI endpoints, JWT auth, RBAC, scenario CRUD, job dispatch, and TiTiler COG routing).
+- Proceed to Phase 8: Frontend Map Interface and Visualizer (Interactive map with MapLibre GL JS / Deck.gl, layer toggles, time slider, split-screen multi-tier comparison, hydrograph charting, and showcase mode).
+
 
 

@@ -59,20 +59,24 @@ def compute_hand(
     hand = "hand.tif"
 
     logger.info("Filling depressions in DEM...")
-    if wbt.fill_depressions(dem, filled_dem) != 0:
-        raise DataError("WhiteboxTools failed at fill_depressions.")
+    if wbt.fill_depressions_wang_and_liu(dem, filled_dem) != 0:
+        raise DataError("WhiteboxTools failed at fill_depressions_wang_and_liu.")
 
     logger.info("Computing flow direction (D8)...")
     if wbt.d8_pointer(filled_dem, d8_pntr) != 0:
         raise DataError("WhiteboxTools failed at d8_pointer.")
 
     logger.info("Computing flow accumulation...")
-    if wbt.d8_flow_accumulation(d8_pntr, d8_accum, out_type="cells") != 0:
+    if wbt.d8_flow_accumulation(d8_pntr, d8_accum, out_type="cells", pntr=True) != 0:
         raise DataError("WhiteboxTools failed at d8_flow_accumulation.")
 
     logger.info(f"Extracting streams (threshold={accumulation_threshold})...")
     if wbt.extract_streams(d8_accum, streams, threshold=accumulation_threshold) != 0:
         raise DataError("WhiteboxTools failed at extract_streams.")
+
+    # Convert extracted stream raster to vector lines for downstream export and verification
+    streams_shp = "streams.shp"
+    wbt.raster_streams_to_vector(streams, d8_pntr, streams_shp)
 
     logger.info("Computing Height Above Nearest Drainage (HAND)...")
     if wbt.elevation_above_stream(filled_dem, streams, hand) != 0:

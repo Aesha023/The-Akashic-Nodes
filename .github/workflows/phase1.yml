@@ -2,6 +2,11 @@ name: Phase 1 E2E Test
 
 on:
   workflow_dispatch:
+    inputs:
+      diagnostic:
+        description: "Upload diagnostic COGs and KMLs (raw DEM, conditioned DEM, flow accumulation, streams, HAND)"
+        type: boolean
+        default: true
 
 jobs:
   run-phase1:

@@ -126,7 +126,19 @@ def find_stage_for_discharge(
     with rasterio.open(hand_path) as src:
         hand = src.read(1)
         nodata = src.nodata
-        cell_size = src.res[0]
+        crs = src.crs
+        cell_size = float(src.res[0])
+        if crs is not None and crs.is_geographic:
+            # Geographic CRS (degrees) - convert cell size to meters at scene center latitude
+            center_lat = (src.bounds.top + src.bounds.bottom) / 2.0
+            lat_rad = np.radians(center_lat)
+            m_per_deg_lat = (
+                111_132.954 - 559.822 * np.cos(2 * lat_rad) + 1.175 * np.cos(4 * lat_rad)
+            )
+            m_per_deg_lon = 111_412.84 * np.cos(lat_rad) - 93.5 * np.cos(3 * lat_rad)
+            dx = float(src.res[0]) * m_per_deg_lon
+            dy = float(src.res[1]) * m_per_deg_lat
+            cell_size = float(np.sqrt(dx * dy))
 
     # Mask out nodata
     if nodata is not None:

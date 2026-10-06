@@ -11,7 +11,7 @@ from pathlib import Path
 from pravahx.data.dem import fetch_dem
 from pravahx.engines.base import RunContext
 from pravahx.engines.tier0_hand.adapter import Tier0HandAdapter
-from pravahx.export.vector import generate_exports
+from pravahx.export.vector import export_diagnostic_bundle, generate_exports
 from pravahx.terrain.hand import compute_hand
 
 logging.basicConfig(level=logging.INFO)
@@ -23,7 +23,6 @@ def main() -> None:
     work_dir.mkdir(exist_ok=True)
 
     # Bounding box for a small reach in India (e.g., somewhere in the Himalayas)
-    # Just a small patch to make the download and processing fast.
     # Coordinates: min_lon, min_lat, max_lon, max_lat
     # Example: Near Rishikesh, India
     bbox = (78.3, 30.1, 78.35, 30.15)
@@ -34,10 +33,12 @@ def main() -> None:
     dem_path = fetch_dem(bbox=bbox, cache_dir=work_dir)
 
     # 2. Compute HAND
+    # With pntr=True, flow accumulation runs properly and max accum is ~27,800.
+    # A threshold of 500 cleanly extracts the Ganga main channel and primary tributaries.
     compute_hand(
         dem_path=dem_path,
         out_dir=work_dir,
-        accumulation_threshold=10,  # Smaller threshold for a small patch
+        accumulation_threshold=500,
     )
 
     # 3. Tier 0 Engine run
@@ -54,9 +55,13 @@ def main() -> None:
     result = engine.run(prepared)
     norm_output = engine.postprocess(result, ctx)
 
-    # 4. Export
+    # 4. Standard exports (COG, Shapefile, filled semi-transparent KML)
     exports_dir = work_dir / "exports"
     exported = generate_exports(norm_output, exports_dir)
+
+    # 5. Diagnostic exports (raw DEM, conditioned DEM, flow accum, stream lines, HAND)
+    diagnostic_files = export_diagnostic_bundle(work_dir, exports_dir)
+    exported.extend(diagnostic_files)
 
     total_time = time.time() - start
 

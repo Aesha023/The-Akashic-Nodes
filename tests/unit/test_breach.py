@@ -55,11 +55,11 @@ def test_hydrograph_integration() -> None:
         dam_height_m=h,
         b_avg_m=params.average_width_m,
         t_f_hr=params.formation_time_hr,
+        reservoir_exponent=3.0,
         side_slope_z=params.side_slope_z,
         dt_hr=dt,
         c_v1=1.70,
         c_v2=1.35,
-        reservoir_exponent=3.0,
     )
 
     assert len(hydrograph) > 0
@@ -83,28 +83,93 @@ def test_hydrograph_integration() -> None:
     assert hydrograph[-1]["volume_remaining_m3"] < 0.01 * vol
 
 
-def test_hec_ras_hydrograph_routing() -> None:
-    """Verify routing on HEC-RAS regression parameters produces expected hydrograph."""
+def test_hec_ras_hydrograph_routing_progression_modes() -> None:
+    """Verify routing on HEC-RAS parameters under both progression modes."""
     vol = 357.98e6
     h = 42.9
     params = compute_froehlich_2008(vol, h, mode="overtopping")
 
-    hydrograph = route_hydrograph(
+    # 1. Horizontal only progression mode (instantaneous invert drop)
+    hg_horiz = route_hydrograph(
         initial_volume_m3=vol,
         dam_height_m=h,
         b_avg_m=params.average_width_m,
         t_f_hr=params.formation_time_hr,
-        side_slope_z=params.side_slope_z,
-        dt_hr=0.01,
-        c_v1=1.70,
-        c_v2=1.35,
         reservoir_exponent=3.0,
+        side_slope_z=params.side_slope_z,
+        progression_mode="horizontal_only",
+        dt_hr=0.01,
     )
+    # Peak is ~48,000 m3/s at ~1.77 h
+    assert 45_000.0 < hg_horiz.peak_discharge_m3s < 50_000.0
+    assert 1.6 < hg_horiz.time_to_peak_hr < 1.9
 
-    max_q = max(p["discharge_m3s"] for p in hydrograph)
-    # Routed peak discharge is ~48,000 m3/s at ~1.77 h
-    assert 40_000.0 < max_q < 55_000.0
+    # 2. Linear vertical + horizontal progression mode (HEC-RAS standard)
+    hg_vert = route_hydrograph(
+        initial_volume_m3=vol,
+        dam_height_m=h,
+        b_avg_m=params.average_width_m,
+        t_f_hr=params.formation_time_hr,
+        reservoir_exponent=3.0,
+        side_slope_z=params.side_slope_z,
+        progression_mode="vertical_and_horizontal",
+        dt_hr=0.01,
+    )
+    # Peak is ~65,600 m3/s at ~2.47 h
+    assert 60_000.0 < hg_vert.peak_discharge_m3s < 70_000.0
+    assert abs(hg_vert.time_to_peak_hr - params.formation_time_hr) < 0.05
 
     # Froehlich 1995 empirical peak
     qp_f95 = 0.607 * (vol**0.295) * (h**1.24)
     assert abs(qp_f95 - 21_420.2) < 1.0
+
+    # Warning flag is set because ratio > 2.0
+    assert hg_vert.warning_flag is not None
+    assert "deviates from Froehlich (1995)" in hg_vert.warning_flag
+
+
+def test_teton_dam_historical_benchmark() -> None:
+    """Benchmark routing against Teton Dam (1976) published historical failure.
+
+    Primary literature: USGS Professional Paper 1028 (1977); Ray et al. (1976);
+    Wahl (1998, Table 1).
+    Parameters: V_w = 251.4 MCM, h_w = 76.2 m, mode = piping.
+    Observed Peak: ~65,129 m3/s.
+    Observed Formation Time: ~1.25 hr.
+    """
+    vol = 251.4e6
+    h = 76.2
+    q_obs = 65_129.0
+
+    params = compute_froehlich_2008(volume_m3=vol, height_m=h, mode="piping")
+    # Froehlich 2008 predicts B_avg ~156.6 m, tf ~1.17 hr
+    assert 140.0 < params.average_width_m < 170.0
+    assert 1.0 < params.formation_time_hr < 1.4
+
+    # Routing with observed geometry (B_avg=151m, tf=1.25h, side_slope=0.5) and pool (m=2.0)
+    hg_teton = route_hydrograph(
+        initial_volume_m3=vol,
+        dam_height_m=h,
+        b_avg_m=151.0,
+        t_f_hr=1.25,
+        reservoir_exponent=2.0,
+        side_slope_z=0.5,
+        progression_mode="horizontal_only",
+        dt_hr=0.005,
+    )
+    # Routed peak is within 10% of observed USGS peak of 65,129 m3/s
+    error_pct = abs(hg_teton.peak_discharge_m3s - q_obs) / q_obs * 100.0
+    assert error_pct < 10.0, f"Teton routed peak error: {error_pct:.1f}%"
+
+
+def test_hydrograph_requires_reservoir_exponent() -> None:
+    """Verify that reservoir_exponent is a required parameter with no default."""
+    import pytest
+
+    with pytest.raises(TypeError):
+        route_hydrograph(  # type: ignore[call-arg]
+            initial_volume_m3=1e6,
+            dam_height_m=20.0,
+            b_avg_m=50.0,
+            t_f_hr=1.0,
+        )

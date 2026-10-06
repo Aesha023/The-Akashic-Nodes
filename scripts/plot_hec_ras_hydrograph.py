@@ -15,29 +15,28 @@ def generate_hec_ras_plot(output_path: Path) -> None:
 
     params = compute_froehlich_2008(volume_m3=vol_m3, height_m=h_dam_m, mode="overtopping")
 
-    # Route hydrograph using trapezoidal broad-crested weir formulation
+    # Route hydrograph using trapezoidal broad-crested weir formulation (HEC-RAS mode)
     dt_hr = 0.005
-    points = route_hydrograph(
+    hydrograph = route_hydrograph(
         initial_volume_m3=vol_m3,
         dam_height_m=h_dam_m,
         b_avg_m=params.average_width_m,
         t_f_hr=params.formation_time_hr,
+        reservoir_exponent=3.0,
         side_slope_z=params.side_slope_z,
+        progression_mode="vertical_and_horizontal",
         dt_hr=dt_hr,
         c_v1=1.70,
         c_v2=1.35,
-        reservoir_exponent=3.0,
     )
 
-    times = [p["time_hr"] for p in points]
-    discharges = [p["discharge_m3s"] for p in points]
-    heads = [p["head_m"] for p in points]
+    times = [p["time_hr"] for p in hydrograph.points]
+    discharges = [p["discharge_m3s"] for p in hydrograph.points]
+    heads = [p["head_m"] for p in hydrograph.points]
 
-    max_q = max(discharges)
-    t_peak = next(p["time_hr"] for p in points if p["discharge_m3s"] == max_q)
-
-    # Froehlich (1995) empirical peak outflow regression: Qp = 0.607 * Vw^0.295 * hw^1.24
-    qp_froehlich_1995 = 0.607 * (vol_m3**0.295) * (h_dam_m**1.24)
+    max_q = hydrograph.peak_discharge_m3s
+    t_peak = hydrograph.time_to_peak_hr
+    qp_froehlich_1995 = hydrograph.froehlich_1995_peak_m3s
 
     # Plot
     fig, ax1 = plt.subplots(figsize=(10, 6), dpi=300)

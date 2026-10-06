@@ -4,10 +4,17 @@ Methods:
 1. UN-SPIDER Recommended Practice (Default SAR Method):
    - Linear ratio change detection: Ratio = sigma0_pre_linear / sigma0_post_linear >= 1.25
      (or in dB: sigma0_pre_dB - sigma0_post_dB >= 10 * log10(1.25) ~= +0.9691 dB).
-   - Topographic slope / HAND filter: excludes terrain with slope > 5% or HAND > 15m
-     to eliminate mountain radar shadow false positives.
+   - Topographic slope filter: excludes terrain with slope > 5 % (PERCENT, not degrees).
+     Source: UN-SPIDER Step 9: 'To remove areas with over 5 % slope, a digital elevation model
+     (WWF HydroSHEDS) has been chosen'.
+   - Connected-pixel filter: eliminates patches connected to 8 or fewer neighbors.
+     Source: UN-SPIDER Step 9: 'Furthermore, the connectivity of the flood pixels is assessed
+     to eliminate those connected to eight or fewer neighbors.'
    - Permanent water subtraction: excludes permanent rivers/lakes (e.g. JRC surface water).
-   Source URL: https://www.un-spider.org/advisory-support/recommended-practices/recommended-practice-google-earth-engine-flood-mapping/step-by-step
+   - [PravahX Hydrological Addition]: HAND filter <= 15m (Height Above Nearest Drainage).
+     Note: HAND is an addition by PravahX and NOT part of the official UN-SPIDER practice.
+   Source URL:
+     https://www.un-spider.org/advisory-support/recommended-practices/recommended-practice-google-earth-engine-flood-mapping/step-by-step
 
 2. Alternative SAR Backscatter Thresholding (Labelled Alternative):
    - Absolute backscatter threshold: sigma0_post < threshold_db (typically -15.0 dB in VV/VH).
@@ -26,6 +33,7 @@ from typing import Any
 import numpy as np
 import rasterio
 from pydantic import BaseModel
+from scipy.ndimage import label  # type: ignore[import-untyped]
 
 
 class FloodExtractionResult(BaseModel):
@@ -38,23 +46,62 @@ class FloodExtractionResult(BaseModel):
     metadata: dict[str, Any] = {}
 
 
+def filter_connected_flood_pixels(
+    binary_mask: np.ndarray[Any, Any],
+    min_connected_pixels: int = 8,
+) -> np.ndarray[Any, Any]:
+    """Eliminates isolated flood pixels connected to 8 or fewer neighbors.
+
+    Source: UN-SPIDER Recommended Practice Step 9:
+    'Furthermore, the connectivity of the flood pixels is assessed to eliminate
+     those connected to eight or fewer neighbors. This operation reduces the noise
+     of the flood extent product (Fig. 15).'
+    """
+    if min_connected_pixels <= 0:
+        return binary_mask
+    structure = np.ones((3, 3), dtype=int)
+    labeled_arr, num_features = label(binary_mask > 0, structure=structure)
+    if num_features == 0:
+        return binary_mask
+    counts = np.bincount(labeled_arr.ravel())
+    # Components with count <= min_connected_pixels are eliminated
+    valid_mask = counts > min_connected_pixels
+    valid_mask[0] = False  # background
+    res: np.ndarray[Any, Any] = valid_mask[labeled_arr].astype(np.uint8)
+    return res
+
+
 def extract_unspider_sar_flood(
     post_event_backscatter_db: np.ndarray[Any, Any],
     pre_event_backscatter_db: np.ndarray[Any, Any],
     ratio_threshold: float = 1.25,
+    slope_array_percent: np.ndarray[Any, Any] | None = None,
     slope_array_deg: np.ndarray[Any, Any] | None = None,
-    max_slope_deg: float = 5.0,
+    max_slope_percent: float = 5.0,
     hand_array_m: np.ndarray[Any, Any] | None = None,
     max_hand_m: float = 15.0,
+    min_connected_pixels: int = 8,
 ) -> np.ndarray[Any, Any]:
     """Extract flood water mask following the UN-SPIDER recommended practice.
 
     Computes linear power change ratio:
         Ratio = 10^(pre_dB / 10) / 10^(post_dB / 10) = 10^((pre_dB - post_dB) / 10)
-    Flooded where Ratio >= ratio_threshold (default: 1.25), conditioned on slope <= 5 deg
-    and HAND <= 15 m.
+    Flooded where Ratio >= ratio_threshold (default: 1.25).
 
-    Source:
+    UN-SPIDER Filters:
+    - Slope filter: Excludes areas with slope > 5 % (PERCENT, not degrees).
+      Source: UN-SPIDER Step 9: 'To remove areas with over 5 % slope, a digital elevation model
+      (WWF HydroSHEDS) has been chosen'.
+    - Connected-pixel filter: Eliminates patches connected to <= 8 neighbors.
+      Source: UN-SPIDER Step 9: 'Furthermore, the connectivity of the flood pixels is assessed
+      to eliminate those connected to eight or fewer neighbors.'
+
+    PravahX Additions:
+    - HAND filter (max_hand_m <= 15.0 m): Hydrological constraint to remove elevated terrain
+      false positives. Note: HAND is a PravahX addition and is NOT part of the UN-SPIDER
+      Recommended Practice.
+
+    Source URL:
         https://www.un-spider.org/advisory-support/recommended-practices/recommended-practice-google-earth-engine-flood-mapping/step-by-step
     """
     post_db = np.asarray(post_event_backscatter_db, dtype=np.float64)
@@ -68,17 +115,30 @@ def extract_unspider_sar_flood(
     # Candidate flooded pixels based on UN-SPIDER ratio
     flood_candidate = (db_drop >= db_drop_threshold) & (post_db < -12.0)
 
-    # Topographic slope filter (mask out steep slopes > 5 deg to remove radar shadow)
-    if slope_array_deg is not None:
-        slope_mask = np.asarray(slope_array_deg, dtype=np.float64) <= max_slope_deg
+    # Topographic slope filter (mask out steep slopes > 5% to remove radar shadow)
+    if slope_array_percent is not None:
+        slope_mask = np.asarray(slope_array_percent, dtype=np.float64) <= max_slope_percent
+        flood_candidate = flood_candidate & slope_mask
+    elif slope_array_deg is not None:
+        # Convert slope degrees to percent: slope_percent = tan(radians(deg)) * 100
+        deg_rad = np.radians(np.asarray(slope_array_deg, dtype=np.float64))
+        slope_pct = np.tan(deg_rad) * 100.0
+        slope_mask = slope_pct <= max_slope_percent
         flood_candidate = flood_candidate & slope_mask
 
-    # HAND filter (mask out high elevation above nearest drainage)
+    # [PravahX Addition]: HAND filter (mask out high elevation above nearest drainage)
     if hand_array_m is not None:
         hand_mask = np.asarray(hand_array_m, dtype=np.float64) <= max_hand_m
         flood_candidate = flood_candidate & hand_mask
 
-    return flood_candidate.astype(np.uint8)
+    # Connected-pixel filter (UN-SPIDER Step 9)
+    res_mask = flood_candidate.astype(np.uint8)
+    if min_connected_pixels > 0:
+        res_mask = filter_connected_flood_pixels(
+            res_mask, min_connected_pixels=min_connected_pixels
+        )
+
+    return res_mask
 
 
 def extract_sar_flood_extent_alternative(

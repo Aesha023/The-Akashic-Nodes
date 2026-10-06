@@ -105,6 +105,17 @@ def test_hazard_rating_and_classification() -> None:
     assert hr_extreme >= 2.0
     assert classify_hazard(3.0, 2.0) == HazardClass.EXTREME
 
+    # Defra Table 3.1 Land Use tests:
+    # Shallow water (0.2m, 0.5m/s):
+    # Pasture: DF=0 -> HR = 0.2*(0.5+0.5) + 0 = 0.20
+    assert pytest.approx(calculate_hazard_rating(0.2, 0.5, land_use="pasture"), abs=0.01) == 0.20
+    # Woodland: DF=0 for d<=0.25 -> HR = 0.20
+    assert pytest.approx(calculate_hazard_rating(0.2, 0.5, land_use="woodland"), abs=0.01) == 0.20
+    # Woodland moderate depth (0.5m, 1.0m/s): DF=0.5 -> HR = 0.5*1.5 + 0.5 = 1.25
+    assert pytest.approx(calculate_hazard_rating(0.5, 1.0, land_use="woodland"), abs=0.01) == 1.25
+    # Urban moderate depth (0.5m, 1.0m/s): DF=1.0 -> HR = 0.5*1.5 + 1.0 = 1.75
+    assert pytest.approx(calculate_hazard_rating(0.5, 1.0, land_use="urban"), abs=0.01) == 1.75
+
     # Array classification
     d_arr = np.array([0.0, 0.2, 0.5, 3.0])
     v_arr = np.array([0.0, 0.5, 1.0, 2.0])

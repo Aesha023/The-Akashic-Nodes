@@ -17,9 +17,17 @@ class GEEClient:
         key_file: str | Path | None = None,
         project: str | None = None,
     ) -> None:
-        self.service_account = service_account or os.environ.get("EE_SERVICE_ACCOUNT")
-        self.key_file = key_file or os.environ.get("EE_KEY_FILE")
-        self.project = project or os.environ.get("EE_PROJECT")
+        self.service_account = (
+            service_account
+            or os.environ.get("GEE_SERVICE_ACCOUNT_EMAIL")
+            or os.environ.get("EE_SERVICE_ACCOUNT")
+        )
+        self.key_file = (
+            key_file
+            or os.environ.get("GEE_SERVICE_ACCOUNT_KEY_FILE")
+            or os.environ.get("EE_KEY_FILE")
+        )
+        self.project = project or os.environ.get("GEE_PROJECT_ID") or os.environ.get("EE_PROJECT")
         self._is_initialized = False
 
     def initialize(self) -> bool:

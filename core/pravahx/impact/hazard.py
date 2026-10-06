@@ -1,20 +1,43 @@
 """Flood hazard rating and severity classification (Phase 7 / Section 9).
 
+Primary Sources:
+1. Defra and Environment Agency (2006) 'The Flood Risks to People Methodology',
+   Flood Risks to People Phase 2, FD2321 Technical Report 1, HR Wallingford et al.
+2. Defra and Environment Agency (2005) 'Framework and Guidance for Assessing and
+   Managing Flood Risk for New Development', FD2320 Technical Report 2, HR Wallingford et al.
+3. Environment Agency / HR Wallingford (May 2008) 'Supplementary Note on Flood Hazard Ratings
+   and Thresholds for Development Planning and Control Purpose - Clarification of Table 13.1
+   of FD2320/TR2 and Figure 3.2 of FD2321/TR1'.
+   URL: https://assets.publishing.service.gov.uk/media/602bbdcfe90e070561b31432/Explanatory_note_for_FD2320_and_FD2321_project_record.pdf
+
 Formulas:
 Flood Hazard Rating (HR):
     HR = d * (v + 0.5) + DF
 where:
     d = water depth (m)
     v = flow velocity (m/s)
-    DF = debris factor (dimensionless):
-        DF = 0.5 for shallow flow (d <= 0.25 m)
-        DF = 1.0 for deep / high-velocity flow (d > 0.25 m) or urban / forest terrain.
+    DF = debris factor (dimensionless)
 
-Hazard Class Categories:
-    1 - Low (HR < 0.75): Caution. Shallow flowing water, safe for most adults.
-    2 - Moderate (0.75 <= HR < 1.25): Dangerous for children, elderly, and frail.
-    3 - High (1.25 <= HR < 2.0): Dangerous for most people; vehicles unstable.
-    4 - Extreme (HR >= 2.0): Dangerous for all; structural damage to buildings.
+Verified Source Quote (FD2321/TR1 Table 3.1 / Supplementary Note Table 1):
+"Table 1: Guidance on debris factors for different flood depths, velocities and dominant land
+uses. (Source FD2321 Table 3.1):
+Depths (d)          Pasture/Arable   Woodland   Urban
+0 to 0.25 m         0                0          0
+0.25 to 0.75 m      0                0.5        1
+d>0.75 m and/or v>2 0.5              1          1"
+
+Conservative Planning Approach (FD2320/TR2 Table 13.1 / Supplementary Note):
+"In the Table 13.1 of FD2320/TR2 a debris factor of 0.5 has been applied for depths less than
+and equal to 0.25m and a debris factor of 1.0 has been used for depths greater than 0.25m."
+
+Hazard Class Categories (FD2320 Table 4 / FD2321 Table 3.2):
+    Low (< 0.75): Caution - "Flood zone with shallow flowing water or deep standing water"
+    Moderate (0.75 - 1.25): Dangerous for some (children, elderly) -
+        "Danger: Flood zone with deep or fast flowing water"
+    High / Significant (1.25 - 2.0): Dangerous for most people -
+        "Danger: flood zone with deep fast flowing water"
+    Extreme (> 2.0 in FD2320, > 2.5 in FD2321): Dangerous for all -
+        "Extreme danger: flood zone with deep fast flowing water"
 """
 
 from __future__ import annotations
@@ -40,13 +63,19 @@ def calculate_hazard_rating(
     depth: np.ndarray[Any, Any] | float,
     velocity: np.ndarray[Any, Any] | float,
     debris_factor: float | None = None,
+    land_use: str = "conservative",
 ) -> np.ndarray[Any, Any] | float:
     """Calculate Flood Hazard Rating HR = d * (v + 0.5) + DF.
 
     Args:
         depth: Water depth in meters (>= 0).
         velocity: Flow velocity in m/s (>= 0).
-        debris_factor: Optional custom debris factor. If None, uses depth-dependent DF.
+        debris_factor: Optional explicit custom debris factor. If provided, overrides land_use.
+        land_use: Land use mode matching Defra Table 3.1 / Table 13.1:
+            - 'conservative': DF = 0.5 for d <= 0.25m, DF = 1.0 for d > 0.25m (FD2320 default).
+            - 'pasture': DF = 0.0 for d <= 0.75m; 0.5 for d > 0.75m or v > 2.0m/s.
+            - 'woodland': DF = 0.0 for d <= 0.25m; 0.5 for 0.25 < d <= 0.75m; 1.0 for deep/fast.
+            - 'urban': DF = 0.0 for d <= 0.25m; 1.0 for d > 0.25m or v > 2.0m/s.
 
     Returns:
         Hazard rating value or array.
@@ -57,10 +86,22 @@ def calculate_hazard_rating(
     df: float | np.ndarray[Any, Any]
     if debris_factor is not None:
         df = float(debris_factor)
+    elif land_use == "pasture":
+        high_debris = (d > 0.75) | (v > 2.0)
+        df_arr = np.where(high_debris, 0.5, 0.0)
+        df = np.where(d > 0.0, df_arr, 0.0)
+    elif land_use == "woodland":
+        high_debris = (d > 0.75) | (v > 2.0)
+        mid_debris = (d > 0.25) & (d <= 0.75) & (v <= 2.0)
+        df_arr = np.where(high_debris, 1.0, np.where(mid_debris, 0.5, 0.0))
+        df = np.where(d > 0.0, df_arr, 0.0)
+    elif land_use == "urban":
+        debris_trigger = (d > 0.25) | (v > 2.0)
+        df_arr = np.where(debris_trigger, 1.0, 0.0)
+        df = np.where(d > 0.0, df_arr, 0.0)
     else:
-        # Dynamic debris factor: 0.5 for shallow water, 1.0 for deeper flow
+        # Default 'conservative' (FD2320 Table 13.1): 0.5 for shallow, 1.0 for deep
         df_arr = np.where(d > 0.25, 1.0, 0.5)
-        # For dry cells (d == 0), debris factor is 0
         df = np.where(d > 0.0, df_arr, 0.0)
 
     hr = d * (v + 0.5) + df
@@ -74,6 +115,7 @@ def classify_hazard(
     depth: np.ndarray[Any, Any] | float,
     velocity: np.ndarray[Any, Any] | float,
     debris_factor: float | None = None,
+    land_use: str = "conservative",
 ) -> np.ndarray[Any, Any] | HazardClass:
     """Classify water depth and velocity into HazardClass categories (1 to 4).
 
@@ -81,7 +123,7 @@ def classify_hazard(
         Categorical array (0: Dry, 1: Low, 2: Moderate, 3: High, 4: Extreme)
         or single HazardClass if scalar.
     """
-    hr = calculate_hazard_rating(depth, velocity, debris_factor=debris_factor)
+    hr = calculate_hazard_rating(depth, velocity, debris_factor=debris_factor, land_use=land_use)
 
     if isinstance(hr, (float, int)):
         if float(depth) <= 0.01:
@@ -119,6 +161,7 @@ def generate_hazard_raster(
     velocity_raster_path: str | Path,
     output_raster_path: str | Path,
     debris_factor: float | None = None,
+    land_use: str = "conservative",
 ) -> Path:
     """Generate a classified 8-bit GeoTIFF raster of flood hazard classes (0 to 4)."""
     out_p = Path(output_raster_path)
@@ -134,7 +177,9 @@ def generate_hazard_raster(
         if v_src.nodata is not None:
             velocity = np.where(velocity == v_src.nodata, 0.0, velocity)
 
-        hazard_arr = classify_hazard(depth, velocity, debris_factor=debris_factor)
+        hazard_arr = classify_hazard(
+            depth, velocity, debris_factor=debris_factor, land_use=land_use
+        )
         assert isinstance(hazard_arr, np.ndarray)
 
         profile = d_src.profile.copy()

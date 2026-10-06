@@ -15,6 +15,7 @@ from pravahx.gee.flood_mapping import (
     extract_optical_water_extent,
     extract_sar_flood_extent,
     extract_unspider_sar_flood,
+    filter_connected_flood_pixels,
     process_satellite_flood_raster,
 )
 from pravahx.gee.lake_watch import LakeObservation, analyze_lake_time_series
@@ -54,9 +55,9 @@ def test_unspider_sar_flood_extraction() -> None:
             [-15.0, -15.0, -10.0],
         ]
     )
-    slope_deg = np.array(
+    slope_pct = np.array(
         [
-            [2.0, 15.0, 2.0],  # col 1 has steep slope (15 deg > 5 deg) -> masked out
+            [2.0, 8.0, 2.0],  # col 1 has steep slope (8.0% > 5.0% threshold) -> masked out
             [2.0, 2.0, 2.0],
         ]
     )
@@ -71,18 +72,35 @@ def test_unspider_sar_flood_extraction() -> None:
         post_event_backscatter_db=post_sar,
         pre_event_backscatter_db=pre_sar,
         ratio_threshold=1.25,
-        slope_array_deg=slope_deg,
+        slope_array_percent=slope_pct,
         hand_array_m=hand_m,
+        min_connected_pixels=0,  # disable connected size filter for small pixel-level matrix test
     )
 
-    # (0, 0): drop 5dB, slope 2 deg, HAND 5m -> Flooded (1)
+    # (0, 0): drop 5dB, slope 2%, HAND 5m -> Flooded (1)
     assert mask[0, 0] == 1
-    # (0, 1): drop 5dB, but slope 15 deg -> Masked out (0)
+    # (0, 1): drop 5dB, but slope 8% (> 5%) -> Masked out (0)
     assert mask[0, 1] == 0
-    # (1, 0): drop 5dB, but HAND 25m -> Masked out (0)
+    # (1, 0): drop 5dB, but HAND 25m (PravahX filter) -> Masked out (0)
     assert mask[1, 0] == 0
-    # (1, 1): drop 5dB, slope 2 deg, HAND 5m -> Flooded (1)
+    # (1, 1): drop 5dB, slope 2%, HAND 5m -> Flooded (1)
     assert mask[1, 1] == 1
+
+
+def test_unspider_connected_pixel_filter() -> None:
+    # A 10x10 binary grid
+    grid = np.zeros((10, 10), dtype=np.uint8)
+    # Blob 1: size 3 (<= 8 neighbors) -> should be removed
+    grid[1:4, 1] = 1
+    # Blob 2: size 12 (> 8 neighbors) -> should be retained
+    grid[5:9, 5:8] = 1
+
+    filtered = filter_connected_flood_pixels(grid, min_connected_pixels=8)
+
+    # Small blob is eliminated
+    assert np.all(filtered[1:4, 1] == 0)
+    # Large blob is retained
+    assert np.all(filtered[5:9, 5:8] == 1)
 
 
 def test_sar_flood_extraction() -> None:

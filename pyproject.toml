@@ -43,6 +43,7 @@ dev = [
     "mypy>=1.13,<2",
     "pre-commit>=4.0,<5",
     "types-PyYAML>=6.0",
+    "matplotlib>=3.8",
 ]
 backend = [
     "fastapi>=0.115,<1",

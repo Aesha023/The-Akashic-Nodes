@@ -139,6 +139,7 @@ module = [
     "PIL.*",
     "hydrolib.*",
     "meshkernel.*",
+    "ee.*",
 ]
 ignore_missing_imports = true
 

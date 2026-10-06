@@ -29,6 +29,12 @@ class GEEClient:
         )
         self.project = project or os.environ.get("GEE_PROJECT_ID") or os.environ.get("EE_PROJECT")
         self._is_initialized = False
+        self._last_error: str | None = None
+
+    @property
+    def last_error(self) -> str | None:
+        """Return the last error message encountered during initialization."""
+        return self._last_error
 
     def initialize(self) -> bool:
         """Initialize GEE if credentials are valid and ee package is available.
@@ -36,7 +42,7 @@ class GEEClient:
         Returns True if live GEE is authenticated, False if offline/mock fallback.
         """
         try:
-            import ee  # type: ignore
+            import ee
 
             if self.service_account and self.key_file:
                 key_path = Path(self.key_file)
@@ -45,17 +51,23 @@ class GEEClient:
                         f"GEE service account key file not found: {key_path}",
                         detail={"key_file": str(key_path)},
                     )
-                credentials = ee.ServiceAccountCredentials(self.service_account, str(key_path))
-                ee.Initialize(credentials, project=self.project)
-                self._is_initialized = True
-                return True
+                try:
+                    credentials = ee.ServiceAccountCredentials(self.service_account, str(key_path))
+                    ee.Initialize(credentials, project=self.project)
+                    self._is_initialized = True
+                    return True
+                except Exception as exc:
+                    self._last_error = str(exc)
+                    self._is_initialized = False
+                    return False
             else:
                 # Attempt default auth
                 try:
                     ee.Initialize(project=self.project)
                     self._is_initialized = True
                     return True
-                except Exception:
+                except Exception as exc:
+                    self._last_error = str(exc)
                     self._is_initialized = False
                     return False
         except ImportError:

@@ -30,6 +30,7 @@ dependencies = [
     "click>=8.1.7,<9",
     "structlog>=24.4.0",
     "rich>=13.9,<14",
+    "pillow>=10.0",
 ]
 
 [project.optional-dependencies]
@@ -120,6 +121,7 @@ module = [
     "whitebox.*",
     "pystac_client.*",
     "structlog.*",
+    "PIL.*",
 ]
 ignore_missing_imports = true
 

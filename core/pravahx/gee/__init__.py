@@ -5,6 +5,7 @@ from pravahx.gee.flood_mapping import (
     FloodExtractionResult,
     extract_optical_water_extent,
     extract_sar_flood_extent,
+    extract_unspider_sar_flood,
     process_satellite_flood_raster,
 )
 from pravahx.gee.lake_watch import (
@@ -28,6 +29,7 @@ __all__ = [
     "calculate_flood_extent_metrics",
     "extract_optical_water_extent",
     "extract_sar_flood_extent",
+    "extract_unspider_sar_flood",
     "process_satellite_flood_raster",
     "score_simulation_against_satellite",
 ]

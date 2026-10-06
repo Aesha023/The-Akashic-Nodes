@@ -14,6 +14,7 @@ from pravahx.gee.client import GEEClient
 from pravahx.gee.flood_mapping import (
     extract_optical_water_extent,
     extract_sar_flood_extent,
+    extract_unspider_sar_flood,
     process_satellite_flood_raster,
 )
 from pravahx.gee.lake_watch import LakeObservation, analyze_lake_time_series
@@ -31,6 +32,57 @@ def test_gee_client_unconfigured() -> None:
     connected = client.initialize()
     assert isinstance(connected, bool)
     assert client.is_connected == connected
+
+
+def test_unspider_sar_flood_extraction() -> None:
+    # Pre-event: -10 dB -> linear power ~ 0.1
+    # Post-event: -15 dB -> linear power ~ 0.0316 -> ratio = 0.1 / 0.0316 = 3.16 >= 1.25 -> Flood
+    # Flat ground: slope = 2 deg, HAND = 5m
+    pre_sar = np.array(
+        [
+            [-10.0, -10.0, -9.0],
+            [-10.0, -10.0, -9.0],
+        ]
+    )
+    post_sar = np.array(
+        [
+            [
+                -15.0,
+                -15.0,
+                -10.0,
+            ],  # col 0: drop 5dB (ratio ~3.16), col 1: drop 5dB, col 2: drop 1dB (ratio ~1.258)
+            [-15.0, -15.0, -10.0],
+        ]
+    )
+    slope_deg = np.array(
+        [
+            [2.0, 15.0, 2.0],  # col 1 has steep slope (15 deg > 5 deg) -> masked out
+            [2.0, 2.0, 2.0],
+        ]
+    )
+    hand_m = np.array(
+        [
+            [5.0, 5.0, 5.0],
+            [25.0, 5.0, 5.0],  # row 1 col 0 has high HAND (25m > 15m) -> masked out
+        ]
+    )
+
+    mask = extract_unspider_sar_flood(
+        post_event_backscatter_db=post_sar,
+        pre_event_backscatter_db=pre_sar,
+        ratio_threshold=1.25,
+        slope_array_deg=slope_deg,
+        hand_array_m=hand_m,
+    )
+
+    # (0, 0): drop 5dB, slope 2 deg, HAND 5m -> Flooded (1)
+    assert mask[0, 0] == 1
+    # (0, 1): drop 5dB, but slope 15 deg -> Masked out (0)
+    assert mask[0, 1] == 0
+    # (1, 0): drop 5dB, but HAND 25m -> Masked out (0)
+    assert mask[1, 0] == 0
+    # (1, 1): drop 5dB, slope 2 deg, HAND 5m -> Flooded (1)
+    assert mask[1, 1] == 1
 
 
 def test_sar_flood_extraction() -> None:

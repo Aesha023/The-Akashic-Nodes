@@ -132,9 +132,23 @@
 - Deviations from the build spec: None
 - Tests: 102 unit tests passing across the repository. Mypy (50 source files) and Ruff 100% clean.
 - Measured results: Resampling, metric calculations, agreement classification, and ensemble percentiles verified on synthetic test rasters and passing all assertions.
-- Known issues and limits: None for Phase 5.
-- Requirement IDs advanced: R1, R2, R4, R5
-- Feature IDs advanced: F09 (Comparison and agreement), F10 (Uncertainty & ensemble aggregation), F12 (Adaptive refinement)
+### Phase 6: Orchestrator and Pipeline Automation (status: done)
+- Built:
+  - `core/pravahx/pipeline/checkpoint.py` (`CheckpointManager`, `CheckpointData` managing disk-based stage checkpoints with artifact SHA-256 hash verification and resumption).
+  - `core/pravahx/pipeline/workflow.py` (`WorkflowOrchestrator` coordinating data preparation, breach modeling, cascade analysis, multi-tier simulation, comparison, and manifest generation).
+  - `core/pravahx/pipeline/tasks.py` (`run_scenario_sync`, `run_scenario_task` with Celery background worker support and progress tracking).
+  - `core/pravahx/pipeline/__init__.py` (Package exports).
+  - `core/pravahx/breach/__init__.py` (Standardized breach exports).
+  - `tests/unit/test_workflow.py` (5 unit tests covering checkpointing, full workflow execution, stage resumption, and synchronous task runner).
+- Decisions:
+  - Enforced disk checkpoint verification against SHA-256 artifact digests to invalidate stale or tampered checkpoints on resumption.
+  - Progress updates stream percentage and message strings via callback hook compatible with Celery and WebSocket push notifications.
+- Deviations from the build spec: None
+- Tests: 107 unit tests passing across the repository. Mypy (54 source files) and Ruff 100% clean.
+- Measured results: Complete scenario pipeline execution creates verified `manifest.json`, CSV hydrograph, and cascade summary artifacts with 0 hash discrepancies.
+- Known issues and limits: None for Phase 6.
+- Requirement IDs advanced: R1, R2, R4, R5, R8
+- Feature IDs advanced: F01, F02, F03, F11
 
 ## Environment
 - Dependency versions (pinned):
@@ -156,5 +170,6 @@
 - None at this time.
 
 ## Next steps
-- Proceed to Phase 6: Orchestrator and Pipeline Automation (Celery task workflows, Redis state management, multi-tier execution graph, checkpointing, and error recovery).
+- Proceed to Phase 7: Backend API, Authentication, and Storage (FastAPI endpoints, JWT auth, RBAC, scenario CRUD, job dispatch, and TiTiler COG routing).
+
 

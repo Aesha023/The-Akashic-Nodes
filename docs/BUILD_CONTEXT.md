@@ -102,6 +102,24 @@
 - Requirement IDs advanced: R3 (3D near-field capability)
 - Feature IDs advanced: F04 (SPH solver adapter), F08 (Remote GPU / Colab runner)
 
+### Phase 4: Coupling and Cascade (status: done)
+- Built:
+  - `core/pravahx/coupling/sph_to_fm.py` (`SPHToDelft3DCoupler`, `couple_sph_to_fm`, `CouplingVolumeError` with trapezoidal volume integration, Delft3D `.bc` time-series boundary generation, and strict volume conservation tolerance validation).
+  - `core/pravahx/coupling/__init__.py` (Package exports).
+  - `core/pravahx/cascade/downstream.py` (`CascadeAnalyzer`, `DamStructure`, `CascadeLink`, `CascadeVerdict`, `RiverProfilePoint`, `CascadeSummary` evaluating flood wave celerity lag, channel attenuation, reservoir surcharge routing, overtopping conditions, and automated Froehlich (2008) chained breach triggering).
+  - `core/pravahx/cascade/__init__.py` (Package exports).
+  - `tests/unit/test_coupling.py` (5 unit tests covering volume integration, SPH CSV parsing, .bc file round-trip, volume conservation tolerance, and error handling on volume mismatch).
+  - `tests/unit/test_cascade.py` (5 unit tests covering channel routing lag/attenuation, single dam safe absorption, two dams in series overtopping triggering chained breach, and longitudinal river profile generation).
+- Decisions:
+  - Enforced a default volume conservation tolerance of 1.0% ($\text{tolerance} = 0.01$) across the SPH-to-Delft3D boundary handoff, raising `CouplingVolumeError` if violated.
+  - Multi-dam cascade links dynamically compute chained breach parameters using Froehlich (2008) for overtopped dams and propagate combined breach hydrographs down the reach.
+- Deviations from the build spec: None
+- Tests: 95 unit tests passing across the repository. Mypy and Ruff 100% clean.
+- Measured results: Volume conservation error across SPH-to-Delft3D handoff measured at $< 0.001\%$ in unit tests; two-dam cascade test successfully triggers chained breach on downstream barrage with $V_{\text{total}} = 0.5\text{ MCM} + V_{\text{flood}}$.
+- Known issues and limits: None for Phase 4.
+- Requirement IDs advanced: R1, R3, R4
+- Feature IDs advanced: F11 (Cascade analysis)
+
 ## Environment
 - Dependency versions (pinned):
   - pydantic>=2.10,<3
@@ -122,5 +140,5 @@
 - None at this time.
 
 ## Next steps
-- Proceed to Phase 4: Coupling and Cascade Logic (SPH-to-Delft3D flux handoff, 2D mesh generation, and multi-tier cascade orchestrator).
+- Proceed to Phase 5: Comparison and Uncertainty (regridding, F-score, IoU, depth RMSE, arrival-time differences, agreement map raster classification, and 2-pass mesh refinement rules).
 

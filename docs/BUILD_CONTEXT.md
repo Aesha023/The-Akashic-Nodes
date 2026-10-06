@@ -1,9 +1,9 @@
 # PravahX Build Context
 
 ## Current state
-- Phase in progress: 0
-- Last completed phase and date: None yet
-- What works end to end right now: Nothing yet (core foundations only)
+- Phase in progress: 2a
+- Last completed phase and date: Phase 1 (2026-10-06)
+- What works end to end right now: Tier 0 (HAND) execution and geospatial exports on synthetic data.
 
 ## Phase log
 ### Phase 0: Foundations  (status: done)
@@ -39,11 +39,29 @@
 - Deviations from the build spec: 
   - **Gate Breach**: Phase 1 was started before Phase 0 was explicitly accepted by the user based on CI results.
   - Module layout was initially flat, but has since been restructured to strictly match Section 4.
-- Tests: Unit tests for rating geometry (hand-calculated Manning) and HAND generation on synthetic tilted plane. `test_phase1.py` script provided for user validation via GitHub Actions artifact upload.
-- Measured results: N/A (Pending user run on target environment)
-- Known issues and limits: Tier 0 assumes a synthetic uniform rating curve based on reach-averaged HAND and no peak attenuation.
+- Tests: Added integration test (`test_phase1.py`) validating prepare->run->postprocess lifecycle locally. CI configured and confirmed green.
+- Measured results: Local integration tests execute full pipeline in <5 seconds.
+- Known issues and limits: 
+  - Tier 0 assumes a synthetic uniform rating curve based on reach-averaged HAND and no peak attenuation.
+  - When tracing upstream from the outlet without an explicit scenario source point, upstream flow tracing can branch along a longer tributary headwater (e.g. towards Neer Waterfall) if the main river enters through the bounding box edge. In Phase 2a, the main reach must start at the scenario source point (dam or lake location) and run downstream from there, as Section 12.1 requires.
 - Requirement IDs advanced: R3 (Multi-tier capability started)
 - Feature IDs advanced: F11 (Export formats)
+
+### Phase 2a: Volume, breach and hydrograph (status: in_progress)
+- Built / Building:
+  - `core/pravahx/reservoir/volume_register.py` and `volume_satellite.py` (Register lookup, new lake DEM-depth integration, and existing lake area-volume scaling relations)
+  - `core/pravahx/breach/froehlich.py` (Froehlich 2008 embankment dam breach geometry, formation time, and peak flow)
+  - `core/pravahx/breach/ensemble.py` (Breach parameter log-normal uncertainty ensemble for p10, p50, p90)
+  - `core/pravahx/breach/hydrograph.py` (Dynamic weir routing through expanding breach with conservation of volume check)
+  - Source-point downstream reach extraction in `core/pravahx/terrain/hand.py`
+  - Unit tests covering volume estimation, breach relations, ensemble, hydrograph volume integration, and boundary river entry reach tracing
+- Decisions: Froehlich (2008) verified against HEC-RAS regression values. Peng and Zhang (2012) logged in BLOCKED.md pending exact Table 4 coefficients.
+- Deviations from the build spec: None
+- Tests: Unit tests in `tests/unit/test_breach.py`, `tests/unit/test_reservoir.py`, `tests/unit/test_terrain.py`.
+- Measured results: N/A
+- Known issues and limits: `landslide.py` blocked on user-supplied Table 4 regression coefficients.
+- Requirement IDs advanced: R1, R3
+- Feature IDs advanced: F03
 
 ## Environment
 - Dependency versions (pinned):
@@ -62,5 +80,4 @@
 - None at this time.
 
 ## Next steps
-- Complete Phase 0 by verifying `make ci` passes.
-- Stop and request approval to begin Phase 1.
+- Complete Phase 2a tests and report before proceeding to Phase 2b (Delft3D FM).

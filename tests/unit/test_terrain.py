@@ -269,3 +269,68 @@ def test_synthetic_main_and_side_valley_hand(tmp_path: Path) -> None:
     stage = 13.3
     assert hand[10, 6] < stage, "Tributary mouth should be flooded (backwater)"
     assert hand[10, 18] > stage, "Upper tributary should NOT be flooded"
+
+
+def test_main_reach_from_source_point_at_domain_boundary(tmp_path: Path) -> None:
+    """Test reach extraction when the main river enters through the domain boundary.
+
+    If traced upstream from the outlet, a longer side tributary might be selected.
+    When a scenario source point (dam/lake) is specified at the boundary inlet,
+    the reach must start at that source point and trace downstream along the main stem.
+    """
+    dem_path = tmp_path / "boundary_entry_dem.tif"
+    dem = np.zeros((20, 20), dtype=np.float32)
+
+    # Main river canyon along col 5 sloping downwards from North (row 0) to South (row 19)
+    for r in range(20):
+        for c in range(20):
+            main_slope = (20 - r) * 1.5
+            main_v = abs(c - 5) * 3.0
+            dem[r, c] = 100.0 + main_slope + main_v
+
+            # Side tributary entering from East (row 10, col 6..19)
+            if r == 10 and c > 5:
+                # Tributary canyon carved into eastern mountain
+                trib_slope = (c - 5) * 0.5
+                dem[r, c] = 100.0 + (20 - 10) * 1.5 + trib_slope
+
+    meta = {
+        "driver": "GTiff",
+        "height": 20,
+        "width": 20,
+        "count": 1,
+        "dtype": rasterio.float32,
+        "nodata": -9999.0,
+        "transform": rasterio.transform.from_origin(0, 20, 1, 1),
+        "crs": "EPSG:32644",
+    }
+    with rasterio.open(dem_path, "w", **meta) as dst:
+        dst.write(dem, 1)
+
+    # Source point at North boundary inlet: (X=5.5, Y=19.5) -> maps to (row=0, col=5)
+    source_coords = (5.5, 19.5)
+
+    hand_path = compute_hand(
+        dem_path,
+        tmp_path,
+        accumulation_threshold=5,
+        source_point=source_coords,
+    )
+    assert hand_path.exists()
+
+    with rasterio.open(tmp_path / "main_reach.tif") as src:
+        main_reach = src.read(1)
+
+    reach_rows, reach_cols = np.where(main_reach > 0)
+
+    # All reach cells must follow the main river along col 5
+    assert len(reach_cols) > 0
+    assert np.all(reach_cols == 5), (
+        f"Expected main reach along col 5, found cols: {np.unique(reach_cols)}"
+    )
+    # Reach must start at the boundary inlet (row 0) and extend to the outlet (row 19)
+    assert 0 in reach_rows
+    assert 19 in reach_rows
+
+    # The eastern tributary (cols 6..19) must NOT be part of the main reach
+    assert not np.any(main_reach[:, 6:])

@@ -121,9 +121,7 @@ def extract_main_reach(
     main_mask = np.zeros_like(accum, dtype=np.uint8)
 
     if source_point is not None:
-        inv_trans = ~trans
-        src_c, src_r = inv_trans * source_point
-        start_r, start_c = round(src_r), round(src_c)
+        start_r, start_c = rasterio.transform.rowcol(trans, source_point[0], source_point[1])
         start_r = max(0, min(height - 1, start_r))
         start_c = max(0, min(width - 1, start_c))
 

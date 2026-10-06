@@ -33,7 +33,6 @@ from typing import Any
 import numpy as np
 import rasterio
 from pydantic import BaseModel
-from scipy.ndimage import label  # type: ignore[import-untyped]
 
 
 class FloodExtractionResult(BaseModel):
@@ -59,16 +58,50 @@ def filter_connected_flood_pixels(
     """
     if min_connected_pixels <= 0:
         return binary_mask
-    structure = np.ones((3, 3), dtype=int)
-    labeled_arr, num_features = label(binary_mask > 0, structure=structure)
-    if num_features == 0:
-        return binary_mask
-    counts = np.bincount(labeled_arr.ravel())
-    # Components with count <= min_connected_pixels are eliminated
-    valid_mask = counts > min_connected_pixels
-    valid_mask[0] = False  # background
-    res: np.ndarray[Any, Any] = valid_mask[labeled_arr].astype(np.uint8)
-    return res
+
+    try:
+        from scipy.ndimage import label  # type: ignore[import-untyped]
+
+        structure = np.ones((3, 3), dtype=int)
+        labeled_arr, num_features = label(binary_mask > 0, structure=structure)
+        if num_features == 0:
+            return binary_mask
+        counts = np.bincount(labeled_arr.ravel())
+        valid_mask = counts > min_connected_pixels
+        valid_mask[0] = False
+        res: np.ndarray[Any, Any] = valid_mask[labeled_arr].astype(np.uint8)
+        return res
+    except ImportError:
+        pass
+
+    # Pure NumPy BFS fallback for lightweight or air-gapped environments without scipy
+    mask = (binary_mask > 0).astype(bool)
+    h, w = mask.shape
+    visited = np.zeros((h, w), dtype=bool)
+    output = np.zeros((h, w), dtype=np.uint8)
+
+    for r in range(h):
+        for c in range(w):
+            if mask[r, c] and not visited[r, c]:
+                component: list[tuple[int, int]] = []
+                queue = [(r, c)]
+                visited[r, c] = True
+                while queue:
+                    curr_r, curr_c = queue.pop()
+                    component.append((curr_r, curr_c))
+                    for dr in (-1, 0, 1):
+                        for dc in (-1, 0, 1):
+                            if dr == 0 and dc == 0:
+                                continue
+                            nr, nc = curr_r + dr, curr_c + dc
+                            if 0 <= nr < h and 0 <= nc < w and mask[nr, nc] and not visited[nr, nc]:
+                                visited[nr, nc] = True
+                                queue.append((nr, nc))
+                if len(component) > min_connected_pixels:
+                    for cr, cc in component:
+                        output[cr, cc] = 1
+
+    return output
 
 
 def extract_unspider_sar_flood(

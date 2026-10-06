@@ -1,45 +1,66 @@
-"""Unit tests for ensemble generator."""
+"""Unit tests for multi-model breach regression ensemble."""
 
-import math
+from __future__ import annotations
 
-from pravahx.breach.ensemble import generate_ensemble
+import pytest
+
+from pravahx.breach.ensemble import (
+    calc_froehlich_1995,
+    calc_froehlich_2008,
+    calc_macdonald_langridge_monopolis_1984,
+    calc_von_thun_gillette_1990,
+    compute_breach_ensemble,
+)
 
 
-def test_generate_ensemble() -> None:
-    """Verify log-normal ensemble generation."""
-    b_base = 100.0
-    t_base = 2.0
-    se_b = 0.3  # Standard error of ln(B)
-    se_t = 0.5  # Standard error of ln(t)
+def test_individual_regressions() -> None:
+    """Verify individual regression equations compute positive physical values."""
+    vol = 10.0e6  # 10 MCM
+    h = 30.0  # 30 m
 
-    ensemble = generate_ensemble(b_base, t_base, se_b, se_t)
+    f08 = calc_froehlich_2008(vol, h, mode="overtopping")
+    f95 = calc_froehlich_1995(vol, h, mode="overtopping")
+    vtg = calc_von_thun_gillette_1990(vol, h, mode="overtopping")
+    mlm = calc_macdonald_langridge_monopolis_1984(vol, h, mode="overtopping")
+
+    for model in [f08, f95, vtg, mlm]:
+        assert model.average_width_m > 0.0
+        assert model.formation_time_hr > 0.0
+        assert model.side_slope_z > 0.0
+
+
+def test_compute_breach_ensemble() -> None:
+    """Verify multi-model ensemble derives p10, p50, p90 quantiles from regression spread."""
+    vol = 10.0e6
+    h = 30.0
+
+    ensemble = compute_breach_ensemble(vol, h, mode="overtopping")
 
     assert "p10" in ensemble
     assert "p50" in ensemble
     assert "p90" in ensemble
 
-    # p50 should be the base values
-    assert abs(ensemble["p50"].average_width_m - b_base) < 1e-5
-    assert abs(ensemble["p50"].formation_time_hr - t_base) < 1e-5
+    p10 = ensemble["p10"]
+    p50 = ensemble["p50"]
+    p90 = ensemble["p90"]
 
-    # p10 should be smaller
-    assert ensemble["p10"].average_width_m < b_base
-    assert ensemble["p10"].formation_time_hr < t_base
+    # Width quantile order: p10 <= p50 <= p90
+    assert p10.average_width_m <= p50.average_width_m <= p90.average_width_m
 
-    # p90 should be larger
-    assert ensemble["p90"].average_width_m > b_base
-    assert ensemble["p90"].formation_time_hr > t_base
+    # Formation time quantile order: p10 <= p50 <= p90
+    assert p10.formation_time_hr <= p50.formation_time_hr <= p90.formation_time_hr
 
-    # Verify exact math for p90
-    expected_b_90 = b_base * math.exp(1.28155 * se_b)
-    expected_t_90 = t_base * math.exp(1.28155 * se_t)
-
-    assert abs(ensemble["p90"].average_width_m - expected_b_90) < 1e-5
-    assert abs(ensemble["p90"].formation_time_hr - expected_t_90) < 1e-5
+    # Check models list
+    assert len(p50.models_used) == 4
+    assert "Froehlich (2008)" in p50.models_used
+    assert "Froehlich (1995)" in p50.models_used
+    assert "Von Thun and Gillette (1990)" in p50.models_used
+    assert "MacDonald and Langridge-Monopolis (1984)" in p50.models_used
 
 
-def test_unsupported_quantile() -> None:
-    import pytest
-
-    with pytest.raises(ValueError, match="Unsupported quantile"):
-        generate_ensemble(100, 2, 0.1, 0.1, quantiles=["p99"])
+def test_compute_breach_ensemble_invalid_inputs() -> None:
+    """Non-positive volume or height raises ValueError."""
+    with pytest.raises(ValueError):
+        compute_breach_ensemble(-1e6, 20.0)
+    with pytest.raises(ValueError):
+        compute_breach_ensemble(1e6, -20.0)

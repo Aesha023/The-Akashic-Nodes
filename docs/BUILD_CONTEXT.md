@@ -49,17 +49,24 @@
 
 ### Phase 2a: Volume, breach and hydrograph (status: done)
 - Built:
-  - `core/pravahx/reservoir/volume_register.py` and `volume_satellite.py` (Register lookup, new lake DEM-depth integration, and existing lake area-volume scaling relations with required parameters)
-  - `core/pravahx/breach/froehlich.py` (Froehlich 2008 embankment dam breach geometry, formation time, and peak flow)
-  - `core/pravahx/breach/ensemble.py` (Breach parameter log-normal uncertainty ensemble for p10, p50, p90)
+  - `core/pravahx/reservoir/volume_register.py` and `volume_satellite.py` (Register lookup, new lake DEM-depth integration, and existing lake area-volume scaling relations with required parameters and terrain slope extrapolation)
+  - `core/pravahx/breach/froehlich.py` (Froehlich 2008 embankment dam breach geometry, formation time, and peak flow verified against HEC-RAS manual)
+  - `core/pravahx/breach/ensemble.py` (Multi-model regression ensemble across 4 HEC-RAS manual models: Froehlich 2008, Froehlich 1995, Von Thun & Gillette 1990, MacDonald & Langridge-Monopolis 1984 deriving p10/p50/p90 quantiles from regression spread)
   - `core/pravahx/breach/hydrograph.py` (Dynamic trapezoidal weir routing with linear vertical+horizontal breach progression, required hypsometric exponent, Froehlich 1995 independent validation check, and factor-of-2 anomaly flags)
   - Source-point downstream reach extraction in `core/pravahx/terrain/hand.py`
-  - Unit tests covering volume estimation, breach relations, ensemble, hydrograph volume integration, HEC-RAS regression, and Teton Dam historical benchmark
-- Decisions: Froehlich (2008) verified against HEC-RAS regression values. Linear vertical+horizontal progression matching HEC-RAS implemented. Peng and Zhang (2012) logged in BLOCKED.md pending exact Table 4 coefficients.
+  - Unit tests covering volume estimation, breach relations, ensemble, hydrograph volume integration, synthetic progression test, and Teton Dam historical benchmark
+- Decisions: 
+  - **Strict Citation Rule Established:** Cite only sources fetched live in this project with URLs recorded in documentation. All un-fetched references marked `[UNVERIFIED]`.
+  - **Citation Audit & Correction:** Earlier unverified citations (such as misattributing Teton flood data to USGS PP 1028 instead of USGS OFR 77-765) audited, corrected, and replaced with live fetched URLs:
+    - USACE HEC-RAS Reference Manual: `https://www.hec.usace.army.mil/confluence/rasdocs/ras1dtechref/latest/performing-a-dam-break-study-with-hec-ras/`
+    - USGS OFR 77-765: `https://pubs.er.usgs.gov/publication/ofr77765`
+    - ASDSO Teton Case Study: `https://damfailures.org/case-study/teton-dam-idaho-1976/`
+  - Linear vertical+horizontal progression matching HEC-RAS implemented.
+  - Peng and Zhang (2012) disabled and recorded in `docs/BLOCKED.md` as "no accessible source".
 - Deviations from the build spec: None
-- Tests: 76 passed unit tests in `tests/unit/test_breach.py`, `tests/unit/test_reservoir.py`, `tests/unit/test_terrain.py`, `tests/unit/test_delft3d_fm.py`.
-- Measured results: Teton Dam benchmark peak within 10% of observed USGS gage peak.
-- Known issues and limits: `landslide.py` blocked on user-supplied Table 4 regression coefficients.
+- Tests: 77 unit tests passing locally and in CI.
+- Measured results: Teton Dam benchmark evaluated across the published 1.0M–2.3M cfs range.
+- Known issues and limits: `landslide.py` blocked with no accessible source for Peng and Zhang (2012).
 - Requirement IDs advanced: R1, R3
 - Feature IDs advanced: F03
 

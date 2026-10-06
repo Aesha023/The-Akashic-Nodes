@@ -13,5 +13,6 @@ def compute_peng_zhang_2012(
         (Landslides 9(1):13-31, DOI 10.1007/s10346-011-0271-y) are provided by the user.
     """
     raise NotImplementedError(
-        "Method not available: Peng and Zhang (2012) coefficients not yet supplied."
+        "Method not available: Peng and Zhang (2012) equations not available from an "
+        "accessible source."
     )

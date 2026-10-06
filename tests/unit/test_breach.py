@@ -83,8 +83,8 @@ def test_hydrograph_integration() -> None:
     assert hydrograph[-1]["volume_remaining_m3"] < 0.01 * vol
 
 
-def test_hec_ras_hydrograph_routing_progression_modes() -> None:
-    """Verify routing on HEC-RAS parameters under both progression modes."""
+def test_synthetic_hydrograph_routing_progression_modes() -> None:
+    """Verify routing mechanics under both progression modes on synthetic reservoir."""
     vol = 357.98e6
     h = 42.9
     params = compute_froehlich_2008(vol, h, mode="overtopping")
@@ -100,11 +100,10 @@ def test_hec_ras_hydrograph_routing_progression_modes() -> None:
         progression_mode="horizontal_only",
         dt_hr=0.01,
     )
-    # Peak is ~48,000 m3/s at ~1.77 h
     assert 45_000.0 < hg_horiz.peak_discharge_m3s < 50_000.0
     assert 1.6 < hg_horiz.time_to_peak_hr < 1.9
 
-    # 2. Linear vertical + horizontal progression mode (HEC-RAS standard)
+    # 2. Linear vertical + horizontal progression mode
     hg_vert = route_hydrograph(
         initial_volume_m3=vol,
         dam_height_m=h,
@@ -115,7 +114,6 @@ def test_hec_ras_hydrograph_routing_progression_modes() -> None:
         progression_mode="vertical_and_horizontal",
         dt_hr=0.01,
     )
-    # Peak is ~65,600 m3/s at ~2.47 h
     assert 60_000.0 < hg_vert.peak_discharge_m3s < 70_000.0
     assert abs(hg_vert.time_to_peak_hr - params.formation_time_hr) < 0.05
 
@@ -131,23 +129,23 @@ def test_hec_ras_hydrograph_routing_progression_modes() -> None:
 def test_teton_dam_historical_benchmark() -> None:
     """Benchmark routing against Teton Dam (1976) published historical failure.
 
-    Primary literature: USGS Professional Paper 1028 (1977); Ray et al. (1976);
-    Wahl (1998, Table 1).
-    Parameters: V_w = 251.4 MCM, h_w = 76.2 m, mode = piping.
-    Observed Peak: ~65,129 m3/s.
-    Observed Formation Time: ~1.25 hr.
+    Primary literature: USGS Professional Paper 1028 (1977, p. 55 Table 3);
+    Wahl (1998, Table 1, p. 11).
+    Inputs: V_w = 251.4 MCM, h_w = 76.2 m, mode = piping.
+    Observed Post-Failure Peak Estimate (St. Anthony Gaging Station): 65,129 m3/s (2.3M cfs).
+    Observed Breach Geometry: B_avg = 151 m, t_f = 1.25 hr, z = 0.5.
     """
     vol = 251.4e6
     h = 76.2
-    q_obs = 65_129.0
+    q_obs_post_failure = 65_129.0
 
-    params = compute_froehlich_2008(volume_m3=vol, height_m=h, mode="piping")
-    # Froehlich 2008 predicts B_avg ~156.6 m, tf ~1.17 hr
-    assert 140.0 < params.average_width_m < 170.0
-    assert 1.0 < params.formation_time_hr < 1.4
+    # 1. Froehlich 2008 predicted parameters
+    params_pred = compute_froehlich_2008(volume_m3=vol, height_m=h, mode="piping")
+    assert 140.0 < params_pred.average_width_m < 170.0
+    assert 1.0 < params_pred.formation_time_hr < 1.4
 
-    # Routing with observed geometry (B_avg=151m, tf=1.25h, side_slope=0.5) and pool (m=2.0)
-    hg_teton = route_hydrograph(
+    # 2. Routing with Observed Parameters (B_avg=151m, tf=1.25h, z=0.5, m=2.0)
+    hg_obs_horiz = route_hydrograph(
         initial_volume_m3=vol,
         dam_height_m=h,
         b_avg_m=151.0,
@@ -157,9 +155,49 @@ def test_teton_dam_historical_benchmark() -> None:
         progression_mode="horizontal_only",
         dt_hr=0.005,
     )
-    # Routed peak is within 10% of observed USGS peak of 65,129 m3/s
-    error_pct = abs(hg_teton.peak_discharge_m3s - q_obs) / q_obs * 100.0
-    assert error_pct < 10.0, f"Teton routed peak error: {error_pct:.1f}%"
+    hg_obs_vert = route_hydrograph(
+        initial_volume_m3=vol,
+        dam_height_m=h,
+        b_avg_m=151.0,
+        t_f_hr=1.25,
+        reservoir_exponent=2.0,
+        side_slope_z=0.5,
+        progression_mode="vertical_and_horizontal",
+        dt_hr=0.005,
+    )
+
+    # 3. Routing with Predicted Parameters (B_avg=156.6m, tf=1.17h, z=0.7, m=2.0)
+    hg_pred_horiz = route_hydrograph(
+        initial_volume_m3=vol,
+        dam_height_m=h,
+        b_avg_m=params_pred.average_width_m,
+        t_f_hr=params_pred.formation_time_hr,
+        reservoir_exponent=2.0,
+        side_slope_z=params_pred.side_slope_z,
+        progression_mode="horizontal_only",
+        dt_hr=0.005,
+    )
+    hg_pred_vert = route_hydrograph(
+        initial_volume_m3=vol,
+        dam_height_m=h,
+        b_avg_m=params_pred.average_width_m,
+        t_f_hr=params_pred.formation_time_hr,
+        reservoir_exponent=2.0,
+        side_slope_z=params_pred.side_slope_z,
+        progression_mode="vertical_and_horizontal",
+        dt_hr=0.005,
+    )
+
+    # Verify all 4 hydrographs execute and report sane peak discharges
+    assert 55_000.0 < hg_obs_horiz.peak_discharge_m3s < 70_000.0
+    assert 75_000.0 < hg_obs_vert.peak_discharge_m3s < 90_000.0
+    assert 55_000.0 < hg_pred_horiz.peak_discharge_m3s < 70_000.0
+    assert 75_000.0 < hg_pred_vert.peak_discharge_m3s < 95_000.0
+
+    # Under horizontal_only mode with observed geometry, routed peak is within 6%
+    # of the post-failure slope-area survey estimate (65,129 m3/s)
+    err_horiz = abs(hg_obs_horiz.peak_discharge_m3s - q_obs_post_failure) / q_obs_post_failure
+    assert err_horiz < 0.08, f"Horizontal mode error: {err_horiz * 100:.2f}%"
 
 
 def test_hydrograph_requires_reservoir_exponent() -> None:

@@ -66,3 +66,31 @@ def test_get_dam_volume_not_implemented() -> None:
     """Dam register lookup raises NotImplementedError until connected."""
     with pytest.raises(NotImplementedError, match="Dam register lookup not yet implemented"):
         get_dam_volume("dam_tehri_001")
+
+
+def test_estimate_volume_from_terrain_extrapolation() -> None:
+    """Test terrain slope extrapolation and warning flag for existing unmonitored lakes."""
+    from pravahx.reservoir.volume_satellite import estimate_volume_from_terrain_extrapolation
+
+    # Create a 20x20 DEM with a flat lake in the center (100m) and 1:1 slopes outside
+    dem = np.zeros((20, 20), dtype=np.float32)
+    mask = np.zeros((20, 20), dtype=bool)
+
+    # Lake in cells [7:13, 7:13] (6x6 cells) at elevation 100.0 m
+    mask[7:13, 7:13] = True
+    dem[:, :] = 100.0
+
+    # Surrounding hills climb 20 m over 5 cells
+    for r in range(20):
+        for c in range(20):
+            if not mask[r, c]:
+                dist = max(0, max(abs(r - 9.5), abs(c - 9.5)) - 2.5)
+                dem[r, c] = 100.0 + dist * 4.0
+
+    vol, m, warning = estimate_volume_from_terrain_extrapolation(
+        dem=dem, mask=mask, cell_area_m2=900.0, buffer_cells=3, assumed_m=2.0
+    )
+
+    assert vol > 0.0
+    assert m == 2.0
+    assert "High uncertainty" in warning

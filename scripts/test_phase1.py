@@ -29,8 +29,8 @@ def main() -> None:
 
     start = time.time()
 
-    # 1. Fetch DEM
-    dem_path = fetch_dem(bbox=bbox, cache_dir=work_dir)
+    # 1. Fetch DEM and reproject to metric UTM Zone 44N (EPSG:32644)
+    dem_path = fetch_dem(bbox=bbox, cache_dir=work_dir, target_crs="EPSG:32644")
 
     # 2. Compute HAND
     # With pntr=True, flow accumulation runs properly and max accum is ~27,800.

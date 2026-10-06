@@ -123,10 +123,33 @@ class TestTier0HandAdapter:
         import geopandas as gpd
         from shapely.geometry import LineString
 
-        from pravahx.export.vector import _vectorise_raster
+        from pravahx.export.vector import generate_exports
 
+        # Create HAND raster with channel at col 5, but ALSO an isolated sink at (row 0, col 0)
         hand_path = tmp_path / "hand.tif"
         _create_dummy_hand(hand_path)
+
+        # Modify HAND raster to inject an isolated low-HAND depression separated by high terrain
+        with rasterio.open(hand_path) as src:
+            hand_data = src.read(1)
+            meta = src.meta.copy()
+
+        # Place an isolated depression at (0, 0) with HAND=0
+        hand_data[0, 0] = 0.0
+        # Surrounded by high ridges (HAND=50)
+        hand_data[0, 1:4] = 50.0
+        hand_data[1:4, 0:4] = 50.0
+
+        with rasterio.open(hand_path, "w", **meta) as dst:
+            dst.write(hand_data, 1)
+
+        # Also create main_reach raster along col 5
+        main_reach = np.zeros_like(hand_data, dtype=np.uint8)
+        main_reach[:, 5] = 1
+        meta_reach = meta.copy()
+        meta_reach.update(dtype="uint8", nodata=0)
+        with rasterio.open(tmp_path / "main_reach.tif", "w", **meta_reach) as dst:
+            dst.write(main_reach, 1)
 
         ctx = RunContext(
             run_id="r_connect_check",
@@ -139,16 +162,27 @@ class TestTier0HandAdapter:
         engine = Tier0HandAdapter()
         prepared = engine.prepare(ctx)
         result = engine.run(prepared)
+        norm_output = engine.postprocess(result, ctx)
 
-        depth_path = result.output_dir / "tier0_max_depth.tif"
-        gdf_env = _vectorise_raster(depth_path, threshold=0.1)
+        exports_dir = tmp_path / "exports"
+        exported = generate_exports(norm_output, exports_dir)
+        shp_exports = [p for p in exported if p.suffix == ".shp"]
+        assert len(shp_exports) > 0
+
+        gdf_env = gpd.read_file(shp_exports[0])
+        assert not gdf_env.empty
+
+        # Explode into individual single-part polygons to ensure no detached components
+        exploded = gdf_env.explode(index_parts=False).reset_index(drop=True)
 
         # Stream channel line along x=5 (from _create_dummy_hand)
         # Dummy hand transform: from_origin(0, 10, 1, 1). x=5 is at X=5.5
         stream_line = LineString([(5.5, 0.5), (5.5, 9.5)])
         gdf_stream = gpd.GeoDataFrame({"geometry": [stream_line]}, crs=gdf_env.crs)
 
-        # All envelope polygons must intersect the stream line
+        # All exported envelope polygons must intersect the stream line
         stream_geom = gdf_stream.geometry.iloc[0]
-        for geom in gdf_env.geometry:
-            assert geom.intersects(stream_geom), "Inundation patch is detached from stream channel!"
+        for geom in exploded.geometry:
+            assert geom.intersects(stream_geom), (
+                "Exported inundation patch is detached from stream channel!"
+            )

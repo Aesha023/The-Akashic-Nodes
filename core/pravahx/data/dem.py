@@ -42,6 +42,7 @@ def fetch_dem(
     bbox: tuple[float, float, float, float],
     cache_dir: Path,
     crs: str = "EPSG:4326",
+    target_crs: str | None = None,
 ) -> Path:
     """Fetch and crop Copernicus GLO-30 DEM for a bounding box.
 
@@ -49,6 +50,7 @@ def fetch_dem(
         bbox: (minx, miny, maxx, maxy) in the given CRS.
         cache_dir: Directory to store the downloaded and merged DEM.
         crs: CRS of the bounding box (default EPSG:4326).
+        target_crs: Optional target CRS to reproject the output DEM to (e.g., EPSG:32644).
 
     Returns:
         Path to the cached, cropped GeoTIFF.
@@ -65,8 +67,10 @@ def fetch_dem(
     else:
         wgs_bounds = bbox
 
+    effective_target_crs = target_crs or (crs if crs != "EPSG:4326" else None)
+    crs_tag = f"_{effective_target_crs.replace(':', '_')}" if effective_target_crs else ""
     cache_key = _hash_bbox(wgs_bounds)
-    out_path = cache_dir / f"dem_{cache_key}.tif"
+    out_path = cache_dir / f"dem_{cache_key}{crs_tag}.tif"
 
     if out_path.exists():
         logger.info(f"Using cached DEM: {out_path}")
@@ -99,16 +103,17 @@ def fetch_dem(
 
     # Use rasterio to open all remote URLs and merge them
     try:
-        src_files_to_mosaic = []
-        for url in urls:
-            src_files_to_mosaic.append(rasterio.open(url))
+        with rasterio.Env(AWS_NO_SIGN_REQUEST="YES", GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR"):
+            src_files_to_mosaic = []
+            for url in urls:
+                src_files_to_mosaic.append(rasterio.open(url))
 
-        mosaic, out_trans = merge(src_files_to_mosaic, bounds=wgs_bounds)
-        out_meta = src_files_to_mosaic[0].meta.copy()
+            mosaic, out_trans = merge(src_files_to_mosaic, bounds=wgs_bounds)
+            out_meta = src_files_to_mosaic[0].meta.copy()
 
-        # Close remote sources
-        for src in src_files_to_mosaic:
-            src.close()
+            # Close remote sources
+            for src in src_files_to_mosaic:
+                src.close()
 
     except Exception as exc:
         raise DataError(f"Failed to download or merge DEM tiles: {exc}") from exc
@@ -130,16 +135,17 @@ def fetch_dem(
     with rasterio.open(wgs_path, "w", **out_meta) as dest:
         dest.write(mosaic)
 
-    # If original request was in another CRS, reproject it
-    if crs != "EPSG:4326":
-        logger.info(f"Reprojecting DEM to {crs}...")
+    # If target CRS is requested, reproject it
+    if effective_target_crs and effective_target_crs != "EPSG:4326":
+        logger.info(f"Reprojecting DEM to {effective_target_crs}...")
         ds = rioxarray.open_rasterio(wgs_path)
         if isinstance(ds, list):
             raise ValueError("Expected a single DataArray or Dataset")
-        ds_proj = ds.rio.reproject(crs)
-        # Crop exactly to the requested projected bbox
-        ds_proj = ds_proj.rio.clip_box(*bbox)
+        # Reproject to metric grid with 30m resolution
+        ds_proj = ds.rio.reproject(effective_target_crs, resolution=30.0)
         ds_proj.rio.to_raster(out_path, compress="deflate", tiled=True)
+        ds.close()
+        ds_proj.close()
         wgs_path.unlink(missing_ok=True)  # Clean up intermediate WGS84 file
     else:
         wgs_path.rename(out_path)

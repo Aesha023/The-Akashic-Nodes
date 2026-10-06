@@ -86,12 +86,55 @@ class Tier0HandAdapter(EngineAdapter):
                 hand = src.read(1)
                 meta = src.meta.copy()
                 nodata = src.nodata
-
-            mask = hand != nodata if nodata is not None else np.ones_like(hand, dtype=bool)
+            mask = (hand != nodata) & (~np.isnan(hand)) if nodata is not None else ~np.isnan(hand)
 
             # Depth = max(0, stage - hand)
             depth = np.zeros_like(hand, dtype=np.float32)
-            valid = mask & (hand < stage)
+            valid = mask & (hand >= 0) & (hand < stage)
+
+            # Spatial connectivity filtering: keep only cells connected to channel
+            main_reach_path = prepared.case_dir / "main_reach.tif"
+            if np.any(valid):
+                from collections import deque
+
+                main_reach = None
+                if main_reach_path.exists():
+                    with rasterio.open(main_reach_path) as src_reach:
+                        main_reach = src_reach.read(1)
+
+                seed_mask = (main_reach > 0) if main_reach is not None else (hand == 0)
+                seed_coords = np.argwhere(seed_mask & valid)
+                if len(seed_coords) == 0 and np.any(valid):
+                    # If channel didn't overlap valid, seed from minimum HAND cell
+                    min_h = np.min(hand[valid])
+                    seed_coords = np.argwhere((hand == min_h) & valid)
+
+                visited = np.zeros_like(valid, dtype=bool)
+                queue: deque[tuple[int, int]] = deque()
+                for sc in seed_coords:
+                    r_s, c_s = int(sc[0]), int(sc[1])
+                    visited[r_s, c_s] = True
+                    queue.append((r_s, c_s))
+
+                h_dim, w_dim = valid.shape
+                while queue:
+                    curr_r, curr_c = queue.popleft()
+                    for dr in (-1, 0, 1):
+                        for dc in (-1, 0, 1):
+                            if dr == 0 and dc == 0:
+                                continue
+                            nr, nc = curr_r + dr, curr_c + dc
+                            if (
+                                0 <= nr < h_dim
+                                and 0 <= nc < w_dim
+                                and valid[nr, nc]
+                                and not visited[nr, nc]
+                            ):
+                                visited[nr, nc] = True
+                                queue.append((nr, nc))
+
+                valid = visited
+
             depth[valid] = stage - hand[valid]
 
             # Mask out non-inundated and nodata areas completely with nodata

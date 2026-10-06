@@ -133,3 +133,139 @@ def test_asymmetric_synthetic_dem(tmp_path: Path) -> None:
     assert np.all(hand[streams > 0] == 0.0)
     # Eastern high cliff (col 18) must have large HAND, not zero
     assert np.nanmean(hand[:, 18]) > 10.0
+
+
+def test_flow_accumulation_pntr_flag(tmp_path: Path) -> None:
+    """Verify that d8_flow_accumulation with pntr=True correctly accumulates flow on D8 pointer.
+
+    Without pntr=True, WhiteboxTools treats the pointer as elevation and fails to accumulate flow.
+    """
+    import whitebox
+
+    wbt = whitebox.WhiteboxTools()
+    wbt.set_working_dir(str(tmp_path))
+    wbt.set_verbose_mode(False)
+
+    dem_path = tmp_path / "v_dem.tif"
+    _create_tilted_plane(dem_path)
+
+    # Compute filled and D8 pointer
+    wbt.fill_depressions_wang_and_liu("v_dem.tif", "filled.tif")
+    wbt.d8_pointer("filled.tif", "d8_pntr.tif")
+
+    # Flow accumulation with pntr=True
+    wbt.d8_flow_accumulation("d8_pntr.tif", "accum_correct.tif", out_type="cells", pntr=True)
+
+    with rasterio.open(tmp_path / "accum_correct.tif") as src:
+        accum_correct = src.read(1)
+
+    # With pntr=True on a 20x20 tilted V-valley, flow accumulates along col 10 reaching ~400 cells
+    max_correct = float(np.max(accum_correct))
+    assert max_correct >= 200.0, f"Expected high accumulation along channel, got {max_correct}"
+
+
+def test_channel_nodata_loud_failure(tmp_path: Path) -> None:
+    """Verify that validate_channel_nodata raises DataError when a stream cell has NoData in DEM."""
+    import pytest
+
+    from pravahx.errors import DataError
+    from pravahx.terrain.hand import validate_channel_nodata
+
+    dem_path = tmp_path / "dem_with_nodata.tif"
+    stream_path = tmp_path / "stream.tif"
+
+    dem = np.full((10, 10), 100.0, dtype=np.float32)
+    # Introduce NoData at channel cell (5, 5)
+    dem[5, 5] = -9999.0
+
+    streams = np.zeros((10, 10), dtype=np.uint8)
+    streams[5, :] = 1  # Channel along row 5
+
+    meta = {
+        "driver": "GTiff",
+        "height": 10,
+        "width": 10,
+        "count": 1,
+        "dtype": rasterio.float32,
+        "nodata": -9999.0,
+        "transform": rasterio.transform.from_origin(0, 10, 1, 1),
+        "crs": "EPSG:32644",
+    }
+    with rasterio.open(dem_path, "w", **meta) as dst:
+        dst.write(dem, 1)
+
+    meta["dtype"] = "uint8"
+    meta["nodata"] = 0
+    with rasterio.open(stream_path, "w", **meta) as dst:
+        dst.write(streams, 1)
+
+    with pytest.raises(DataError, match="NoData cell detected on stream channel"):
+        validate_channel_nodata(dem_path, stream_path)
+
+
+def test_synthetic_main_and_side_valley_hand(tmp_path: Path) -> None:
+    """Test HAND with a main valley and a steep tributary side valley.
+
+    Main valley runs along col 5 from North to South (elev 100m down to 80m).
+    Side valley enters from East at row 10 (elev climbing steeply from 90m to 160m at col 19).
+
+    HAND relative to main reach must:
+    1. Be 0.0 along the main channel (col 5).
+    2. Be small (< 10m) at the confluence mouth (row 10, col 6).
+    3. Rise steeply (> 40m) up the side valley (row 10, col 15-19), ensuring
+       that a 13m main-stem flood does not flood up the tributary.
+    """
+    dem_path = tmp_path / "main_side_valley.tif"
+    dem = np.zeros((20, 20), dtype=np.float32)
+
+    for r in range(20):
+        for c in range(20):
+            # Main valley: runs along col 5, slopes down with increasing row r
+            main_slope = (20 - r) * 1.0  # 20m drop from r=0 to r=20
+            main_v = abs(c - 5) * 2.0
+            dem[r, c] = 80.0 + main_slope + main_v
+
+            # Side valley: tributary entering at row 10 from col 6..19
+            if abs(r - 10) <= 2 and c > 5:
+                # Carve side valley into the eastern mountain, but with steep ascending bed
+                side_v = abs(r - 10) * 3.0
+                side_bed_ascent = (c - 5) * 4.0  # Climbs 4m per cell eastward
+                trib_elev = 80.0 + (20 - 10) * 1.0 + side_bed_ascent + side_v
+                dem[r, c] = min(dem[r, c], trib_elev)
+
+    meta = {
+        "driver": "GTiff",
+        "height": 20,
+        "width": 20,
+        "count": 1,
+        "dtype": rasterio.float32,
+        "nodata": -9999.0,
+        "transform": rasterio.transform.from_origin(0, 20, 1, 1),
+        "crs": "EPSG:32644",
+    }
+    with rasterio.open(dem_path, "w", **meta) as dst:
+        dst.write(dem, 1)
+
+    hand_path = compute_hand(dem_path, tmp_path, accumulation_threshold=15)
+    assert hand_path.exists()
+
+    with rasterio.open(hand_path) as src:
+        hand = src.read(1)
+
+    with rasterio.open(tmp_path / "main_reach.tif") as src:
+        main_reach = src.read(1)
+
+    # Main channel cells where stream is initiated have HAND == 0
+    assert np.any(main_reach > 0)
+    assert np.all(hand[main_reach > 0] == 0.0)
+
+    # Confluence mouth (row 10, col 6) is near the main river
+    assert hand[10, 6] < 10.0
+
+    # Upper tributary (row 10, col 18) is steep and high above the confluence
+    assert hand[10, 18] > 30.0
+
+    # Under a 13.3m flood stage, confluence mouth is flooded, but upper tributary is dry!
+    stage = 13.3
+    assert hand[10, 6] < stage, "Tributary mouth should be flooded (backwater)"
+    assert hand[10, 18] > stage, "Upper tributary should NOT be flooded"

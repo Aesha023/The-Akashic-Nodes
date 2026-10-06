@@ -189,7 +189,66 @@ For a rectangular water column of initial base width $a$ and height $h_0 = 2a$:
 
 ---
 
-## 9. Verified Project Sources
+---
+
+## 9. Multi-Tier Coupling & Multi-Dam Cascade Formulations
+
+### 9.1 SPH-to-Delft3D Flux Handoff & Volume Conservation
+At the spatial boundary where 3D SPH terminates and 2D SWE begins, the cumulative water volume $V(T)$ passing through the downstream measurement plane is integrated via the trapezoidal rule:
+$$V_{\text{SPH}} = \int_0^T Q_{\text{SPH}}(t)\,dt \approx \sum_{k=1}^N \frac{Q_k + Q_{k-1}}{2} (t_k - t_{k-1})$$
+
+The generated Delft3D FM `.bc` boundary condition time-series $Q_{\text{FM}}(t)$ must satisfy strict mass conservation:
+$$\text{Relative Error} = \frac{|V_{\text{FM}} - V_{\text{SPH}}|}{V_{\text{SPH}}} \le \epsilon_{\text{tol}} \quad (\epsilon_{\text{tol}} = 0.01 = 1.0\%)$$
+
+### 9.2 Cascade Dam Failure & Overtopping Analysis
+For cascading reservoirs connected by river reaches:
+1. **Wave Celerity & Channel Lag:** Flood wave transit time over channel distance $L$ at mean celerity $c = \sqrt{g \bar{d}} + \bar{u}$:
+   $$\Delta t_{\text{lag}} = \frac{L}{c}$$
+2. **Channel Routing Attenuation:** Peak discharge attenuation based on channel roughness and length:
+   $$Q_{\text{arriving, peak}} = Q_{\text{upstream, peak}} \cdot \exp\left(-\frac{\alpha \cdot L}{1000}\right)$$
+3. **Downstream Reservoir Surcharge Routing:**
+   $$h(t) = \left(\frac{V(t)}{K_v}\right)^{1/m}$$
+   If peak reservoir stage exceeds the dam crest ($z_{\text{peak}} > z_{\text{crest}}$), an overtopping failure is triggered. Chained breach geometry and hydrograph are computed using the verified Froehlich (2008) formulation with combined storage $V_{\text{combined}} = V_{\text{storage}} + V_{\text{flood wave}}$.
+
+---
+
+## 10. Multi-Tier Comparison, Agreement Mapping, and Uncertainty
+
+### 10.1 Spatial Extent Metrics
+Comparing Model A against Model B over binary inundated masks ($d \ge d_{\text{thresh}}$):
+- **Critical Success Index / IoU:** $\text{IoU} = \frac{TP}{TP + FP + FN}$
+- **Dice F1-Score:** $F_1 = \frac{2 \cdot TP}{2 \cdot TP + FP + FN}$
+- **Precision (Hit Rate):** $\text{Precision} = \frac{TP}{TP + FP}$
+- **Recall (Sensitivity):** $\text{Recall} = \frac{TP}{TP + FN}$
+- **False Alarm Ratio:** $\text{FAR} = \frac{FP}{TP + FP}$
+
+### 10.2 Depth and Arrival-Time Differences (Mutually Wet Cells)
+- **Depth RMSE:** $\text{RMSE}_d = \sqrt{\frac{1}{N_{TP}} \sum (d_A - d_B)^2}$
+- **Depth MAE:** $\text{MAE}_d = \frac{1}{N_{TP}} \sum |d_A - d_B|$
+- **Depth Bias:** $\text{Bias}_d = \frac{1}{N_{TP}} \sum (d_A - d_B)$
+- **Arrival Time MAE:** $\text{MAE}_t = \frac{1}{N_{\text{arr}}} \sum |t_{\text{arr}, A} - t_{\text{arr}, B}|$
+
+### 10.3 5-Class Spatial Agreement Categorization
+Grid cells are classified into 5 discrete categories:
+- **Class 0 (Both Dry):** $d_A < d_{\text{thresh}}$ and $d_B < d_{\text{thresh}}$
+- **Class 1 (Model A Only):** $d_A \ge d_{\text{thresh}}$ and $d_B < d_{\text{thresh}}$
+- **Class 2 (Model B Only):** $d_A < d_{\text{thresh}}$ and $d_B \ge d_{\text{thresh}}$
+- **Class 3 (Agreed Wet):** $d_A \ge d_{\text{thresh}}$, $d_B \ge d_{\text{thresh}}$, and $|d_A - d_B| \le \Delta d_{\text{thresh}}$ ($\Delta d_{\text{thresh}} = 0.5\text{ m}$)
+- **Class 4 (Disagreed Wet):** $d_A \ge d_{\text{thresh}}$, $d_B \ge d_{\text{thresh}}$, and $|d_A - d_B| > \Delta d_{\text{thresh}}$
+
+### 10.4 Ensemble & Uncertainty Aggregation
+Across $M$ stochastic / parameter spread scenarios:
+- **Inundation Exceedance Probability:** $P(\text{depth} \ge d_{\text{thresh}}) = \frac{1}{M} \sum_{k=1}^M \mathbb{I}(d_k \ge d_{\text{thresh}})$
+- **Percentile Depth Fields:** p10 (optimistic/minimum), p50 (median/expected), p90 (conservative/maximum) calculated cell-by-cell.
+
+### 10.5 Two-Pass Mesh & Particle Refinement Criteria
+Identifies high-resolution candidate sub-domains for Pass 2 based on:
+1. **Depth Gradient:** $|\nabla d| = \sqrt{\left(\frac{\partial d}{\partial x}\right)^2 + \left(\frac{\partial d}{\partial y}\right)^2} \ge \tau_{\text{grad}}$ ($\tau_{\text{grad}} = 0.15\text{ m/m}$)
+2. **Supercritical Flow / Hydraulic Jump Vicinity:** $Fr = \frac{u}{\sqrt{g d}} \ge 0.90$
+
+---
+
+## 11. Verified Project Sources
 
 1. **USACE HEC-RAS Hydraulic Reference Manual (Chapter 14):**
    `https://www.hec.usace.army.mil/confluence/rasdocs/ras1dtechref/latest/performing-a-dam-break-study-with-hec-ras/`

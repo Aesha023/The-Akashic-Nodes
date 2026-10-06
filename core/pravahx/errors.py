@@ -241,6 +241,21 @@ class VolumeConservationError(CouplingError):
         super().__init__(message, detail=detail)
 
 
+# ── Comparison & Uncertainty ──────────────────────────────────────────────────
+
+
+class ComparisonError(PravahXError):
+    """Error during spatial comparison or uncertainty aggregation."""
+
+    code = "COMPARISON_ERROR"
+
+
+class RasterAlignmentError(ComparisonError):
+    """Rasters cannot be aligned for comparison (e.g. non-overlapping extents, invalid CRS)."""
+
+    code = "RASTER_ALIGNMENT_ERROR"
+
+
 # ── Egress / secure mode ────────────────────────────────────────────────────
 
 

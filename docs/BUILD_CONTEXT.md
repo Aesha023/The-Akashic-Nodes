@@ -117,8 +117,24 @@
 - Tests: 95 unit tests passing across the repository. Mypy and Ruff 100% clean.
 - Measured results: Volume conservation error across SPH-to-Delft3D handoff measured at $< 0.001\%$ in unit tests; two-dam cascade test successfully triggers chained breach on downstream barrage with $V_{\text{total}} = 0.5\text{ MCM} + V_{\text{flood}}$.
 - Known issues and limits: None for Phase 4.
-- Requirement IDs advanced: R1, R3, R4
-- Feature IDs advanced: F11 (Cascade analysis)
+### Phase 5: Comparison and Uncertainty (status: done)
+- Built:
+  - `core/pravahx/compare/regrid.py` (`regrid_raster_to_target`, `align_rasters_to_common_grid` using `rasterio.warp.reproject` with intersection/union bounding box alignments).
+  - `core/pravahx/compare/metrics.py` (`compute_comparison_metrics`, `ComparisonMetrics` calculating IoU / CSI, Dice F1-Score, Precision, Recall, False Alarm Ratio, depth RMSE / MAE / bias / Pearson correlation on mutually wet cells, and arrival timing errors).
+  - `core/pravahx/compare/agreement.py` (`generate_agreement_raster`, `AgreementSummary`, `AgreementCategoryStats` implementing 5-class GeoTIFF raster classification with embedded colormap and categorical area breakdown).
+  - `core/pravahx/compare/ensemble.py` (`aggregate_ensemble_rasters`, `EnsembleRasterResults` generating exceedance inundation probability raster, p10, p50, p90 depth percentiles, and standard deviation raster).
+  - `core/pravahx/compare/refine.py` (`compute_refinement_zones`, `RefinementPlan`, `RefinementZone` calculating depth gradients $|\nabla d|$ and supercritical Froude numbers $Fr = u / \sqrt{g d} \ge 0.9$ to output vectorized refinement polygons in GeoJSON for 2-pass adaptive mesh refinement).
+  - `core/pravahx/compare/__init__.py` (Package exports).
+  - `tests/unit/test_compare.py` (7 unit tests covering regridding, alignment error handling, spatial & depth metrics, 5-class agreement classification, ensemble probability/percentiles, and 2-pass mesh refinement extraction).
+- Decisions:
+  - Fixed 5 standard spatial agreement classes: 0 (Both Dry), 1 (Model A Only), 2 (Model B Only), 3 (Both Wet Agreed within $\Delta d \le 0.5\text{ m}$), 4 (Both Wet Disagreed).
+  - Vectorized refinement zones apply minimum area thresholds ($> 2 \text{ cells}$) to exclude single-pixel slivers.
+- Deviations from the build spec: None
+- Tests: 102 unit tests passing across the repository. Mypy (50 source files) and Ruff 100% clean.
+- Measured results: Resampling, metric calculations, agreement classification, and ensemble percentiles verified on synthetic test rasters and passing all assertions.
+- Known issues and limits: None for Phase 5.
+- Requirement IDs advanced: R1, R2, R4, R5
+- Feature IDs advanced: F09 (Comparison and agreement), F10 (Uncertainty & ensemble aggregation), F12 (Adaptive refinement)
 
 ## Environment
 - Dependency versions (pinned):
@@ -140,5 +156,5 @@
 - None at this time.
 
 ## Next steps
-- Proceed to Phase 5: Comparison and Uncertainty (regridding, F-score, IoU, depth RMSE, arrival-time differences, agreement map raster classification, and 2-pass mesh refinement rules).
+- Proceed to Phase 6: Orchestrator and Pipeline Automation (Celery task workflows, Redis state management, multi-tier execution graph, checkpointing, and error recovery).
 

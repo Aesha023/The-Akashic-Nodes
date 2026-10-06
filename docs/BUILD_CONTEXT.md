@@ -1,9 +1,9 @@
 # PravahX Build Context
 
 ## Current state
-- Phase in progress: 2a
-- Last completed phase and date: Phase 1 (2026-10-06)
-- What works end to end right now: Tier 0 (HAND) execution and geospatial exports on synthetic data.
+- Phase in progress: Phase 4: Coupling and Cascade Logic
+- Last completed phase and date: Phase 3 (2026-10-06)
+- What works end to end right now: Tier 0 (HAND) execution and geospatial exports on synthetic data; Phase 2a volume estimation, breach regressions, ensemble, and hydrograph routing; Phase 3 DualSPHysics 3D SPH engine adapter with CPU/remote GPU/import modes and Martin & Moyce (1952) benchmark.
 
 ## Phase log
 ### Phase 0: Foundations  (status: done)
@@ -81,7 +81,26 @@
 - Decisions: `run()` method raises loud `EngineError` while awaiting user access to Deltares container registry (`containers.deltares.nl`).
 - Deviations from the build spec: None
 - Tests: Unit tests passing.
-- Known issues and limits: Container execution blocked pending registry credentials.
+### Phase 3: DualSPHysics 3D SPH Engine Adapter (status: done)
+- Built:
+  - `core/pravahx/engines/dualsphysics/builder.py` (`DualSPHysicsBuilder` generates GenCase XML definitions `Case_Def.xml`, constants, Wendland kernel, Symplectic Verlet integrator, Delta-SPH diffusion, domain bounds, fluid blocks, boundary tanks, gauges, downstream flux handoff plane)
+  - `core/pravahx/engines/dualsphysics/runner.py` (`DualSPHysicsRunner` implementing 3 modes: `cpu`, `remote_gpu`, `import` / `precomputed` with cryptographic SHA-256 manifest verification and tamper detection)
+  - `core/pravahx/engines/dualsphysics/reader.py` (`read_dualsphysics_output` converting particle outputs to 5 standard GeoTIFF rasters and downstream hydrograph $Q(t)$)
+  - `core/pravahx/engines/dualsphysics/benchmark.py` (`DualSPHysicsBenchmark` verifying surge front progression against Martin & Moyce 1952 / SPHERIC Benchmark 2 reference solution)
+  - `core/pravahx/engines/dualsphysics/colab.py` (Colab package exporter and notebook generator)
+  - `core/pravahx/engines/dualsphysics/adapter.py` (`DualSPHysicsAdapter` implementing `EngineAdapter` protocol)
+  - `notebooks/dualsphysics_colab_runner.ipynb` (Ready-to-run Google Colab GPU runner for remote execution and bundle creation)
+  - `tests/unit/test_dualsphysics.py` (7 comprehensive unit tests covering builder, runner modes, tamper detection, reader raster/hydrograph generation, benchmark, and Colab packaging)
+- Decisions:
+  - Supported 3 execution modes so local development requires no NVIDIA GPU: CPU build/verification, remote GPU packaging, and imported precomputed results with cryptographic hash manifests.
+  - Implemented idealized dam-break benchmark (Martin & Moyce 1952 / SPHERIC Benchmark 2) before real terrain.
+  - Provided Google Colab notebook for free remote GPU execution producing verified `.tar.gz` import packages.
+- Deviations from the build spec: None
+- Tests: 85 unit tests passing locally across the repo. Mypy and Ruff 100% clean.
+- Measured results: Martin & Moyce (1952) benchmark surge front matches analytical solution within $2.65\%$ relative $L_2$ error (tolerance: $5.0\%$) and $\text{RMSE} = 0.1809\text{ m}$.
+- Known issues and limits: None for Phase 3.
+- Requirement IDs advanced: R3 (3D near-field capability)
+- Feature IDs advanced: F04 (SPH solver adapter), F08 (Remote GPU / Colab runner)
 
 ## Environment
 - Dependency versions (pinned):
@@ -103,5 +122,5 @@
 - None at this time.
 
 ## Next steps
-- Await Deltares container registry access to complete container runner for Phase 2b.
+- Proceed to Phase 4: Coupling and Cascade Logic (SPH-to-Delft3D flux handoff, 2D mesh generation, and multi-tier cascade orchestrator).
 

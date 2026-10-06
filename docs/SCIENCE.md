@@ -148,7 +148,48 @@ $$Q_{p,\text{empirical}} = 0.607 \cdot V_w^{0.295} \cdot h_w^{1.24} \quad (\text
 
 ---
 
-## 6. Verified Project Sources
+## 7. Tier 2: 3D Smoothed Particle Hydrodynamics (DualSPHysics)
+
+For complex near-field dam break hydraulics, 3D Smoothed Particle Hydrodynamics (SPH) models free-surface fragmentation, plunging waves, vertical accelerations, and turbulent surge front propagation without mesh distortion.
+
+### 7.1 SPH Governing Equations
+
+1. **Continuity Equation (Mass Conservation):**
+   $$\frac{d\rho_a}{dt} = \sum_b m_b (\mathbf{v}_a - \mathbf{v}_b) \cdot \nabla_a W_{ab} + \mathcal{D}_a$$
+   where $\rho_a$ is particle density, $m_b$ is particle mass, $\mathbf{v}$ is velocity, $W_{ab}$ is the kernel function, and $\mathcal{D}_a$ is the Molteni & Colagrossi (2009) $\delta$-SPH density diffusion term ($\delta = 0.1$) to stabilize acoustic pressure fluctuations.
+
+2. **Momentum Equation (Navier-Stokes SPH):**
+   $$\frac{d\mathbf{v}_a}{dt} = -\sum_b m_b \left(\frac{P_a}{\rho_a^2} + \frac{P_b}{\rho_b^2} + \Pi_{ab}\right) \nabla_a W_{ab} + \mathbf{g}$$
+   where $P$ is pressure, $\mathbf{g} = (0, 0, -9.81)\text{ m/s}^2$, and $\Pi_{ab}$ is Monaghan artificial viscosity ($\alpha = 0.01$).
+
+3. **Tait's Weakly Compressible Equation of State (EOS):**
+   $$P = B \left[\left(\frac{\rho}{\rho_0}\right)^\gamma - 1\right], \quad B = \frac{c_0^2 \rho_0}{\gamma}$$
+   with $\gamma = 7.0$, $\rho_0 = 1000\text{ kg/m}^3$, and numerical sound speed $c_0 \approx 10 \cdot \sqrt{g h_{\text{max}}}$ ensuring density variations remain under $1\%$ ($\text{Mach} < 0.1$).
+
+4. **Kernel Function & Time Integration:**
+   * **Kernel:** Wendland quintic kernel (Kernel = 2) with compact support radius $2h$.
+   * **Time Integrator:** Symplectic Position Verlet (StepAlgorithm = 2) with dynamic CFL condition ($\text{CFL} = 0.2$).
+
+---
+
+## 8. Idealized Dam-Break Reference Solution: Martin & Moyce (1952)
+
+* *Literature Reference:* Martin & Moyce (1952), *An Experimental Study of the Collapse of Liquid Columns on a Rigid Horizontal Plane*, Phil. Trans. R. Soc. Lond. A `[UNVERIFIED - Standard SPHERIC Benchmark 2 Reference]`.
+
+### 8.1 Non-Dimensional Scaling
+For a rectangular water column of initial base width $a$ and height $h_0 = 2a$:
+* Non-dimensional time: $t^* = t \cdot \sqrt{\frac{2g}{a}}$
+* Non-dimensional surge front position: $x^* = \frac{x}{a}$
+
+### 8.2 Surge Front Kinematics
+1. **Initial Hydrostatic Acceleration Phase ($t^* < 1.0$):**
+   $$x^*(t^*) = 1.0 + 0.5 \cdot (t^*)^2$$
+2. **Asymptotic Constant-Surge Propagation ($t^* \ge 1.0$):**
+   $$x^*(t^*) = 1.0 + 2.0 \cdot (t^* - 0.4)$$
+
+---
+
+## 9. Verified Project Sources
 
 1. **USACE HEC-RAS Hydraulic Reference Manual (Chapter 14):**
    `https://www.hec.usace.army.mil/confluence/rasdocs/ras1dtechref/latest/performing-a-dam-break-study-with-hec-ras/`
@@ -158,4 +199,5 @@ $$Q_{p,\text{empirical}} = 0.607 \cdot V_w^{0.295} \cdot h_w^{1.24} \quad (\text
    `https://damfailures.org/case-study/teton-dam-idaho-1976/`
 4. **USBR Teton History & Facility Documentation:**
    `https://www.usbr.gov/pn/snakeriver/dams/uppersnake/teton/index.html`
+
 

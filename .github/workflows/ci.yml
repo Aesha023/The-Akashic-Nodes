@@ -74,6 +74,16 @@ jobs:
           POSTGRES_PASSWORD: test_password
           REDIS_URL: redis://localhost:6379/0
 
+      - name: Generate hydrograph plot
+        run: python scripts/plot_hec_ras_hydrograph.py
+
+      - name: Upload hydrograph plot artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hec-ras-breach-hydrograph
+          path: artifacts/hec_ras_hydrograph.png
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4

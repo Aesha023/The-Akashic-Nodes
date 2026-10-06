@@ -11,6 +11,7 @@ class FroehlichParams:
 
     average_width_m: float
     bottom_width_m: float
+    side_slope_z: float
     formation_time_hr: float
     peak_discharge_m3s: float
 
@@ -26,7 +27,7 @@ def compute_froehlich_2008(
         mode: Failure mode, either 'overtopping' or 'piping'
 
     Returns:
-        FroehlichParams with width, time and peak discharge estimates.
+        FroehlichParams with width, time, side slope, and peak discharge estimates.
     """
     if volume_m3 <= 0 or height_m <= 0:
         raise ValueError("Volume and height must be positive")
@@ -34,31 +35,26 @@ def compute_froehlich_2008(
     k_o = 1.3 if mode == "overtopping" else 1.0
     g = 9.81
 
-    # Average breach width (m)
+    # Average breach width (m) - Froehlich (2008) Eq. 1
     b_avg = 0.27 * k_o * (volume_m3**0.32) * (height_m**0.04)
 
-    # Breach formation time (hrs)
-    # Convert seconds to hours if 63.2 formula is in seconds?
-    # Wait, in Froehlich 2008, tf = 63.2 * sqrt(Vw / (g * Hb^2)) gives tf in seconds!
-    # Or is tf in hours?
-    # Let me use the standard Froehlich 2008 formulas directly.
-    # Actually, tf = 63.2 * sqrt(...) is usually in seconds.
-    # Let's keep tf in hours for convenience.
+    # Breach formation time (hrs) - Froehlich (2008) Eq. 2
     t_f_hr = 63.2 * math.sqrt(volume_m3 / (g * (height_m**2))) / 3600.0
 
-    # Bottom breach width (m)
-    # Froehlich 2008 assumes side slope z = 1.0 for overtopping, z = 0.7 for piping
+    # Side slope z:1 (H:V) - Froehlich (2008)
     z = 1.0 if mode == "overtopping" else 0.7
+
+    # Bottom breach width (m)
     b_bottom = max(0.0, b_avg - z * height_m)
 
-    # Peak discharge (m3/s) for reference
-    # Qp = 60.7 * (Vw ** 0.295) * (Hw ** 1.24)
-    # Assuming Hw (depth of water) is approximately equal to Hb (height of breach)
-    q_p = 60.7 * (volume_m3**0.295) * (height_m**1.24)
+    # Peak discharge (m3/s) for reference from Froehlich (1995) SI regression:
+    # Qp = 0.607 * (Vw ** 0.295) * (hw ** 1.24)
+    q_p = 0.607 * (volume_m3**0.295) * (height_m**1.24)
 
     return FroehlichParams(
         average_width_m=b_avg,
         bottom_width_m=b_bottom,
+        side_slope_z=z,
         formation_time_hr=t_f_hr,
         peak_discharge_m3s=q_p,
     )

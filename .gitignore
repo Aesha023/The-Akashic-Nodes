@@ -76,3 +76,6 @@ logs/
 # ── Generated files ──
 frontend/src/api/generated/
 docs/API.md
+test_phase1_output/
+patch.diff
+artifacts/

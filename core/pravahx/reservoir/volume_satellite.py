@@ -70,17 +70,20 @@ def compute_volume_new_lake(
 
 def compute_volume_existing_lake(
     area_m2: float,
-    kappa: float = 0.043,  # Cael et al. (2017) generic coefficient
-    zeta: float = 1.146,  # Cael et al. (2017) generic exponent
+    kappa: float,
+    zeta: float,
 ) -> float:
     """Compute volume for an existing lake using an area-volume scaling relation.
 
     Note: The DEM records the water surface, so subtracting DEM from the surface yields zero.
-    This method uses a power-law relation V = kappa * A^zeta.
+    This method uses a power-law relation V = kappa * A^zeta (with A in km^2, V in km^3).
+    Because scaling parameters depend strongly on lake type (e.g., glacial moraine-dammed vs
+    tectonic vs thermokarst) and geographic region, kappa and zeta are required parameters
+    with no defaults.
 
     Args:
         area_m2: Lake surface area in square meters.
-        kappa: Proportionality coefficient.
+        kappa: Proportionality coefficient (for A in km^2, V in km^3).
         zeta: Scaling exponent.
 
     Returns:
@@ -89,8 +92,7 @@ def compute_volume_existing_lake(
     if area_m2 <= 0:
         return 0.0
 
-    # The standard relation V = 0.043 * A^1.146 is typically for V in km3 and A in km2
-    # If the default coefficients are meant for km, we should convert:
+    # The standard relation V = kappa * A^zeta is for V in km3 and A in km2
     area_km2 = area_m2 / 1_000_000.0
     volume_km3 = kappa * (area_km2**zeta)
     volume_m3 = volume_km3 * 1_000_000_000.0

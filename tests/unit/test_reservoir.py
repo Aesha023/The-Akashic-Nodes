@@ -54,8 +54,12 @@ def test_compute_volume_existing_lake() -> None:
     assert abs(vol - expected_vol) < 1000.0, f"Expected {expected_vol}, got {vol}"
 
     # Non-positive area returns 0.0
-    assert compute_volume_existing_lake(0.0) == 0.0
-    assert compute_volume_existing_lake(-100.0) == 0.0
+    assert compute_volume_existing_lake(0.0, kappa=0.043, zeta=1.146) == 0.0
+    assert compute_volume_existing_lake(-100.0, kappa=0.043, zeta=1.146) == 0.0
+
+    # Missing required parameters raises TypeError
+    with pytest.raises(TypeError):
+        compute_volume_existing_lake(area_m2)  # type: ignore[call-arg]
 
 
 def test_get_dam_volume_not_implemented() -> None:

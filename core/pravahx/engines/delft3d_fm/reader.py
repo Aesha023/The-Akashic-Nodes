@@ -73,20 +73,35 @@ def read_delft3d_output(raw_result: RawResult, context: RunContext) -> Normalise
                 vel_var = candidate
                 break
 
-        max_vel_arr = None
+        max_vel_arr: np.ndarray | None = None
         if vel_var:
             if "ucmag" in vel_var:
                 vel_da = ds[vel_var]
                 max_vel_da = vel_da.max(dim="time") if "time" in vel_da.dims else vel_da
-                max_vel_arr = np.nan_to_num(max_vel_da.values, nan=0.0)
+                val = (
+                    max_vel_da.values
+                    if hasattr(max_vel_da, "values")
+                    else np.asarray(max_vel_da)
+                )
+                max_vel_arr = np.nan_to_num(np.asarray(val, dtype=np.float32), nan=0.0)
             elif "mesh2d_ucx" in ds.data_vars and "mesh2d_ucy" in ds.data_vars:
-                ucx = ds["mesh2d_ucx"]
-                ucy = ds["mesh2d_ucy"]
-                vmag = np.sqrt(ucx**2 + ucy**2)
-                max_vel_da = vmag.max(dim="time") if "time" in vmag.dims else vmag
-                max_vel_arr = np.nan_to_num(max_vel_da.values, nan=0.0)
+                ucx_da = ds["mesh2d_ucx"]
+                ucy_da = ds["mesh2d_ucy"]
+                vmag_da = (ucx_da**2 + ucy_da**2) ** 0.5
+                max_vmag_da = vmag_da.max(dim="time") if "time" in vmag_da.dims else vmag_da
+                val = (
+                    max_vmag_da.values
+                    if hasattr(max_vmag_da, "values")
+                    else np.asarray(max_vmag_da)
+                )
+                max_vel_arr = np.nan_to_num(np.asarray(val, dtype=np.float32), nan=0.0)
 
-        depth_arr = np.nan_to_num(max_depth_da.values, nan=0.0).astype(np.float32)
+        depth_val = (
+            max_depth_da.values
+            if hasattr(max_depth_da, "values")
+            else np.asarray(max_depth_da)
+        )
+        depth_arr = np.nan_to_num(np.asarray(depth_val, dtype=np.float32), nan=0.0)
 
     # Grid / Coordinate bounds
     # If 2D regular grid in xarray:
@@ -110,8 +125,11 @@ def read_delft3d_output(raw_result: RawResult, context: RunContext) -> Normalise
 
     # Export max_depth raster
     height, width = depth_2d.shape
+    has_domain = context.config and hasattr(context.config, "domain") and context.config.domain
     crs_str = (
-        context.config.geometry.crs if context.config and context.config.geometry else "EPSG:32644"
+        context.config.domain.crs
+        if has_domain and context.config.domain.crs != "auto"
+        else "EPSG:32644"
     )
     transform = rasterio.transform.from_origin(0.0, float(height), 1.0, 1.0)
 

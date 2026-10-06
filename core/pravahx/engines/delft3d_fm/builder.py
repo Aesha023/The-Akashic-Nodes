@@ -44,14 +44,19 @@ def build_delft3d_case(context: RunContext) -> PreparedCase:
     pli_path = case_dir / "inflow_boundary.pli"
 
     # 1. Build Inflow Polyline Boundary (.pli)
-    # Default upstream boundary coordinates from config or terrain bounding box
-    bbox = (
-        context.config.geometry.bbox
-        if context.config and context.config.geometry
-        else (78.3, 30.1, 78.35, 30.15)
-    )
-    pt1 = Point(x=float(bbox[0]), y=float(bbox[3]), data=[])
-    pt2 = Point(x=float(bbox[0] + 0.001), y=float(bbox[3]), data=[])
+    # Upstream boundary coordinates from scenario source location or fallback default
+    if (
+        context.config
+        and hasattr(context.config, "source")
+        and context.config.source
+        and context.config.source.point
+    ):
+        lon, lat = context.config.source.point
+        pt1 = Point(x=float(lon), y=float(lat), data=[])
+        pt2 = Point(x=float(lon + 0.001), y=float(lat), data=[])
+    else:
+        pt1 = Point(x=78.3, y=30.1, data=[])
+        pt2 = Point(x=78.301, y=30.1, data=[])
     meta = Metadata(name="inflow_bnd", n_rows=2, n_columns=2)
     poly_obj = PolyObject(metadata=meta, points=[pt1, pt2])
     poly_file = PolyFile(objects=[poly_obj])
@@ -113,8 +118,11 @@ def build_delft3d_case(context: RunContext) -> PreparedCase:
     fm_model.output.mapinterval = [600.0]  # 10 minute map output
     fm_model.output.hisinterval = [60.0]
 
+    has_domain = context.config and hasattr(context.config, "domain") and context.config.domain
     crs_str = (
-        context.config.geometry.crs if context.config and context.config.geometry else "EPSG:32644"
+        context.config.domain.crs
+        if has_domain and context.config.domain.crs != "auto"
+        else "EPSG:32644"
     )
 
     fm_model.save(filepath=mdu_path)

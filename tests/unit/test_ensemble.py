@@ -20,42 +20,60 @@ def test_individual_regressions() -> None:
 
     f08 = calc_froehlich_2008(vol, h, mode="overtopping")
     f95 = calc_froehlich_1995(vol, h, mode="overtopping")
-    vtg = calc_von_thun_gillette_1990(vol, h, mode="overtopping")
+    vtg = calc_von_thun_gillette_1990(vol, h, mode="overtopping", erodibility="erosion_resistant")
+    vtg_erodible = calc_von_thun_gillette_1990(
+        vol, h, mode="overtopping", erodibility="easily_erodible"
+    )
     mlm = calc_macdonald_langridge_monopolis_1984(vol, h, mode="overtopping")
 
-    for model in [f08, f95, vtg, mlm]:
+    for model in [f08, f95, vtg, vtg_erodible]:
+        assert model.average_width_m is not None
         assert model.average_width_m > 0.0
         assert model.formation_time_hr > 0.0
         assert model.side_slope_z > 0.0
 
+    # Von Thun & Gillette erodibility comparison
+    assert vtg.formation_time_hr == 0.015 * h
+    assert vtg_erodible.formation_time_hr == 0.020 * h
+
+    # MacDonald & Langridge-Monopolis: width is None (excluded from direct width spread)
+    assert mlm.average_width_m is None
+    assert mlm.formation_time_hr > 0.0
+    assert mlm.side_slope_z == 0.5
+
 
 def test_compute_breach_ensemble() -> None:
-    """Verify multi-model ensemble derives p10, p50, p90 quantiles from regression spread."""
+    """Verify multi-model ensemble derives min, median, max from regression spread."""
     vol = 10.0e6
     h = 30.0
 
     ensemble = compute_breach_ensemble(vol, h, mode="overtopping")
 
-    assert "p10" in ensemble
-    assert "p50" in ensemble
-    assert "p90" in ensemble
+    assert "min" in ensemble
+    assert "median" in ensemble
+    assert "max" in ensemble
 
-    p10 = ensemble["p10"]
-    p50 = ensemble["p50"]
-    p90 = ensemble["p90"]
+    e_min = ensemble["min"]
+    e_med = ensemble["median"]
+    e_max = ensemble["max"]
 
-    # Width quantile order: p10 <= p50 <= p90
-    assert p10.average_width_m <= p50.average_width_m <= p90.average_width_m
+    # Width spread order: min <= median <= max
+    assert e_min.average_width_m <= e_med.average_width_m <= e_max.average_width_m
 
-    # Formation time quantile order: p10 <= p50 <= p90
-    assert p10.formation_time_hr <= p50.formation_time_hr <= p90.formation_time_hr
+    # Formation time spread order: min <= median <= max
+    assert e_min.formation_time_hr <= e_med.formation_time_hr <= e_max.formation_time_hr
 
     # Check models list
-    assert len(p50.models_used) == 4
-    assert "Froehlich (2008)" in p50.models_used
-    assert "Froehlich (1995)" in p50.models_used
-    assert "Von Thun and Gillette (1990)" in p50.models_used
-    assert "MacDonald and Langridge-Monopolis (1984)" in p50.models_used
+    assert len(e_med.models_used_width) == 3
+    assert "Froehlich (2008)" in e_med.models_used_width
+    assert "Froehlich (1995)" in e_med.models_used_width
+    assert "Von Thun and Gillette (1990)" in e_med.models_used_width
+
+    assert len(e_med.models_used_time) == 4
+    assert "Froehlich (2008)" in e_med.models_used_time
+    assert "Froehlich (1995)" in e_med.models_used_time
+    assert "Von Thun and Gillette (1990)" in e_med.models_used_time
+    assert "MacDonald and Langridge-Monopolis (1984)" in e_med.models_used_time
 
 
 def test_compute_breach_ensemble_invalid_inputs() -> None:

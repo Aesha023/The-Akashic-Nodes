@@ -51,21 +51,23 @@
 - Built:
   - `core/pravahx/reservoir/volume_register.py` and `volume_satellite.py` (Register lookup, new lake DEM-depth integration, and existing lake area-volume scaling relations with required parameters and terrain slope extrapolation)
   - `core/pravahx/breach/froehlich.py` (Froehlich 2008 embankment dam breach geometry, formation time, and peak flow verified against HEC-RAS manual)
-  - `core/pravahx/breach/ensemble.py` (Multi-model regression ensemble across 4 HEC-RAS manual models: Froehlich 2008, Froehlich 1995, Von Thun & Gillette 1990, MacDonald & Langridge-Monopolis 1984 deriving p10/p50/p90 quantiles from regression spread)
+  - `core/pravahx/breach/ensemble.py` (Multi-model regression ensemble across HEC-RAS manual equations reporting min, median, max method spread; Von Thun & Gillette erodibility input; MLM excluded from standalone width spread; Xu & Zhang 2009 documented with omission rationale)
   - `core/pravahx/breach/hydrograph.py` (Dynamic trapezoidal weir routing with linear vertical+horizontal breach progression, required hypsometric exponent, Froehlich 1995 independent validation check, and factor-of-2 anomaly flags)
   - Source-point downstream reach extraction in `core/pravahx/terrain/hand.py`
   - Unit tests covering volume estimation, breach relations, ensemble, hydrograph volume integration, synthetic progression test, and Teton Dam historical benchmark
 - Decisions: 
   - **Strict Citation Rule Established:** Cite only sources fetched live in this project with URLs recorded in documentation. All un-fetched references marked `[UNVERIFIED]`.
-  - **Citation Audit & Correction:** Earlier unverified citations (such as misattributing Teton flood data to USGS PP 1028 instead of USGS OFR 77-765) audited, corrected, and replaced with live fetched URLs:
-    - USACE HEC-RAS Reference Manual: `https://www.hec.usace.army.mil/confluence/rasdocs/ras1dtechref/latest/performing-a-dam-break-study-with-hec-ras/`
-    - USGS OFR 77-765: `https://pubs.er.usgs.gov/publication/ofr77765`
-    - ASDSO Teton Case Study: `https://damfailures.org/case-study/teton-dam-idaho-1976/`
+  - **Citation Audit & Re-derivation:** Earlier unverified citations audited and corrected. Teton Dam inputs re-derived directly from fetched URLs with exact quotes:
+    - USBR Pacific Northwest / RCEM: `https://www.usbr.gov/pn/snakeriver/dams/uppersnake/teton/index.html` ($V_w = 251,700\text{ acre-ft} = 310.47\text{ MCM}$, depth at dam $270\text{ ft} = 82.3\text{ m}$).
+    - ASDSO Case Study: `https://damfailures.org/case-study/teton-dam-idaho-1976/` (structural height $305\text{ ft} = 93.0\text{ m}$, crest length $3,100\text{ ft} = 945\text{ m}$, failure timing).
+    - USGS OFR 77-765: `https://pubs.er.usgs.gov/publication/ofr77765` (slope-area post-failure peak estimate $65,129\text{ m}^3/\text{s}$ / $2.3\text{M cfs}$).
+    - USACE HEC-RAS Reference Manual: `https://www.hec.usace.army.mil/confluence/rasdocs/ras1dtechref/latest/performing-a-dam-break-study-with-hec-ras/` (5 regression equations documented).
+  - Observed breach parameters attributed to Wahl (1998, USBR DSO-98-004) labeled `[UNVERIFIED - Historical Literature Database]`.
   - Linear vertical+horizontal progression matching HEC-RAS implemented.
   - Peng and Zhang (2012) disabled and recorded in `docs/BLOCKED.md` as "no accessible source".
 - Deviations from the build spec: None
-- Tests: 77 unit tests passing locally and in CI.
-- Measured results: Teton Dam benchmark evaluated across the published 1.0M–2.3M cfs range.
+- Tests: 78 unit tests passing locally and in CI.
+- Measured results: Teton Dam benchmark evaluated across the published 1.0M–2.3M cfs range using re-derived verified inputs.
 - Known issues and limits: `landslide.py` blocked with no accessible source for Peng and Zhang (2012).
 - Requirement IDs advanced: R1, R3
 - Feature IDs advanced: F03

@@ -79,27 +79,35 @@ where $z_{\text{shore}}$ is the median perimeter elevation.
 * **Verified Source:** USACE HEC-RAS Hydraulic Reference Manual (Chapter 14):
   `https://www.hec.usace.army.mil/confluence/rasdocs/ras1dtechref/latest/performing-a-dam-break-study-with-hec-ras/`
 
-The HEC-RAS manual incorporates four empirical regression equations for embankment dam breach parameters:
+The HEC-RAS manual documents five empirical regression methods for embankment dam breach parameters:
 
 1. **Froehlich (2008):**
    * Average width: $B_{\text{avg}} = 0.27 \cdot K_o \cdot V_w^{0.32} \cdot h_b^{0.04}$ ($K_o = 1.3$ overtopping, $1.0$ piping)
    * Formation time: $t_f = 63.2 \cdot \sqrt{\frac{V_w}{g \cdot h_b^2}} / 3600.0$ (hours)
    * Side slope: $z = 1.0$ (overtopping), $0.7$ (piping)
-2. **Froehlich (1995):**
+2. **Froehlich (1995a):**
    * Average width: $B_{\text{avg}} = 0.1803 \cdot K_o \cdot V_w^{0.32} \cdot h_b^{0.19}$ ($K_o = 1.4$ overtopping, $1.0$ piping)
    * Formation time: $t_f = 0.00254 \cdot V_w^{0.53} \cdot h_b^{-0.90}$ (hours)
    * Side slope: $z = 1.4$ (overtopping), $0.9$ (piping)
 3. **Von Thun and Gillette (1990):**
-   * Average width: $B_{\text{avg}} = 2.5 \cdot h_w + C_b$ (where $C_b$ scales from $6.1\text{m}$ to $45.7\text{m}$ with storage $V_w$)
-   * Formation time: $t_f = 0.015 \cdot h_w$ (hours)
-   * Side slope: $z = 0.5$
+   * Average width: $B_{\text{avg}} = 2.5 \cdot h_w + C_b$ (where $C_b$ scales from $6.1\text{ m}$ to $45.7\text{ m}$ with storage $V_w$)
+   * Formation time (function of erodibility):
+     * Erosion-resistant / standard embankment: $t_f = 0.015 \cdot h_w$ (hours)
+     * Easily erodible embankment: $t_f = 0.020 \cdot h_w$ (hours)
+   * Side slope: $z = 0.5$ (piping), $1.0$ (overtopping)
 4. **MacDonald and Langridge-Monopolis (1984):**
-   * Eroded volume: $V_{\text{eroded}} = 0.0261 \cdot (V_w \cdot h_w)^{0.77}$ ($\text{m}^3$)
+   * Volume of eroded material: $V_{\text{eroded}} = 0.0261 \cdot (V_w \cdot h_w)^{0.77}$ ($\text{m}^3$)
    * Formation time: $t_f = 0.0179 \cdot (V_{\text{eroded}})^{0.364}$ (hours)
-   * Average width: $B_{\text{avg}} \approx \sqrt{V_{\text{eroded}} / h_b}$, side slope $z = 0.5$
+   * Side slope: $z = 0.5$
+   * *Breach Width Treatment:* In HEC-RAS, MacDonald & Langridge-Monopolis does NOT predict breach width through a standalone direct empirical equation. Instead, width is calculated by equating $V_{\text{eroded}}$ to the physical trapezoidal cross-section volume removed from the embankment ($V_{\text{eroded}} = h_b W_b C_{\text{avg}} + \dots$), which requires the dam's physical cross-section geometry (crest width and upstream/downstream embankment slopes). When dam geometry is not provided, MLM is excluded from the direct width spread and used exclusively in the formation time spread.
+5. **Xu and Zhang (2009):**
+   * Predicts top width $B_t$, bottom width $B_b$, and failure time $T_f$.
+   * *Reason for Omission from Automated Spread:* Requires 5 multi-attribute categorical parameters (dam type, corewall type, foundation type, failure mode, erodibility index $F_r$) not available in standard single-polygon inventories, and its failure time definition incorporates both pre-breach initiation and post-breach enlargement phases, producing non-comparable development times unless individually calibrated.
 
-### 4.1 Multi-Model Ensemble Uncertainty
-Instead of arbitrary statistical multipliers, the ensemble uncertainty quantiles ($p10, p50, p90$) are derived directly from the distribution of predictions across these four HEC-RAS regression equations for a given dam geometry and storage volume.
+### 4.1 Multi-Model Ensemble Spread (Min, Median, Max)
+Because four empirical regression equations do not constitute a continuous statistical sample for percentiles, the ensemble uncertainty is reported strictly as the **Min**, **Median**, and **Max** of the method spread:
+* **Width Spread:** Evaluated across the 3 direct width regression models: Froehlich (2008), Froehlich (1995), and Von Thun & Gillette (1990).
+* **Formation Time Spread:** Evaluated across all 4 regression models: Froehlich (2008), Froehlich (1995), Von Thun & Gillette (1990), and MacDonald & Langridge-Monopolis (1984).
 
 ---
 
@@ -148,3 +156,6 @@ $$Q_{p,\text{empirical}} = 0.607 \cdot V_w^{0.295} \cdot h_w^{1.24} \quad (\text
    `https://pubs.er.usgs.gov/publication/ofr77765`
 3. **ASDSO Dam Failures Case Study (Teton Dam):**
    `https://damfailures.org/case-study/teton-dam-idaho-1976/`
+4. **USBR Teton History & Facility Documentation:**
+   `https://www.usbr.gov/pn/snakeriver/dams/uppersnake/teton/index.html`
+

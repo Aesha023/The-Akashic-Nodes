@@ -78,11 +78,7 @@ def read_delft3d_output(raw_result: RawResult, context: RunContext) -> Normalise
             if "ucmag" in vel_var:
                 vel_da = ds[vel_var]
                 max_vel_da = vel_da.max(dim="time") if "time" in vel_da.dims else vel_da
-                val = (
-                    max_vel_da.values
-                    if hasattr(max_vel_da, "values")
-                    else np.asarray(max_vel_da)
-                )
+                val = max_vel_da.values if hasattr(max_vel_da, "values") else np.asarray(max_vel_da)
                 max_vel_arr = np.nan_to_num(np.asarray(val, dtype=np.float32), nan=0.0)
             elif "mesh2d_ucx" in ds.data_vars and "mesh2d_ucy" in ds.data_vars:
                 ucx_da = ds["mesh2d_ucx"]
@@ -97,9 +93,7 @@ def read_delft3d_output(raw_result: RawResult, context: RunContext) -> Normalise
                 max_vel_arr = np.nan_to_num(np.asarray(val, dtype=np.float32), nan=0.0)
 
         depth_val = (
-            max_depth_da.values
-            if hasattr(max_depth_da, "values")
-            else np.asarray(max_depth_da)
+            max_depth_da.values if hasattr(max_depth_da, "values") else np.asarray(max_depth_da)
         )
         depth_arr = np.nan_to_num(np.asarray(depth_val, dtype=np.float32), nan=0.0)
 

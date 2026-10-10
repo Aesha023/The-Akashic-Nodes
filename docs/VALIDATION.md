@@ -159,9 +159,8 @@ To verify the Delft3D FM solver against analytical dam-break hydrodynamics over 
   * **Water depth RMSE (along centerline):** $\le 0.5$ m (expecting some smearing at the front due to numerical diffusion and wet/dry thresholds).
 
 **RESULTS:**
-* **Generator required these fixes to run at all:** (1) hydrolib-core missing in Colab; (2) DtUser defaulted to 300 s (> Tstop 40 s) → set DtUser 5, DtMax 0.5, HisInterval 5, MapInterval 5; (3) hydrolib writes obsolete key wrishp_enc → engine rejects; (4) initial water was wired via waterLevIniFile (expects .xyz samples) → reservoir empty; fixed with IniFieldFile = initialFields.ini ([General] fileVersion 2.00, fileType iniField; [Initial] quantity waterlevel, dataFileType polygon, interpolationMethod constant, operand O, value 10.0); (5) upstream.pol header was "1 4" → must be "5 2" with closing point.
-* **After fixes:** 2000/4000 cells wet at t=0, mass conserved exactly (500,000 m3 at t=0 and t=30 s).
-* **Frictionless (pre-registered config):** depth RMSE 0.055/0.055/0.059 m at t=10/20/30 → PASS (tol 0.5 m). Front FAIL: thin-film artefact, film speeds 382 m/s (t=5) and 126 m/s (t=10) vs Ritter max 19.8 m/s; water piles at far wall (0.90 m at x=1997.5, t=30).
-* **Spot values vs Ritter:** x=1400 t=30: 0.475 vs 0.474 m; x=1200 t=20: 1.14 vs 1.09 m; dam site ≈4.37–4.42 vs 4.44 m.
-* **Sensitivity (NOT the pass criterion, recorded as such):** A) epsHu 0.01 m: wall pile-up gone, continuous front +194/+126/+108 m ahead, RMSE ≈0.05 m. B) Manning n 0.005: front err -40.1%/+4.7%/+16.3%, RMSE ≈0.06–0.07 m (friction departs from Ritter's assumption).
-* **Verdict:** depth PASS, front FAIL (understood numerical artefact). Reference: Delestre et al. 2013 (SWASHES), arXiv:1110.0288v7, Section 4.1.2, fetched and checked.
+* **Mass:** 500,000 → 500,000 m3 in all 4 runs.
+* **Depth RMSE (m) t=10/20/30:** Base 0.055/0.055/0.059; A(epsHu 0.01) 0.053/0.047/0.051; B(n 0.005) 0.061/0.062/0.074; C(dx 2.5) 0.031/0.034/0.042. → PASS (tol 0.5). Refinement 5→2.5 m reduces RMSE ~45%: converging.
+* **Front (continuous from dam, depth >5 cm), error % of travel:** Base -32.5/-13.0/+14.6; A -22.4/-10.4/+2.8; B -19.9/+6.0/+30.6; C +9.8/+12.6/+13.5. → FAIL vs pre-registered 5%. Cause: frictionless thin-film artefact (film speeds up to 382 m/s; wall pile-up 0.90 m Base, 0.94 m C).
+* **Observation only (NOT a pass criterion, chosen after seeing data):** C 1 cm front at t=30 = 1591.25 m vs Ritter 1594.3 m.
+* **Verdict:** depth PASS + converging; front FAIL, understood. Reference: Delestre et al. 2013 (SWASHES), arXiv:1110.0288v7, Section 4.1.2, fetched and checked.

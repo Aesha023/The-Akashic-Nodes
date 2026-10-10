@@ -38,6 +38,8 @@ class Delft3DBenchmark:
         dam_x: float = 1000.0,
         h0: float = 10.0,
         g: float = 9.81,
+        uniffrictcoef: float = 0.0,
+        epshu: float | None = None,
     ):
         self.length = length
         self.width = width
@@ -45,6 +47,8 @@ class Delft3DBenchmark:
         self.dam_x = dam_x
         self.h0 = h0
         self.g = g
+        self.uniffrictcoef = uniffrictcoef
+        self.epshu = epshu
 
     def generate_mesh(self, net_path: Path):
         """Generate a 2D UGRID NetCDF mesh."""
@@ -168,7 +172,9 @@ class Delft3DBenchmark:
         fm.time.dtuser = 5.0
         fm.output.mapinterval = [5.0]
         fm.output.hisinterval = [5.0]
-        fm.physics.uniffrictcoef = 0.0  # Frictionless
+        fm.physics.uniffrictcoef = self.uniffrictcoef
+        if self.epshu is not None:
+            fm.numerics.epshu = self.epshu
         fm.save(filepath=mdu_path)
 
         # Fix obsolete keys and set MapFormat

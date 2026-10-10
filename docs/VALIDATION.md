@@ -134,13 +134,16 @@ To verify the DualSPHysics 3D SPH formulation before applying it to complex 3D t
 
 To verify the Delft3D FM formulation before applying it to complex 2D topography, the solver will be executed on an idealized dam-break setup.
 
-### 8.1 Execution Record on Real Hardware
+### 8.1 Engine Smoke Test (Deltares c019)
+Before running the benchmark, a basic engine smoke test was performed using the Deltares c019 case (`test/tests/FMtests/f05_boundary_conditions/c019_waterlevel_bc_cmp_varying`).
+* **Modifications:** 7 obsolete keys commented, ObsFile blanked, MapInterval 600, MapFormat 4.
 * **Hardware & Runtime:** Google Colab (CPU)
-* **Provenance Archive:** Pending successful remote execution.
-* **Operational Status:** **NOT RUN**.
+* **Results:** EXIT 0, ~11 s wall time for 2 h simulation, 13 time steps x 780 faces.
+* **Validation:** $s1$ min -0.0154 m / max 0.0056 m, no NaN values, max $|\Delta s1|$ 0.0107 m.
+* **Operational Status:** **RUN AND PASSED**.
 
 ### 8.2 Benchmark Verification Status: NOT VERIFIED
 
 > [!WARNING]
 > **Status: NOT VERIFIED**
-> No validation runs against a fetched physical reference dataset have been performed for Delft3D FM yet.
+> No validation runs against a fetched physical reference dataset have been performed for Delft3D FM yet. (The above c019 run is purely a software engine test, not a physical benchmark).

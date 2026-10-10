@@ -95,6 +95,36 @@ def test_delft3d_fm_mdu_writer(tmp_path: Path) -> None:
     assert "Tstart" in mdu_text or "tstart" in mdu_text.lower()
     assert "Tstop" in mdu_text or "tstop" in mdu_text.lower()
     assert "14400" in mdu_text
+    
+    # Verify MDU writer rules
+    obsolete_keys = ["TransportMethod", "Qhrelax", "Jaorgsethu", "EffectSpiral", "Gapres", "WaveNikuradse", "Writebalancefile"]
+    lines = [line.strip() for line in mdu_text.splitlines() if line.strip()]
+    for key in obsolete_keys:
+        for line in lines:
+            if line.lower().startswith(key.lower() + "=") or line.lower().startswith(key.lower() + " "):
+                assert False, f"Obsolete key {key} found active in MDU"
+                
+    mapformat_found = False
+    mapinterval_found = False
+    obsfile_empty = True
+    for line in lines:
+        if line.lower().startswith("mapformat"):
+            assert "4" in line
+            mapformat_found = True
+        if line.lower().startswith("mapinterval"):
+            # Should be > 0
+            val_str = line.split("=")[1].split()[0].strip()
+            val = float(val_str)
+            assert val > 0
+            mapinterval_found = True
+        if line.lower().startswith("obsfile"):
+            val = line.split("=", 1)[1].strip()
+            if val:
+                obsfile_empty = False
+                
+    assert mapformat_found
+    assert mapinterval_found
+    assert obsfile_empty
 
 
 def test_delft3d_fm_run_missing_binary(tmp_path: Path) -> None:

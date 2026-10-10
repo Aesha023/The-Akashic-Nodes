@@ -149,8 +149,22 @@ class Delft3DRunner:
         script_content = f"""#!/bin/bash
 set -e
 echo "=== Running Delft3D FM Simulation ==="
-# Ensure library path includes custom compiled binaries and Intel runtime (if installed)
-export LD_LIBRARY_PATH=/content/delft3d_bin/lib:/opt/intel/oneapi/compiler/latest/linux/compiler/lib/intel64_lin:/opt/intel/oneapi/mpi/latest/lib:$LD_LIBRARY_PATH
+
+# Build LD_LIBRARY_PATH dynamically
+INTEL_LIBS_DIR=""
+if [ -d "/opt/intel" ]; then
+    echo "Finding Intel libraries..."
+    DIRS=$(find /opt/intel -type f \( -name "libifcore.so*" -o -name "libimf.so*" -o -name "libiomp5.so*" -o -name "libmpi.so.12*" \) -exec dirname {{}} \; | sort -u | tr '\n' ':' | sed 's/:$//')
+    if [ -n "$DIRS" ]; then
+        INTEL_LIBS_DIR=":$DIRS"
+    fi
+fi
+
+export LD_LIBRARY_PATH=/content/delft3d_bin/lib${INTEL_LIBS_DIR}:$LD_LIBRARY_PATH
+echo "Final LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+
+echo "Checking missing dependencies with ldd:"
+ldd /content/delft3d_bin/bin/dflowfm | grep "not found" || echo "All OK."
 
 # Run D-Flow FM
 /content/delft3d_bin/bin/dflowfm --autostartstop {mdu_name} || exit 1

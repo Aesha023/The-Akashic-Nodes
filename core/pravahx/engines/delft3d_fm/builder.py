@@ -127,6 +127,32 @@ def build_delft3d_case(context: RunContext) -> PreparedCase:
 
     fm_model.save(filepath=mdu_path)
 
+    # Apply MDU writer rules directly on the written text
+    mdu_text = mdu_path.read_text(encoding="utf-8")
+    lines = mdu_text.splitlines()
+    obsolete_keys = ["TransportMethod", "Qhrelax", "Jaorgsethu", "EffectSpiral", "Gapres", "WaveNikuradse", "Writebalancefile"]
+    new_lines = []
+    for line in lines:
+        lower_line = line.lower().strip()
+        is_obsolete = any(lower_line.startswith(k.lower() + "=") or lower_line.startswith(k.lower() + " ") for k in obsolete_keys)
+        if is_obsolete:
+            new_lines.append(f"# {line}")
+            continue
+        if lower_line.startswith("obsfile"):
+            # Blank out ObsFile if the referenced file does not exist locally
+            parts = line.split("=", 1)
+            if len(parts) > 1:
+                obs_val = parts[1].strip()
+                if obs_val and not (case_dir / obs_val).exists():
+                    new_lines.append(f"{parts[0]}= ")
+                    continue
+        if lower_line.startswith("mapformat"):
+            new_lines.append("MapFormat = 4")
+            continue
+        new_lines.append(line)
+        
+    mdu_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+
     # 5. Compute File Hashes for Provenance
     input_hashes = {
         mdu_path.name: compute_file_hash(mdu_path),

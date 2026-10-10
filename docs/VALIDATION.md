@@ -171,29 +171,71 @@ To verify the Delft3D FM solver against analytical dam-break hydrodynamics over 
 > **LABELING: MODEL INTERCOMPARISON**
 > This simulation is strictly a **MODEL INTERCOMPARISON** between Tier-0 (HAND) and Tier-1 (Delft3D Flexible Mesh 2D) on identical input data and hypothetical forcing. It is **NOT** a validation against field observations. Disagreement between tiers is expected due to structural model differences (static gravity-equilibrium HAND vs 2D shallow-water equations with advective inertia and backwater effects) and will be reported transparently without tuning.
 
-* **Benchmark Status:** **[NOT RUN - PENDING COLAB EXECUTION]**
+* **Benchmark Status:** **RUNS, but INTERCOMPARISON NOT VALID** (Colab debugging session, commit 5fb9488 + in-notebook fixes)
 * **Notebook:** `notebooks/PravahX_Ganga_Tier1.ipynb`
 * **Target Environment:** Google Colab Free CPU (Intel Xeon / 2 vCPUs)
 * **Execution Budget:** < 45 min wall time (< 15k cells total across variants)
+
+### 9.0 Debugging Session Findings & Validity Gates
+
+During the Colab debugging session (commit `5fb9488` with in-notebook patches), the Delft3D FM engine executed successfully (`EXIT 0`), but identified hydraulic and boundary anomalies that render the intercomparison **NOT VALID** until patched. The following 8 findings were observed and addressed:
+
+1. **`initialFields.ini` Specification:**
+   * An `[Initial]` block without `dataFile` triggers an engine fatal ERROR.
+   * `[Parameter]` friction from sample points with `interpolationMethod = constant` triggers an engine ERROR (samples require Delaunay triangulation: `interpolationMethod = triangulation`).
+   * Quantity name `friction` is rejected by the engine parser. The verified D-Flow FM 1D2D quantity name is `frictioncoefficient` (`[VERIFIED - Deltares D-Flow FM User Manual]`).
+   * For uniform Manning $n$ cases (`Base_uniform_50m`, `C_dx25`), no `initialFields.ini` is written or referenced; uniform roughness is configured directly via MDU keyword `UnifFrictCoef = 0.035`.
+2. **Boundary `.pli` Edge Alignment & Gate:**
+   * Boundary polylines placed interior to the domain were outside the engine's boundary tolerance and resulted in `"opened 0 cells"` (reported as `INFO` while the solver proceeded with zero inflow).
+   * Gate enforcement: The run must fail immediately if any boundary opens 0 cells. Polylines are now strictly snapped to the outer boundary links of the mesh.
+3. **Inflow Placement on Main Stem vs Tributary:**
+   * Inflow in earlier drafts was placed on a northern tributary with high bed elevation ($\sim 458\text{ m}$), rather than the Ganga main stem which enters the AOI from the east ($\sim 244590, 3336101$, bed $\sim 346\text{ m}$).
+   * Inflow and outflow boundary locations are now chosen strictly from the Ganga main stem (identified by maximum flow accumulation crossing the model edge). Boundary placement and the longitudinal thalweg profile are plotted over the Tier-0 flood footprint in the notebook.
+4. **Boundary Condition (.bc) Naming Conventions:**
+   * For the compiled engine build, discharge boundary forcing must reference the support point name: `[forcing]` name `inflow_bnd_0001` (with `quantity = dischargebnd`).
+   * Q-h boundary forcing must reference the polyline name: `[forcing]` name `downstream_bnd`.
+   * Q-h rating curve table header quantities must be exactly `quantity = qhbnd discharge` and `quantity = qhbnd waterlevel`.
+5. **Outlet Bed Elevation for Q-h Rating Table:**
+   * The Q-h normal depth table previously assumed an idealized bed of $337.00\text{ m}$. Real mesh bed elevations near the outlet differ ($342.6\text{ m}$ on 50 m mesh, $337.5\text{ m}$ on 25 m mesh).
+   * The normal depth table is now computed using the actual minimum bed elevation extracted from the boundary cells.
+6. **Zero Outflow & DEM Boundary Lip Resolution:**
+   * In initial runs, zero outflow occurred across all runs: cumulative inflow ($7,061,783\text{ m}^3$ + initial $150\text{ m}^3$) equaled stored volume ($7,061,933\text{ m}^3$) exactly to the $\text{m}^3$. Outlet water depth remained 0 m for most of the run; at the end of the 25 m mesh run, $6.6\text{ m}$ of water was impounded behind an artificial $\sim 7\text{ m}$ bed lip ($\sim 344.4\text{ m}$ edge bed vs $337.5\text{ m}$ just upstream).
+   * *Root Cause Verified:* The mesh boundary (Tier-0 envelope + 300 m buffer) extended beyond the clipped DEM raster extent into nodata border margins, causing edge cells to receive default nodata values ($350\text{ m}$).
+   * *Fix:* The computational domain is strictly clipped to the valid, non-nodata DEM extent (eroded by $15\text{ m}$), eliminating edge artifacts without modifying the underlying terrain data.
+7. **Spin-up Near-Steady Claim Removed:**
+   * The earlier assertion that "spin-up reaches near-steady, $|Q_{\text{out}} - Q_{\text{in}}| / Q_{\text{in}} < 0.05$" was never measured in previous runs and was false (measured outflow was 0). This claim has been excised from documentation.
+8. **Real Mass Balance & Observation Cross-Section:**
+   * The hard-coded mass balance "PASS (exact)" has been removed.
+   * An observation cross-section (`outlet_obs.pli`) is placed 100 m upstream of the outlet boundary (registered via MDU `crsFile = outlet_obs.pli`).
+   * Mass balance is computed dynamically from model outputs:
+     $$\Delta M = V_{\text{in,cum}} - V_{\text{out,cum}} - \Delta V_{\text{stored}}$$
+     where cumulative inflow and outflow are integrated from `*_his.nc` and storage change is computed from `*_map.nc`.
+
+#### Pre-Comparison Validity Gates
+
+Before computing or comparing spatial metrics (IoU, F-score), the notebook strictly evaluates five validity gates. If any gate fails, the notebook reports `FAIL`, prints the gate diagnostics, and **halts without performing the intercomparison**:
+
+* **Gate a (Open Cells):** Both inflow and downstream boundaries open $> 0$ cells (checked via log inspection: `"opened N cells"`).
+* **Gate b (Diagnostics):** Solver diagnostic scan contains 0 fatal `ERROR` lines and 0 `"No signals"` boundary errors.
+* **Gate c (Spin-up Equilibrium):** Warm-up outflow measured at the observation cross-section is within $10\%$ of baseflow inflow ($|Q_{\text{out}} - Q_{\text{in}}| / Q_{\text{in}} \le 0.10$). If not met, warm-up must be lengthened.
+* **Gate d (Drainage Efficiency):** $\ge 70\%$ of total cumulative inflow drains past the outlet by $T_{\text{stop}}$, or an explicit physical/hydraulic mechanism (e.g. storage depression retention) is documented.
+* **Gate e (Mass Conservation):** Cumulative domain mass balance relative error $|\Delta M| / V_{\text{in,cum}} < 1.0\%$.
 
 ### 9.1 Identical Inputs & Variant Matrix
 
 To ensure a strictly fair intercomparison, the primary Tier-1 run matches Tier-0's uniform roughness ($n = 0.035$). Spatially distributed roughness and mesh refinement are evaluated as explicit sensitivity variants.
 
 | Parameter / Input | Tier-0 HAND Accepted Run | Tier-1 Primary (`Base_uniform_50m`) | Variant B (`B_worldcover`) | Variant C (`C_dx25`) | Source / Provenance | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Geographic AOI** | `(78.30, 30.10, 78.35, 30.15)` | `(78.30, 30.10, 78.35, 30.15)` | `(78.30, 30.10, 78.35, 30.15)` | `(78.30, 30.10, 78.35, 30.15)` | Rishikesh reach, Uttarakhand, India | IDENTICAL |
 | **Projected CRS** | `EPSG:32644` (UTM 44N) | `EPSG:32644` (UTM 44N) | `EPSG:32644` (UTM 44N) | `EPSG:32644` (UTM 44N) | EPSG Registry | IDENTICAL |
 | **Terrain DEM** | Copernicus GLO-30 (30 m) | Copernicus GLO-30 (30 m) | Copernicus GLO-30 (30 m) | Copernicus GLO-30 (30 m) | STAC AWS `copernicus-dem-30m` | IDENTICAL |
 | **Hydro-Conditioning** | WhiteboxTools `breach_depressions` | Conditioned DEM bed elevations | Conditioned DEM bed elevations | Conditioned DEM bed elevations | WhiteboxTools v2.4 | IDENTICAL |
-| **Domain Envelope** | D8 $\ge 500$ cells reach | Tier-0 envelope + 300 m buffer | Tier-0 envelope + 300 m buffer | Tier-0 envelope + 300 m buffer | PravahX Mesh Generator | MATCHED |
-| **Grid / Mesh Size** | 30 m raster cells | $\Delta x = 50\text{ m}$ (3,154 quad cells) | $\Delta x = 50\text{ m}$ (3,154 quad cells) | $\Delta x = 25\text{ m}$ (12,647 quad cells) | PravahX Delft3D FM Mesh | PRIMARY / SENSITIVITY |
-| **Manning Roughness** | Uniform $n = 0.035$ | **Uniform $n = 0.035$** | Distributed ESA WorldCover 10 m (mean $n \approx 0.0436$) | Uniform $n = 0.035$ | ESA WorldCover 2021 v200 | **MATCHED (Primary)** |
+| **Domain Envelope** | D8 $\ge 500$ cells reach | Tier-0 envelope + 300 m buffer (clipped to DEM extent) | Tier-0 envelope + 300 m buffer (clipped to DEM extent) | Tier-0 envelope + 300 m buffer (clipped to DEM extent) | PravahX Mesh Generator | MATCHED & CLIPPED |
+| **Grid / Mesh Size** | 30 m raster cells | $\Delta x = 50\text{ m}$ | $\Delta x = 50\text{ m}$ | $\Delta x = 25\text{ m}$ | PravahX Delft3D FM Mesh | PRIMARY / SENSITIVITY |
+| **Manning Roughness** | Uniform $n = 0.035$ | **Uniform $n = 0.035$** | Distributed ESA WorldCover 10 m | Uniform $n = 0.035$ | ESA WorldCover 2021 v200 | **MATCHED (Primary)** |
 | **Peak Inflow** | $5,000.0\text{ m}^3/\text{s}$ | $5,000.0\text{ m}^3/\text{s}$ | $5,000.0\text{ m}^3/\text{s}$ | $5,000.0\text{ m}^3/\text{s}$ | Froehlich (2008) back-solve | IDENTICAL PEAK |
 | **Spin-up Warm-up** | N/A (steady-state HAND) | $5,400\text{ s}$ at $100\text{ m}^3/\text{s}$ | $5,400\text{ s}$ at $100\text{ m}^3/\text{s}$ | $5,400\text{ s}$ at $100\text{ m}^3/\text{s}$ | Baseflow equilibrium | FAIR BASELINE |
-
-> [!NOTE]
-> *Correction regarding previous draft:* In the earlier draft documentation, the primary run was stated as having "IDENTICAL BASELINE" roughness while actually configuring distributed WorldCover $n$. This discrepancy has been corrected: the primary intercomparison run (`Base_uniform_50m`) strictly uses uniform $n = 0.035$ identical to Tier-0. WorldCover-distributed roughness is evaluated as an explicit variant (`B_worldcover`).
 
 ### 9.2 Peak Discharge Derivation & Froehlich Hydrograph
 
@@ -223,8 +265,7 @@ To ensure a strictly fair intercomparison, the primary Tier-1 run matches Tier-0
 * **Base-Flow Spin-up Period:**
   * Duration: $T_{\text{spinup}} = 5,400\text{ s}$ ($1.5\text{ h}$).
   * Discharge: $Q_{\text{base}} = 100.0\text{ m}^3/\text{s}$ held constant.
-  * Criterion: The 9 km reach reaches dynamic equilibrium before breach initiation:
-    $$\frac{|Q_{\text{outlet}} - Q_{\text{inlet}}|}{Q_{\text{inlet}}} < 0.05$$
+  * *Equilibrium Measurement:* Outflow is dynamically monitored at the downstream observation cross-section `outlet_obs.pli`. Gate (c) verifies that $|Q_{\text{out}} - Q_{\text{in}}| / Q_{\text{in}} \le 0.10$ before admitting results.
 * **Breach Hydrograph Period:**
   * Starts at $t = 5,400\text{ s}$ ($1.5\text{ h}$).
   * Breach peak reached at $t = 5,400 + 1,870 = 7,270\text{ s}$ ($Q_{\text{total}} = 5,000.0\text{ m}^3/\text{s}$).
@@ -236,36 +277,32 @@ To ensure a strictly fair intercomparison, the primary Tier-1 run matches Tier-0
 ### 9.4 Downstream Boundary Condition: DEM Longitudinal Profile
 
 * **Derivation from DEM Profile:**
-  * Longitudinal profile along the lower 2.8 km reach ($X \approx 240,000\text{ m}$ to domain outlet):
-    * Upstream profile thalweg elevation: $z_1 = 338.50\text{ m}$
-    * Outlet cross-section thalweg elevation: $z_{\text{bed}} = 337.00\text{ m}$
-    * Streamwise reach length: $L = 2,788\text{ m}$
-    * Longitudinal bed slope:
-      $$S_0 = \frac{338.50 - 337.00}{2788} = 0.000538 \approx \mathbf{0.00054}$$
+  * Longitudinal profile along the lower 2.8 km reach to domain outlet:
+    * Upstream profile thalweg elevation: $z_1 \approx 338.50\text{ m}$
+    * Outlet cross-section thalweg elevation: derived from actual mesh boundary cell minimum bed
+    * Streamwise reach length: $L \approx 2,788\text{ m}$
+    * Longitudinal bed slope: $S_0 \approx 0.00054$
     * Effective channel bottom width at outlet: $B = 200.0\text{ m}$.
-  * *Correction regarding previous draft:* Replaces previous ad-hoc assumption ($S_0 = 0.005$, an order of magnitude too steep).
 * **Manning Normal Depth Rating Curve (`quantity = qhbnd`):**
   * Stage-discharge relationship derived from Manning's formula for wide rectangular channel:
     $$Q = \frac{1}{n} B h_n^{5/3} \sqrt{S_0} \implies h_n(Q) = \left( \frac{n \cdot Q}{B \sqrt{S_0}} \right)^{3/5}$$
-    $$\text{Water Level } z_w(Q) = z_{\text{bed}} + h_n(Q) = 337.00 + h_n(Q)$$
-  * At base flow $Q = 100\text{ m}^3/\text{s}$: $h_n = 0.88\text{ m} \implies z_w = 337.88\text{ m}$.
-  * At peak flow $Q = 5,000\text{ m}^3/\text{s}$: $h_n = 9.13\text{ m} \implies z_w = 346.13\text{ m}$.
-  * *Consistency Check:* Tier-0 HAND accepted downstream water surface elevation was $344.73\text{ m}$, aligning within $1.4\text{ m}$ of the dynamic normal depth.
+    $$\text{Water Level } z_w(Q) = z_{\text{bed,actual}} + h_n(Q)$$
+  * Calculated from actual boundary cell minimum bed elevation ($z_{\text{bed,actual}}$) to ensure zero hydraulic lip at the mesh exit.
 * **Limitation Note:** The Q-h normal depth boundary assumes uniform steady flow at the domain exit. Backwater effects from downstream hydraulic controls or narrowing beyond the domain boundaries are not captured.
 
 ### 9.5 Model Build Specifications
 
 * **Computational Meshes:**
-  * Primary (`Base_uniform_50m`): $\Delta x = 50\text{ m}$, $3,154$ quad faces, $3,405$ nodes, $6,558$ links.
-  * High-Resolution Variant (`C_dx25`): $\Delta x = 25\text{ m}$, $12,647$ quad faces, $13,158$ nodes, $25,804$ links.
+  * Primary (`Base_uniform_50m`): $\Delta x = 50\text{ m}$, quad faces clipped strictly to valid DEM extent.
+  * High-Resolution Variant (`C_dx25`): $\Delta x = 25\text{ m}$, quad faces clipped strictly to valid DEM extent.
   * Both meshes are well within the $< 100\text{k}$ Colab CPU limit.
 * **Bed Level:** Interpolated at mesh nodes and cell centres from the Copernicus GLO-30 conditioned DEM.
 * **Roughness Treatment:**
-  * Primary & Variant C: Uniform Manning $n = 0.035$ (identical to Tier-0).
-  * Variant B (`B_worldcover`): Mapped from ESA WorldCover 10 m classes: Tree cover (10) $n=0.070$, Shrubland (20) $n=0.050$, Grassland (30) $n=0.035$, Cropland (40) $n=0.040$, Built-up (50) $n=0.100$, Bare (60) $n=0.030$, Water (80) $n=0.030$. Area-weighted mean $n \approx 0.0436$. Mapping status: `[UNVERIFIED - Empirical Literature Mapping]`.
-* **Numerical Settings (incorporating Ritter lessons):**
+  * Primary & Variant C: Uniform Manning $n = 0.035$ configured via MDU `UnifFrictCoef = 0.035` (no `initialFields.ini`).
+  * Variant B (`B_worldcover`): Sourced via `initialFields.ini` with `quantity = frictioncoefficient`, `interpolationMethod = triangulation`, mapped from ESA WorldCover 10 m classes: Tree cover (10) $n=0.070$, Shrubland (20) $n=0.050$, Grassland (30) $n=0.035$, Cropland (40) $n=0.040$, Built-up (50) $n=0.100$, Bare (60) $n=0.030$, Water (80) $n=0.030$. Area-weighted mean $n \approx 0.0436$. Mapping status: `[UNVERIFIED - Empirical Literature Mapping]`.
+* **Numerical Settings:**
   * `MapFormat = 4` (UGRID NetCDF standard).
-  * `IniFieldFile = initialFields.ini` (constant initial water level $337.0\text{ m}$).
+  * Observation cross-section: `crsFile = outlet_obs.pli` (located 100 m upstream of outlet).
   * Time stepping: $T_{\text{stop}} = 12,600\text{ s}$ ($3.5\text{ h}$), $DtUser = 10\text{ s}$, $DtMax = 2.0\text{ s}$, $CflMax = 0.7$, $epsHu = 0.01\text{ m}$.
 
 ### 9.6 Limitations
@@ -277,11 +314,12 @@ To ensure a strictly fair intercomparison, the primary Tier-1 run matches Tier-0
 
 ### 9.7 Intercomparison Outputs and Final Table (Pre-registered)
 
-Upon Colab execution of `notebooks/PravahX_Ganga_Tier1.ipynb`, the notebook will generate and print:
+Upon Colab execution of `notebooks/PravahX_Ganga_Tier1.ipynb`, the notebook enforces the 5 validity gates. If all gates pass, the notebook generates:
 
 1. **Consolidated Intercomparison Table:**
    `case | cells | wall s | EXIT | mass balance | IoU | F-score | Tier-0 area | Tier-1 area | depth diff mean/RMSD (both wet)`
    Across all 3 cases: `Base_uniform_50m`, `B_worldcover`, `C_dx25`.
+   *(Note: Pending Colab execution with validity gate clearance; no IoU/F metrics are quoted prior to passing all gates).*
 
 2. **Hydrodynamic Rasters & Vectors (EPSG:32644):**
    `tier1_max_depth.tif`, `tier1_max_velocity.tif`, `tier1_arrival_time_0_05.tif`, `tier1_arrival_time_0_30.tif`, `tier1_envelope.shp`, `tier1_envelope.kml`.

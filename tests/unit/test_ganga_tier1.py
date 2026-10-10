@@ -79,7 +79,7 @@ def test_manning_normal_depth() -> None:
 
 
 def test_build_ganga_tier1_case(tmp_path: Path) -> None:
-    """Verify complete case build with real Ganga inputs."""
+    """Verify complete case build with real Ganga inputs for uniform and WorldCover variants."""
     data_dir = Path("data/ganga_inputs")
     dem_path = data_dir / "dem_ganga_32644.tif"
     tier0_env = data_dir / "tier0_envelope.shp"
@@ -88,38 +88,84 @@ def test_build_ganga_tier1_case(tmp_path: Path) -> None:
     if not dem_path.exists() or not tier0_env.exists():
         return
 
-    case_dir = tmp_path / "case"
-    res = build_ganga_tier1_case(
-        case_dir=case_dir,
+    # 1. Primary uniform roughness case
+    case_dir_uni = tmp_path / "case_uni"
+    res_uni = build_ganga_tier1_case(
+        case_dir=case_dir_uni,
         dem_path=dem_path,
         tier0_envelope_path=tier0_env,
         worldcover_path=lc_path,
         buffer_m=300.0,
         dx=50.0,
+        uniform_mannings_n=0.035,
         tstop_s=7200.0,
     )
 
-    mesh_info = res["mesh_info"]
-    # Free Colab CPU constraint: cell count must be well under 100k
-    assert mesh_info["n_faces"] < 100000
-    assert mesh_info["n_faces"] > 1000  # Reasonable resolution on ~7.5 km reach
+    mesh_info = res_uni["mesh_info"]
+    assert 1000 < mesh_info["n_faces"] < 100000
 
-    # Verify key files created
-    assert (case_dir / "grid_net.nc").exists()
-    assert (case_dir / "flow2d3d.mdu").exists()
-    assert (case_dir / "boundary_conditions.ext").exists()
-    assert (case_dir / "inflow.bc").exists()
-    assert (case_dir / "downstream.bc").exists()
-    assert (case_dir / "initialFields.ini").exists()
-    assert (case_dir / "roughness.xyz").exists()
+    assert (case_dir_uni / "grid_net.nc").exists()
+    assert (case_dir_uni / "flow2d3d.mdu").exists()
+    assert (case_dir_uni / "boundary_conditions.ext").exists()
+    assert (case_dir_uni / "inflow.bc").exists()
+    assert (case_dir_uni / "downstream.bc").exists()
+    assert (case_dir_uni / "outlet_obs.pli").exists()
+    # Uniform case must not have initialFields.ini
+    assert not (case_dir_uni / "initialFields.ini").exists()
 
-    # Verify MDU contents
-    mdu_text = (case_dir / "flow2d3d.mdu").read_text(encoding="utf-8")
-    assert "mapFormat" in mdu_text and "4" in mdu_text
-    assert "iniFieldFile" in mdu_text and "initialFields.ini" in mdu_text
-    assert "obsFile" in mdu_text
-    assert "TransportMethod" not in mdu_text or "# OBSOLETE" in mdu_text
-    assert "wrishp_enc" not in mdu_text or "# OBSOLETE" in mdu_text
+    mdu_uni = (case_dir_uni / "flow2d3d.mdu").read_text(encoding="utf-8")
+    assert "mapFormat" in mdu_uni and "4" in mdu_uni
+    assert "crsFile               = outlet_obs.pli" in mdu_uni
+    assert "unifFrictCoef         = 0.0350" in mdu_uni
+    assert "TransportMethod" not in mdu_uni or "# OBSOLETE" in mdu_uni
+
+    inflow_bc_txt = (case_dir_uni / "inflow.bc").read_text(encoding="utf-8")
+    assert "inflow_bnd_0001" in inflow_bc_txt
+    assert "dischargebnd" in inflow_bc_txt
+
+    down_bc_txt = (case_dir_uni / "downstream.bc").read_text(encoding="utf-8")
+    assert "downstream_bnd" in down_bc_txt
+    assert "qhbnd discharge" in down_bc_txt
+    assert "qhbnd waterlevel" in down_bc_txt
+
+    # 2. Distributed WorldCover roughness variant
+    case_dir_wc = tmp_path / "case_wc"
+    build_ganga_tier1_case(
+        case_dir=case_dir_wc,
+        dem_path=dem_path,
+        tier0_envelope_path=tier0_env,
+        worldcover_path=lc_path,
+        buffer_m=300.0,
+        dx=50.0,
+        uniform_mannings_n=None,
+        tstop_s=7200.0,
+    )
+    assert (case_dir_wc / "initialFields.ini").exists()
+    assert (case_dir_wc / "roughness.xyz").exists()
+    ini_txt = (case_dir_wc / "initialFields.ini").read_text(encoding="utf-8")
+    assert "frictioncoefficient" in ini_txt
+    assert "triangulation" in ini_txt
+    assert "[Initial]" not in ini_txt  # No invalid [Initial] block
+
+
+def test_evaluate_validity_gates(tmp_path: Path) -> None:
+    """Verify validity gates evaluation logic."""
+    from pravahx.engines.delft3d_fm.ganga_tier1 import evaluate_validity_gates
+
+    case_dir = tmp_path / "mock_gate_case"
+    case_dir.mkdir(parents=True)
+
+    # Mock clean run log
+    log_file = case_dir / "run.log"
+    log_file.write_text(
+        "Boundary 'inflow_bnd' opened 8 cells\nDownstream opened 8 cells\n",
+        encoding="utf-8",
+    )
+
+    gates = evaluate_validity_gates(case_dir, spinup_s=5400.0)
+    assert gates["gate_a"] is True  # No 0 cells opened
+    assert gates["gate_b"] is True  # No errors
+    assert "PASS" in gates["gate_a_msg"]
 
 
 def test_compare_tier0_and_tier1(tmp_path: Path) -> None:

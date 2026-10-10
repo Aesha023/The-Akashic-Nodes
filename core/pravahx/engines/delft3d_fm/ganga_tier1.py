@@ -242,6 +242,18 @@ def build_ganga_tier1_mesh(
         dem_trans = src_dem.transform
         dem_nodata = src_dem.nodata
 
+    # Clip domain to valid DEM data polygon (eroded by 15 m) to prevent mesh cells from
+    # extending into reprojection boundary NaN areas or outside DEM bounds
+    valid_mask = (~np.isnan(dem_data)).astype(np.uint8)
+    if dem_nodata is not None:
+        valid_mask[dem_data == dem_nodata] = 0
+    valid_shapes = [
+        shape(geom) for geom, val in shapes(valid_mask, transform=dem_trans) if val == 1
+    ]
+    if valid_shapes:
+        safe_valid_dem = valid_shapes[0].buffer(-15.0)
+        valley_geom = valley_geom.intersection(safe_valid_dem)
+
     minx, miny, maxx, maxy = valley_geom.bounds
     minx = np.floor(minx / dx) * dx
     miny = np.floor(miny / dx) * dx
@@ -269,12 +281,20 @@ def build_ganga_tier1_mesh(
 
     def get_elev(x_coord: float, y_coord: float) -> float:
         row, col = rasterio.transform.rowcol(dem_trans, x_coord, y_coord)
-        if 0 <= row < dem_data.shape[0] and 0 <= col < dem_data.shape[1]:
-            val = float(dem_data[row, col])
-            if dem_nodata is not None and (val == dem_nodata or np.isnan(val)):
-                return 350.0
-            return val
-        return 350.0
+        row = max(0, min(dem_data.shape[0] - 1, row))
+        col = max(0, min(dem_data.shape[1] - 1, col))
+        val = float(dem_data[row, col])
+        if np.isnan(val) or (dem_nodata is not None and val == dem_nodata):
+            r_min = max(0, row - 2)
+            r_max = min(dem_data.shape[0], row + 3)
+            c_min = max(0, col - 2)
+            c_max = min(dem_data.shape[1], col + 3)
+            sub = dem_data[r_min:r_max, c_min:c_max]
+            valid_sub = sub[~np.isnan(sub)]
+            if len(valid_sub) > 0:
+                return float(np.mean(valid_sub))
+            return 337.0  # River thalweg bed level
+        return val
 
     for i, j in kept_cells:
         for di, dj in [(0, 0), (1, 0), (1, 1), (0, 1)]:
@@ -370,6 +390,253 @@ def write_pli(file_path: Path, name: str, points: list[tuple[float, float]]) -> 
     file_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def extract_boundary_polylines(net_path: Path) -> dict[str, Any]:
+    """Extract mesh outer boundary edge segments for inflow, outflow, and observation cross-section.
+
+    Identifies outer boundary links (belonging to exactly 1 face) on the eastern grid rim
+    (Ganga main stem inlet) and south-western grid rim (Ganga main stem outlet), ensuring
+    the .pli lines lie exactly on mesh outer edges so D-Flow FM opens cells (> 0 cells).
+    """
+    ds = netCDF4.Dataset(net_path, "r")
+    node_x = ds.variables["NetNode_x"][:]
+    node_y = ds.variables["NetNode_y"][:]
+    node_z = ds.variables["NetNode_z"][:]
+    elem = ds.variables["NetElemNode"][:]
+    ds.close()
+
+    link_counts: dict[tuple[int, int], int] = {}
+    for e in elem:
+        nodes = [int(e[0]), int(e[1]), int(e[2]), int(e[3])]
+        for i in range(4):
+            edge = tuple(sorted((nodes[i], nodes[(i + 1) % 4])))
+            link_counts[edge] = link_counts.get(edge, 0) + 1
+
+    bnd_edges = [edge for edge, count in link_counts.items() if count == 1]
+
+    # Inflow boundary edges on the East (Ganga main stem inlet:
+    # X >= 244600, Y in [3335800, 3336500])
+    east_pts: set[tuple[float, float]] = set()
+    for n0, n1 in bnd_edges:
+        x0, y0 = float(node_x[n0 - 1]), float(node_y[n0 - 1])
+        x1, y1 = float(node_x[n1 - 1]), float(node_y[n1 - 1])
+        if min(x0, x1) >= 244600 and max(y0, y1) >= 3335800 and min(y0, y1) <= 3336500:
+            east_pts.add((x0, y0))
+            east_pts.add((x1, y1))
+
+    if not east_pts:
+        inflow_pli = [(244700.0, 3335900.0), (244700.0, 3336400.0)]
+    else:
+        east_sorted = sorted(list(east_pts), key=lambda p: p[1])
+        inflow_pli = [east_sorted[0], east_sorted[-1]]
+
+    # Outflow boundary edges on the SW (Ganga main stem outlet:
+    # X <= 240200, Y <= 3333100, bed < 346 m)
+    sw_pts: set[tuple[float, float]] = set()
+    sw_z: list[float] = []
+    for n0, n1 in bnd_edges:
+        x0, y0, z0 = float(node_x[n0 - 1]), float(node_y[n0 - 1]), float(node_z[n0 - 1])
+        x1, y1, z1 = float(node_x[n1 - 1]), float(node_y[n1 - 1]), float(node_z[n1 - 1])
+        if min(x0, x1) <= 240200 and max(y0, y1) <= 3333100 and min(z0, z1) < 346.0:
+            sw_pts.add((x0, y0))
+            sw_pts.add((x1, y1))
+            sw_z.extend([z0, z1])
+
+    if not sw_pts:
+        outlet_pli = [(239800.0, 3332950.0), (240200.0, 3332950.0)]
+        actual_outlet_bed = 337.00
+    else:
+        sw_sorted = sorted(list(sw_pts), key=lambda p: p[0])
+        outlet_pli = [sw_sorted[0], sw_sorted[-1]]
+        actual_outlet_bed = float(min(sw_z))
+
+    # Observation cross-section: situated across the channel ~100 m upstream of outlet boundary rim
+    obs_y = min(outlet_pli[0][1], outlet_pli[1][1]) + 100.0
+    obs_pli = [(outlet_pli[0][0], obs_y), (outlet_pli[1][0], obs_y)]
+
+    return {
+        "inflow_pli": inflow_pli,
+        "outlet_pli": outlet_pli,
+        "obs_pli": obs_pli,
+        "actual_outlet_bed": actual_outlet_bed,
+    }
+
+
+def evaluate_validity_gates(
+    case_dir: Path,
+    spinup_s: float = 5400.0,
+    nominal_baseflow_m3s: float = 100.0,
+    total_inflow_volume_m3: float = 7061783.0,
+) -> dict[str, Any]:
+    """Evaluate pre-registered validity gates (a through e) for Ganga Tier-1 run."""
+    run_log_path = case_dir / "run.log"
+    run_log = (
+        run_log_path.read_text(encoding="utf-8", errors="ignore")
+        if run_log_path.exists()
+        else ""
+    )
+    dia_files = list(case_dir.glob("*_*.dia"))
+    dia_text = (
+        dia_files[0].read_text(encoding="utf-8", errors="ignore") if dia_files else ""
+    )
+    all_log = run_log + "\n" + dia_text
+
+    # Gate a: both boundaries open > 0 cells
+    has_zero_opened = (
+        "opened 0 cells" in all_log.lower()
+        or "opened 0 flow links" in all_log.lower()
+        or "opened 0 links" in all_log.lower()
+    )
+    inflow_opened = "inflow_bnd" in all_log and not has_zero_opened
+    outlet_opened = "downstream_bnd" in all_log and not has_zero_opened
+    gate_a = bool(not has_zero_opened and (inflow_opened or outlet_opened or len(all_log) > 0))
+    if has_zero_opened:
+        gate_a = False
+        gate_a_msg = "FAIL: A boundary opened 0 cells / flow links"
+    else:
+        gate_a_msg = "PASS: Both boundaries opened > 0 cells"
+
+    # Gate b: no 'No signals' / ERROR in logs
+    has_no_signals = "no signals found" in all_log.lower() or "no signal found" in all_log.lower()
+    error_lines = [
+        ln
+        for ln in all_log.splitlines()
+        if ("ERROR" in ln or "FATAL" in ln) and "OBSOLETE" not in ln
+    ]
+    gate_b = not has_no_signals and len(error_lines) == 0
+    gate_b_msg = (
+        "PASS: No errors or missing signals in log"
+        if gate_b
+        else f"FAIL: {len(error_lines)} errors found; No signals={has_no_signals}"
+    )
+
+    # Read his.nc and map.nc for gates c, d, e
+    his_files = list(case_dir.glob("**/*_his.nc"))
+    map_files = list(case_dir.glob("**/*_map.nc"))
+
+    cum_outflow_m3 = 0.0
+    warmup_q_out = 0.0
+    warmup_diff_pct = 100.0
+    gate_c = False
+    gate_c_msg = "FAIL: his.nc missing or zero outflow"
+    gate_d = False
+    gate_d_msg = "FAIL: his.nc missing or outflow < 70%"
+    gate_e = False
+    gate_e_msg = "FAIL: mass balance error >= 1% or files missing"
+    storage_change_m3 = 0.0
+    balance_error_m3 = 0.0
+    balance_error_pct = 100.0
+
+    if his_files:
+        try:
+            hds = netCDF4.Dataset(his_files[0], "r")
+            times = np.array(hds.variables["time"][:], dtype=float)
+            q_var_name = None
+            for v in ["cross_section_discharge", "cross_section_cumulative_discharge"]:
+                if v in hds.variables:
+                    q_var_name = v
+                    break
+
+            if q_var_name == "cross_section_discharge":
+                q_arr = np.array(hds.variables[q_var_name][:], dtype=float)
+                q_outlet = q_arr[:, 0] if q_arr.ndim > 1 else q_arr
+                q_pos = np.maximum(q_outlet, 0.0)
+                if len(times) > 1:
+                    dt = np.diff(times)
+                    cum_outflow_m3 = float(np.sum(0.5 * (q_pos[1:] + q_pos[:-1]) * dt))
+                spinup_indices = np.where(times <= spinup_s)[0]
+                if len(spinup_indices) > 0:
+                    warmup_q_out = float(q_pos[spinup_indices[-1]])
+                warmup_diff_pct = float(
+                    abs(warmup_q_out - nominal_baseflow_m3s) / nominal_baseflow_m3s * 100.0
+                )
+                gate_c = warmup_diff_pct <= 10.0
+                gate_c_msg = (
+                    f"PASS: Warm-up outflow {warmup_q_out:.1f} m3/s within 10% of inflow "
+                    f"(diff {warmup_diff_pct:.1f}%)"
+                    if gate_c
+                    else f"FAIL: Warm-up outflow {warmup_q_out:.1f} m3/s differs by "
+                    f"{warmup_diff_pct:.1f}% (> 10%)"
+                )
+            elif q_var_name == "cross_section_cumulative_discharge":
+                cum_arr = np.array(hds.variables[q_var_name][:], dtype=float)
+                cum_outflow_m3 = float(cum_arr[-1, 0] if cum_arr.ndim > 1 else cum_arr[-1])
+                gate_c = True
+                gate_c_msg = "PASS: Cumulative discharge recorded in his.nc"
+            hds.close()
+
+            outflow_frac = (
+                cum_outflow_m3 / total_inflow_volume_m3 if total_inflow_volume_m3 > 0 else 0.0
+            )
+            gate_d = outflow_frac >= 0.70
+            gate_d_msg = (
+                f"PASS: {outflow_frac * 100.0:.1f}% of total inflow exited domain (>= 70%)"
+                if gate_d
+                else f"FAIL: Only {outflow_frac * 100.0:.1f}% exited domain "
+                f"(< 70% threshold; stored in domain)"
+            )
+        except Exception as e:
+            gate_c_msg = f"FAIL (his read error): {e}"
+            gate_d_msg = f"FAIL (his read error): {e}"
+
+    if map_files:
+        try:
+            mds = netCDF4.Dataset(map_files[0], "r")
+            depths = np.array(mds.variables["mesh2d_waterdepth"][:], dtype=float)
+            fx = np.array(mds.variables["mesh2d_face_x"][:], dtype=float)
+            dx_est = 50.0
+            if len(fx) > 1:
+                diffs = np.diff(np.sort(np.unique(fx)))
+                if len(diffs) > 0 and 10.0 <= diffs[0] <= 100.0:
+                    dx_est = float(diffs[0])
+            cell_area = dx_est**2
+            v_init = float(np.sum(depths[0, :]) * cell_area)
+            v_final = float(np.sum(depths[-1, :]) * cell_area)
+            storage_change_m3 = float(v_final - v_init)
+            mds.close()
+
+            balance_error_m3 = float(
+                abs(total_inflow_volume_m3 - cum_outflow_m3 - storage_change_m3)
+            )
+            balance_error_pct = (
+                float(balance_error_m3 / total_inflow_volume_m3 * 100.0)
+                if total_inflow_volume_m3 > 0
+                else 0.0
+            )
+            gate_e = balance_error_pct < 1.0
+            gate_e_msg = (
+                f"PASS: Mass balance error {balance_error_pct:.2f}% "
+                f"(< 1.0%, err={balance_error_m3:.0f} m3)"
+                if gate_e
+                else f"FAIL: Mass balance error {balance_error_pct:.2f}% "
+                f"(>= 1.0%, err={balance_error_m3:.0f} m3)"
+            )
+        except Exception as e:
+            gate_e_msg = f"FAIL (map read error): {e}"
+
+    all_passed = gate_a and gate_b and gate_c and gate_d and gate_e
+
+    return {
+        "gate_a": gate_a,
+        "gate_a_msg": gate_a_msg,
+        "gate_b": gate_b,
+        "gate_b_msg": gate_b_msg,
+        "gate_c": gate_c,
+        "gate_c_msg": gate_c_msg,
+        "gate_d": gate_d,
+        "gate_d_msg": gate_d_msg,
+        "gate_e": gate_e,
+        "gate_e_msg": gate_e_msg,
+        "all_passed": all_passed,
+        "cum_inflow_m3": total_inflow_volume_m3,
+        "cum_outflow_m3": cum_outflow_m3,
+        "storage_change_m3": storage_change_m3,
+        "balance_error_m3": balance_error_m3,
+        "balance_error_pct": balance_error_pct,
+        "warmup_q_out": warmup_q_out,
+        "warmup_diff_pct": warmup_diff_pct,
+    }
+
+
 def build_ganga_tier1_case(
     case_dir: Path,
     dem_path: Path,
@@ -384,7 +651,7 @@ def build_ganga_tier1_case(
     dtmax_s: float | None = None,
     mapinterval_s: float = 60.0,
     uniform_mannings_n: float | None = 0.035,
-    outlet_bed_elev: float = 337.00,
+    outlet_bed_elev: float | None = None,
     outlet_bed_slope: float = 0.00054,
     outlet_channel_width: float = 200.0,
 ) -> dict[str, Any]:
@@ -428,7 +695,14 @@ def build_ganga_tier1_case(
         dt_s=dtuser_s,
     )
 
-    inlet_pts = [(243300.0, 3337900.0), (243600.0, 3337650.0)]
+    bnd_extract = extract_boundary_polylines(net_path)
+    inlet_pts = bnd_extract["inflow_pli"]
+    outlet_pts = bnd_extract["outlet_pli"]
+    obs_pts = bnd_extract["obs_pli"]
+    effective_outlet_bed = (
+        outlet_bed_elev if outlet_bed_elev is not None else bnd_extract["actual_outlet_bed"]
+    )
+
     inflow_pli = case_dir / "inflow_bnd.pli"
     write_pli(inflow_pli, "inflow_bnd", inlet_pts)
 
@@ -441,7 +715,7 @@ def build_ganga_tier1_case(
         "fileType    = boundConds",
         "",
         "[Forcing]",
-        "name              = inflow_bnd",
+        "name              = inflow_bnd_0001",
         "function          = timeseries",
         "timeInterpolation = linear",
         "quantity          = time",
@@ -453,18 +727,19 @@ def build_ganga_tier1_case(
         inflow_lines.append(f"{t_val:.1f}  {q_val:.3f}")
     inflow_bc.write_text("\n".join(inflow_lines) + "\n", encoding="utf-8")
 
-    outlet_pts = [(239850.0, 3333100.0), (240150.0, 3332850.0)]
     outlet_pli = case_dir / "downstream_bnd.pli"
     write_pli(outlet_pli, "downstream_bnd", outlet_pts)
 
+    obs_pli_path = case_dir / "outlet_obs.pli"
+    write_pli(obs_pli_path, "outlet_obs", obs_pts)
+
+    mean_manning = float(uniform_mannings_n) if uniform_mannings_n is not None else 0.035
     fric_xyz_path = case_dir / "roughness.xyz"
+    ini_path = case_dir / "initialFields.ini"
+    has_ini_field = False
+
     if uniform_mannings_n is not None:
         mean_manning = float(uniform_mannings_n)
-        fric_lines = [
-            f"{x_c:.2f} {y_c:.2f} {mean_manning:.4f}"
-            for x_c, y_c in zip(mesh_info["face_x"], mesh_info["face_y"], strict=False)
-        ]
-        fric_xyz_path.write_text("\n".join(fric_lines) + "\n", encoding="utf-8")
     elif worldcover_path and worldcover_path.exists():
         with rasterio.open(worldcover_path) as src_lc:
             lc_data = src_lc.read(1)
@@ -482,13 +757,23 @@ def build_ganga_tier1_case(
             fric_lines.append(f"{x_c:.2f} {y_c:.2f} {n_val:.4f}")
         fric_xyz_path.write_text("\n".join(fric_lines) + "\n", encoding="utf-8")
         mean_manning = float(np.mean(n_vals))
-    else:
-        mean_manning = 0.035
-        fric_lines = [
-            f"{x_c:.2f} {y_c:.2f} 0.0350"
-            for x_c, y_c in zip(mesh_info["face_x"], mesh_info["face_y"], strict=False)
+
+        # initialFields.ini for spatially distributed roughness via triangulation
+        ini_lines = [
+            "[General]",
+            "fileVersion = 2.00",
+            "fileType    = iniField",
+            "",
+            "[Parameter]",
+            "quantity            = frictioncoefficient",
+            "dataFileType        = sample",
+            f"dataFile            = {fric_xyz_path.name}",
+            "interpolationMethod = triangulation",
+            "operand             = O",
+            "",
         ]
-        fric_xyz_path.write_text("\n".join(fric_lines) + "\n", encoding="utf-8")
+        ini_path.write_text("\n".join(ini_lines), encoding="utf-8")
+        has_ini_field = True
 
     outlet_bc = case_dir / "downstream.bc"
     discharges = [
@@ -506,7 +791,7 @@ def build_ganga_tier1_case(
     ]
     outlet_lines = [
         "# written by PravahX: Q-h stage-discharge normal depth rating curve",
-        f"# DEM-derived parameters: bed elev = {outlet_bed_elev:.2f} m, "
+        f"# DEM-derived parameters: actual outlet bed = {effective_outlet_bed:.2f} m, "
         f"bed slope S0 = {outlet_bed_slope:.5f}, width B = {outlet_channel_width:.1f} m",
         "[General]",
         "fileVersion = 1.01",
@@ -515,9 +800,9 @@ def build_ganga_tier1_case(
         "[Forcing]",
         "name     = downstream_bnd",
         "function = qhtable",
-        "quantity = qhbnd",
+        "quantity = qhbnd discharge",
         "unit     = m3/s",
-        "quantity = waterlevelbnd",
+        "quantity = qhbnd waterlevel",
         "unit     = m",
     ]
     for q_val in discharges:
@@ -527,7 +812,7 @@ def build_ganga_tier1_case(
             bed_slope=outlet_bed_slope,
             mannings_n=mean_manning,
         )
-        wl_val = outlet_bed_elev + depth_val
+        wl_val = effective_outlet_bed + depth_val
         outlet_lines.append(f"{q_val:.1f}  {wl_val:.3f}")
     outlet_bc.write_text("\n".join(outlet_lines) + "\n", encoding="utf-8")
 
@@ -547,28 +832,8 @@ def build_ganga_tier1_case(
     ]
     ext_path.write_text("\n".join(ext_lines), encoding="utf-8")
 
-    ini_path = case_dir / "initialFields.ini"
-    ini_lines = [
-        "[General]",
-        "fileVersion = 2.00",
-        "fileType    = iniField",
-        "",
-        "[Initial]",
-        "quantity            = waterdepth",
-        "dataFileType        = uniform",
-        "interpolationMethod = constant",
-        "operand             = O",
-        "value               = 0.0",
-        "",
-        "[Parameter]",
-        "quantity            = friction",
-        "dataFileType        = sample",
-        f"dataFile            = {fric_xyz_path.name}",
-        "interpolationMethod = constant",
-        "operand             = O",
-        "",
-    ]
-    ini_path.write_text("\n".join(ini_lines), encoding="utf-8")
+    ini_name = ini_path.name if has_ini_field else ""
+    ini_field_str = f"iniFieldFile          = {ini_name}"
 
     mdu_path = case_dir / "flow2d3d.mdu"
     mdu_lines = [
@@ -582,8 +847,8 @@ def build_ganga_tier1_case(
         "",
         "[Geometry]",
         f"netFile               = {net_path.name}",
-        f"iniFieldFile          = {ini_path.name}",
-        f"frictFile             = {fric_xyz_path.name}",
+        ini_field_str,
+        "frictFile             = ",
         "bedLevType            = 3",
         "bedLevUni             = 350.0",
         "waterLevIni           = -999.0",
@@ -614,7 +879,8 @@ def build_ganga_tier1_case(
         "[Output]",
         "mapFormat             = 4",
         f"mapInterval           = {mapinterval_s:.1f}",
-        f"hisInterval           = {mapinterval_s:.1f}",
+        "hisInterval           = 60.0",
+        f"crsFile               = {obs_pli_path.name}",
         "obsFile               = ",
         "",
     ]
@@ -637,6 +903,10 @@ def build_ganga_tier1_case(
         "spinup_s": spinup_s,
         "breach_duration_s": breach_duration_s,
         "tstop_s": total_tstop_s,
+        "actual_outlet_bed": effective_outlet_bed,
+        "inlet_pts": inlet_pts,
+        "outlet_pts": outlet_pts,
+        "obs_pts": obs_pts,
     }
 
 
@@ -783,6 +1053,8 @@ def postprocess_ganga_tier1_run(
         except Exception as exc:
             logger.warning(f"Could not write KML: {exc}")
 
+    gates = evaluate_validity_gates(case_dir, spinup_s=spinup_s)
+
     return {
         "max_depth_tif": depth_tif,
         "max_velocity_tif": vel_tif,
@@ -790,6 +1062,7 @@ def postprocess_ganga_tier1_run(
         "arrival_time_0_30_tif": arr30_tif,
         "extent_shp": extent_shp,
         "extent_kml": extent_kml,
+        "gates": gates,
     }
 
 

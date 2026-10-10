@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING, Any
-from dateutil.parser import parse
 
+from dateutil.parser import parse
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 

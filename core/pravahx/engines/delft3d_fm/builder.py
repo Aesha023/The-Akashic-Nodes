@@ -135,10 +135,26 @@ def build_delft3d_case(context: RunContext) -> PreparedCase:
         pli_path.name: compute_file_hash(pli_path),
     }
 
+    mode_str = "cpu"
+    precomputed_dir = None
+    if context.config and hasattr(context.config, "tiers") and context.config.tiers:
+        delft_config = context.config.tiers.delft3d_fm
+        if delft_config:
+            mode_str = getattr(delft_config, "mode", "cpu")
+            precomputed_dir = getattr(delft_config, "precomputed_dir", None)
+
+    metadata = {
+        "case_mdu": mdu_path.name,
+        "crs": crs_str,
+        "mode": str(mode_str),
+    }
+    if precomputed_dir:
+        metadata["precomputed_dir"] = str(precomputed_dir)
+
     logger.info(f"Delft3D FM case prepared successfully in: {case_dir}")
     return PreparedCase(
         engine_name="delft3d_fm",
         case_dir=case_dir,
         input_file_hashes=input_hashes,
-        metadata={"mdu_file": mdu_path.name, "crs": crs_str},
+        metadata=metadata,
     )

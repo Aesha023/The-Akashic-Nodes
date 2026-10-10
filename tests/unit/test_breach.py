@@ -212,3 +212,51 @@ def test_hydrograph_requires_reservoir_exponent() -> None:
             b_avg_m=50.0,
             t_f_hr=1.0,
         )
+
+
+def test_hydrograph_piping_orifice_to_weir_progression() -> None:
+    """Verify piping breach orifice flow and transition to open-channel weir flow."""
+    vol = 1_000_000.0  # 1 MCM
+    h = 25.0
+    b_avg = 40.0
+    t_f = 1.5
+
+    hg_piping = route_hydrograph(
+        initial_volume_m3=vol,
+        dam_height_m=h,
+        b_avg_m=b_avg,
+        t_f_hr=t_f,
+        reservoir_exponent=2.0,
+        side_slope_z=1.0,
+        progression_mode="piping_orifice_to_weir",
+        piping_collapse_fraction=0.4,
+    )
+
+    assert len(hg_piping) > 0
+    assert hg_piping.peak_discharge_m3s > 0
+
+    # Volume integration check
+    dt_s = 0.01 * 3600.0
+    total_vol = sum(
+        (hg_piping[i]["discharge_m3s"] + hg_piping[i + 1]["discharge_m3s"]) / 2.0 * dt_s
+        for i in range(len(hg_piping) - 1)
+    )
+    rel_vol_err = abs(total_vol - vol) / vol
+    assert rel_vol_err < 0.015, f"Piping volume integration error: {rel_vol_err * 100:.2f}%"
+
+
+def test_hydrograph_piping_requires_collapse_fraction() -> None:
+    """Verify that piping_collapse_fraction is required with no default in piping mode."""
+    import pytest
+
+    with pytest.raises(ValueError, match="piping_collapse_fraction is a required parameter"):
+        route_hydrograph(
+            initial_volume_m3=1e6,
+            dam_height_m=20.0,
+            b_avg_m=40.0,
+            t_f_hr=1.5,
+            reservoir_exponent=2.0,
+            progression_mode="piping_orifice_to_weir",
+        )
+
+

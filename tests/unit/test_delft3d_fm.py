@@ -74,9 +74,31 @@ def test_delft3d_fm_prepare(tmp_path: Path) -> None:
     assert "flow2d3d.mdu" in prepared.input_file_hashes
     assert "hydrograph.bc" in prepared.input_file_hashes
 
+def test_delft3d_fm_mdu_writer(tmp_path: Path) -> None:
+    """Test that Delft3D FM MDU writer sets the correct simulation time rules."""
+    adapter = Delft3DFMAdapter()
+    ctx = RunContext(
+        run_id="delft3d_test_mdu",
+        config=None,  # type: ignore[arg-type]
+        work_dir=tmp_path,
+        terrain_dir=tmp_path,
+        breach_hydrograph_path=None,
+    )
+    prepared = adapter.prepare(ctx)
+    mdu_path = prepared.case_dir / "flow2d3d.mdu"
+    assert mdu_path.exists()
+    
+    # Read the text of the MDU to verify Hydrolib-core wrote it correctly
+    mdu_text = mdu_path.read_text(encoding="utf-8")
+    assert "RefDate" in mdu_text or "refdate" in mdu_text.lower()
+    assert "20260101" in mdu_text
+    assert "Tstart" in mdu_text or "tstart" in mdu_text.lower()
+    assert "Tstop" in mdu_text or "tstop" in mdu_text.lower()
+    assert "14400" in mdu_text
 
-def test_delft3d_fm_run_blocked(tmp_path: Path) -> None:
-    """Test that Delft3D FM run() raises EngineError while container runner is blocked."""
+
+def test_delft3d_fm_run_missing_binary(tmp_path: Path) -> None:
+    """Test that Delft3D FM run() raises EngineError when CPU binary is missing."""
     adapter = Delft3DFMAdapter()
 
     ctx = RunContext(
@@ -87,8 +109,9 @@ def test_delft3d_fm_run_blocked(tmp_path: Path) -> None:
         breach_hydrograph_path=None,
     )
     prepared = adapter.prepare(ctx)
+    prepared.metadata["mode"] = "cpu"
 
-    with pytest.raises(EngineError, match="Delft3D FM solver execution is blocked"):
+    with pytest.raises(EngineError, match="Delft3D FM CPU binary not found"):
         adapter.run(prepared)
 
 

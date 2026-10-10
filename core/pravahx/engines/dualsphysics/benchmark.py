@@ -111,8 +111,10 @@ class DualSPHysicsBenchmark:
 
         notes = (
             f"Evaluated on Martin & Moyce (1952) / SPHERIC Benchmark 2 idealized dam break. "
-            f"Relative L2 error = {rel_l2 * 100:.2f}% (tolerance: {tolerance_l2 * 100:.1f}%), "
-            f"RMSE = {rmse:.4f} m, Max Error = {max_err:.4f} m."
+            f"Relative L2 error = {rel_l2 * 100:.2f}%, "
+            f"RMSE = {rmse:.4f} m, Max Error = {max_err:.4f} m. "
+            f"BENCHMARK STATUS: NOT VERIFIED. Open-access reference data not yet extracted from "
+            f"https://doi.org/10.3390/w15061229."
         )
 
         return BenchmarkResult(
@@ -125,7 +127,7 @@ class DualSPHysicsBenchmark:
             rmse_m=rmse,
             max_error_m=max_err,
             relative_l2_error=rel_l2,
-            passes_tolerance=passes,
+            passes_tolerance=False,
             notes=notes,
         )
 

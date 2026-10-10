@@ -29,7 +29,7 @@ def export_colab_case_package(case: PreparedCase, output_tar: Path) -> Path:
     xml_name = case.metadata.get("case_xml", "Case_Def.xml")
     case_base = xml_name.replace("_Def.xml", "").replace(".xml", "")
 
-    # Runner shell script for Colab
+    # Runner shell script for Colab mirroring official xCaseDambreak_linux64_GPU.sh
     run_script = f"""#!/bin/bash
 set -e
 echo "=================================================="
@@ -37,48 +37,113 @@ echo " PravahX DualSPHysics GPU Runner (Google Colab)"
 echo "=================================================="
 
 # Check NVIDIA GPU
-nvidia-smi
+if command -v nvidia-smi >/dev/null 2>&1; then
+    nvidia-smi
+else
+    echo "WARNING: nvidia-smi not found. Checking execution environment..."
+fi
 
-# 1. Run GenCase
+# Auto-detect case definition XML without .xml extension
+CASE_DEF_FILE=$(ls -1 *_Def.xml 2>/dev/null | head -n 1)
+if [ -n "$CASE_DEF_FILE" ]; then
+    export name="${{CASE_DEF_FILE%_Def.xml}}"
+else
+    export name="{case_base}"
+fi
+
+export dirout=${{name}}_out
+export diroutdata=${{dirout}}/data
+
+# Resolve binaries directory
+export dirbin=/content/dualsphysics/bin
+export LD_LIBRARY_PATH=${{LD_LIBRARY_PATH}}:${{dirbin}}:/usr/local/lib
+
+export gencase=$(which GenCase_linux64 2>/dev/null || \\
+    which gencase 2>/dev/null || echo "${{dirbin}}/GenCase_linux64")
+export dualsphysicsgpu=$(which DualSPHysics5.4_linux64 2>/dev/null || \\
+    which dualsphysics_gpu 2>/dev/null || echo "${{dirbin}}/DualSPHysics5.4_linux64")
+export partvtk=$(which PartVTK_linux64 2>/dev/null || \\
+    which partvtk 2>/dev/null || echo "${{dirbin}}/PartVTK_linux64")
+export partvtkout=$(which PartVTKOut_linux64 2>/dev/null || \\
+    which partvtkout 2>/dev/null || echo "${{dirbin}}/PartVTKOut_linux64")
+
+if [ ! -x "${{gencase}}" ]; then
+    echo "ERROR: GenCase binary not found at ${{gencase}}."
+    echo "Please ensure Step 2 of the Colab notebook ran successfully."
+    exit 1
+fi
+
+if [ ! -x "${{dualsphysicsgpu}}" ]; then
+    echo "ERROR: DualSPHysics GPU solver not found at ${{dualsphysicsgpu}}."
+    echo "Please ensure Step 2 of the Colab notebook ran successfully."
+    exit 1
+fi
+
+echo "Case name: ${{name}}"
+echo "Output directory: ${{dirout}}"
+echo "Using GenCase: ${{gencase}}"
+echo "Using DualSPHysics: ${{dualsphysicsgpu}}"
+
+# Remove existing output folder if present
+if [ -e "${{dirout}}" ]; then rm -rf "${{dirout}}"; fi
+
+# 1. Executes GenCase to create initial files for simulation
 echo "--> Step 1/3: Running GenCase..."
-gencase {xml_name} {case_base} -save:all
+${{gencase}} ${{name}}_Def ${{dirout}}/${{name}} -save:all
+if [ $? -ne 0 ]; then
+    echo "Execution aborted: GenCase failed."
+    exit 1
+fi
 
-# 2. Run DualSPHysics GPU
+# 2. Executes DualSPHysics to simulate SPH method on GPU
 echo "--> Step 2/3: Running DualSPHysics GPU solver..."
-dualsphysics_gpu {case_base} output -gpu -dirdataout data -svres
+${{dualsphysicsgpu}} -gpu ${{dirout}}/${{name}} ${{dirout}}
+if [ $? -ne 0 ]; then
+    echo "Execution aborted: DualSPHysics GPU solver failed."
+    exit 1
+fi
 
-# 3. Extract particles and gauges
-echo "--> Step 3/3: Running PartVTK and MeasureTool..."
-partvtk -dirin output/data -fileout output/PartFluid -vars:all -savevtk output/PartFluid.vtk || true
-measuretool -dirin output/data -fileout output/MeasureTool_Gauges -savecsv || true
+# 3. Post-processing: PartVTK, PartVTKOut, MeasureTool
+echo "--> Step 3/3: Running post-processing..."
+export dirout2=${{dirout}}/particles
+mkdir -p "${{dirout2}}"
+if [ -x "${{partvtk}}" ]; then
+    ${{partvtk}} -dirdata ${{diroutdata}} -savevtk ${{dirout2}}/PartFluid \\
+        -onlytype:-all,+fluid || true
+fi
+if [ -x "${{partvtkout}}" ]; then
+    ${{partvtkout}} -dirdata ${{diroutdata}} -savevtk ${{dirout2}}/PartFluidOut \\
+        -SaveResume ${{dirout2}}/_ResumeFluidOut || true
+fi
 
-# 4. Generate SHA-256 Manifest
+# 4. Generate SHA-256 Cryptographic Manifest
 echo "--> Generating cryptographic SHA-256 manifest..."
 python3 -c "
 import hashlib, json, os
 manifest = {{'files': {{}}}}
-for root, _, files in os.walk('output'):
+for root, _, files in os.walk('${{dirout}}'):
     for f in files:
         if f == 'manifest.json':
             continue
         p = os.path.join(root, f)
-        rel = os.path.relpath(p, 'output')
+        rel = os.path.relpath(p, '${{dirout}}')
         with open(p, 'rb') as fp:
             manifest['files'][rel] = hashlib.sha256(fp.read()).hexdigest()
-with open('output/manifest.json', 'w') as mf:
+with open('${{dirout}}/manifest.json', 'w') as mf:
     json.dump(manifest, mf, indent=2)
-print(f'Manifest generated with {{len(manifest[\"files\"])}} files.')
+file_count = len(manifest.get('files', manifest))
+print(f'Manifest generated with {{file_count}} files.')
 "
 
 # 5. Compress results
-tar -czf dualsphysics_results.tar.gz -C output .
+tar -czf dualsphysics_results.tar.gz -C ${{dirout}} .
 echo "=================================================="
 echo " Execution Complete: dualsphysics_results.tar.gz"
 echo "=================================================="
 """
 
     script_path = case.case_dir / "run_colab.sh"
-    script_path.write_text(run_script, encoding="utf-8")
+    script_path.write_text(run_script, encoding="utf-8", newline="\n")
 
     with tarfile.open(output_tar, "w:gz") as tar:
         tar.add(case.case_dir / xml_name, arcname=xml_name)
@@ -90,15 +155,6 @@ echo "=================================================="
 
 def create_colab_notebook_content() -> str:
     """Generate the complete JSON string for the Google Colab runner notebook."""
-    dl_url_52 = (
-        "https://github.com/DualSPHysics/DualSPHysics/releases/download/"
-        "v5.2.1/DualSPHysics_v5.2.1_Linux_x64.zip"
-    )
-    dl_url_50 = (
-        "https://github.com/DualSPHysics/DualSPHysics/releases/download/"
-        "v5.0/DualSPHysics_v5.0_Linux_x64.zip"
-    )
-
     notebook_dict: dict[str, Any] = {
         "cells": [
             {
@@ -111,7 +167,7 @@ def create_colab_notebook_content() -> str:
                     "**Google Colab GPU (NVIDIA Tesla T4 / V100 / A100)**.\n",
                     "\n",
                     "### Workflow:\n",
-                    "1. Verify GPU acceleration.\n",
+                    "1. Verify GPU acceleration (`nvidia-smi`).\n",
                     "2. Download and set up DualSPHysics Linux x64 CUDA binaries.\n",
                     "3. Upload your prepared `dualsphysics_case.tar.gz` from PravahX.\n",
                     "4. Execute the simulation and generate cryptographic SHA-256 manifest.\n",
@@ -123,7 +179,25 @@ def create_colab_notebook_content() -> str:
                 "execution_count": None,
                 "metadata": {},
                 "outputs": [],
-                "source": ["# Step 1: Check GPU\n", "!nvidia-smi"],
+                "source": [
+                    "# Step 1: Check GPU Acceleration\n",
+                    "import subprocess\n",
+                    "\n",
+                    "try:\n",
+                    "    res = subprocess.run(['nvidia-smi'], capture_output=True, text=True)\n",
+                    "    if res.returncode == 0:\n",
+                    "        print(res.stdout)\n",
+                    "        print('✅ NVIDIA GPU is active and ready.')\n",
+                    "    else:\n",
+                    "        print('⚠️ WARNING: nvidia-smi failed:')\n",
+                    "        print(res.stderr)\n",
+                    "        print('Please enable GPU: Colab menu -> Runtime ->')\n",
+                    "        print('  Change runtime type -> T4 GPU -> Save.')\n",
+                    "except Exception as e:\n",
+                    "    print(f'⚠️ Could not execute nvidia-smi: {e}')\n",
+                    "    print('Please enable GPU: Colab menu -> Runtime ->')\n",
+                    "    print('  Change runtime type -> T4 GPU -> Save.')\n",
+                ],
             },
             {
                 "cell_type": "code",
@@ -131,14 +205,91 @@ def create_colab_notebook_content() -> str:
                 "metadata": {},
                 "outputs": [],
                 "source": [
-                    "# Step 2: Download & Extract DualSPHysics Linux Binaries\n",
+                    "# Step 2: Download & Setup DualSPHysics Linux Binaries\n",
                     "import os\n",
+                    "import shutil\n",
+                    "import subprocess\n",
+                    "import urllib.request\n",
                     "\n",
-                    "!mkdir -p /content/dualsphysics && cd /content/dualsphysics\n",
-                    f"!wget -q -O /content/dualsphysics_bin.zip {dl_url_52} || \\\n",
-                    f" wget -q -O /content/dualsphysics_bin.zip {dl_url_50}\n",
-                    "!unzip -q /content/dualsphysics_bin.zip -d /content/dualsphysics || true\n",
-                    "os.environ['PATH'] += ':/content/dualsphysics/bin/linux'",
+                    "bin_dir = '/content/dualsphysics/bin'\n",
+                    "os.makedirs(bin_dir, exist_ok=True)\n",
+                    "\n",
+                    "base_url = 'https://dual.sphysics.org/sphcourse/DualSPHysics-bin/dualsphysics/bin'\n",
+                    "fb_base = 'https://raw.githubusercontent.com/DualSPHysics/DualSPHysics/master/bin/linux'\n",
+                    "\n",
+                    "files_to_download = [\n",
+                    "    'GenCase_linux64',\n",
+                    "    'DualSPHysics5.4_linux64',\n",
+                    "    'PartVTK_linux64',\n",
+                    "    'libChronoEngine.so',\n",
+                    "    'libdsphchrono.so',\n",
+                    "    'DsphConfig.xml',\n",
+                    "]\n",
+                    "\n",
+                    "print('Downloading DualSPHysics Linux x64 binaries...')\n",
+                    "for fname in files_to_download:\n",
+                    "    dest = os.path.join(bin_dir, fname)\n",
+                    "    if os.path.exists(dest) and os.path.getsize(dest) > 0:\n",
+                    "        print(f'  [cached] {fname}')\n",
+                    "        continue\n",
+                    "\n",
+                    "    url_primary = f'{base_url}/{fname}'\n",
+                    "    success = False\n",
+                    "    for url in [url_primary, f'{fb_base}/{fname}']:\n",
+                    "        try:\n",
+                    "            print(f'  Downloading {fname} from {url[:40]}...')\n",
+                    "            hdr = {'User-Agent': 'Mozilla/5.0'}\n",
+                    "            req = urllib.request.Request(url, headers=hdr)\n",
+                    "            with (\n",
+                    "                urllib.request.urlopen(req, timeout=60) as resp,\n",
+                    "                open(dest, 'wb') as out_f,\n",
+                    "            ):\n",
+                    "                shutil.copyfileobj(resp, out_f)\n",
+                    "            success = True\n",
+                    "            break\n",
+                    "        except Exception as e:\n",
+                    "            print(f'    Failed from {url[:40]}: {e}')\n",
+                    "\n",
+                    "    if not success:\n",
+                    "        raise RuntimeError(\n",
+                    "            f'Failed to download required DualSPHysics file: {fname}'\n",
+                    "        )\n",
+                    "\n",
+                    "    if fname.endswith('_linux64'):\n",
+                    "        os.chmod(dest, 0o755)\n",
+                    "\n",
+                    "# Install shared libraries to /usr/local/lib and update cache\n",
+                    "for lib in ['libChronoEngine.so', 'libdsphchrono.so']:\n",
+                    "    src = os.path.join(bin_dir, lib)\n",
+                    "    if os.path.exists(src):\n",
+                    "        shutil.copy2(src, f'/usr/local/lib/{lib}')\n",
+                    "subprocess.run(['ldconfig'], check=False)\n",
+                    "\n",
+                    "# Create symlinks in /usr/local/bin for canonical names and aliases\n",
+                    "aliases = {\n",
+                    "    'GenCase_linux64': ['GenCase_linux64', 'gencase'],\n",
+                    "    'DualSPHysics5.4_linux64': [\n",
+                    "        'DualSPHysics5.4_linux64',\n",
+                    "        'dualsphysics_gpu',\n",
+                    "        'dualsphysics',\n",
+                    "    ],\n",
+                    "    'PartVTK_linux64': ['PartVTK_linux64', 'partvtk'],\n",
+                    "}\n",
+                    "\n",
+                    "for target_file, links in aliases.items():\n",
+                    "    target_path = os.path.join(bin_dir, target_file)\n",
+                    "    for link_name in links:\n",
+                    "        link_path = f'/usr/local/bin/{link_name}'\n",
+                    "        try:\n",
+                    "            if os.path.islink(link_path) or os.path.exists(link_path):\n",
+                    "                os.remove(link_path)\n",
+                    "            os.symlink(target_path, link_path)\n",
+                    "        except Exception as e:\n",
+                    "            print(f'Could not symlink {link_name}: {e}')\n",
+                    "\n",
+                    "print('\\n--- Verifying DualSPHysics Installation ---')\n",
+                    "!gencase -ver\n",
+                    "!dualsphysics_gpu -ver\n",
                 ],
             },
             {
@@ -148,16 +299,47 @@ def create_colab_notebook_content() -> str:
                 "outputs": [],
                 "source": [
                     "# Step 3: Upload Case Package\n",
+                    "import os\n",
                     "import tarfile\n",
+                    "\n",
                     "from google.colab import files\n",
                     "\n",
-                    "print('Upload your dualsphysics_case.tar.gz prepared by PravahX:')\n",
-                    "uploaded = files.upload()\n",
-                    "for fn in uploaded:\n",
-                    "    if fn.endswith('.tar.gz') or fn.endswith('.tgz'):\n",
-                    "        with tarfile.open(fn, 'r:gz') as tar:\n",
-                    "            tar.extractall(path='/content/run')\n",
-                    "        print(f'Extracted {fn} to /content/run')",
+                    "run_dir = '/content/run'\n",
+                    "os.makedirs(run_dir, exist_ok=True)\n",
+                    "\n",
+                    "# Check if user uploaded dualsphysics_case.tar.gz via sidebar\n",
+                    "tar_candidates = [\n",
+                    "    '/content/dualsphysics_case.tar.gz',\n",
+                    "    '/content/run/dualsphysics_case.tar.gz',\n",
+                    "]\n",
+                    "tar_candidate = next(\n",
+                    "    (c for c in tar_candidates if os.path.exists(c)), None\n",
+                    ")\n",
+                    "\n",
+                    "if not tar_candidate:\n",
+                    "    print('Upload your dualsphysics_case.tar.gz prepared by PravahX:')\n",
+                    "    uploaded = files.upload()\n",
+                    "    for fn in uploaded:\n",
+                    "        if fn.endswith('.tar.gz') or fn.endswith('.tgz'):\n",
+                    "            tar_candidate = fn\n",
+                    "            break\n",
+                    "\n",
+                    "if not tar_candidate or not os.path.exists(tar_candidate):\n",
+                    "    raise FileNotFoundError(\n",
+                    "        'No dualsphysics_case.tar.gz uploaded.'\n",
+                    "    )\n",
+                    "\n",
+                    "print(f'Extracting {tar_candidate} into {run_dir}...')\n",
+                    "with tarfile.open(tar_candidate, 'r:gz') as tar:\n",
+                    "    if hasattr(tarfile, 'data_filter'):\n",
+                    "        tar.extractall(path=run_dir, filter='data')\n",
+                    "    else:\n",
+                    "        tar.extractall(path=run_dir)\n",
+                    "\n",
+                    "print('Extracted files in /content/run:')\n",
+                    "for f in os.listdir(run_dir):\n",
+                    "    sz = os.path.getsize(os.path.join(run_dir, f))\n",
+                    "    print(f'  - {f} ({sz} bytes)')\n",
                 ],
             },
             {
@@ -170,7 +352,7 @@ def create_colab_notebook_content() -> str:
                     "%%bash\n",
                     "cd /content/run\n",
                     "chmod +x run_colab.sh\n",
-                    "./run_colab.sh",
+                    "./run_colab.sh\n",
                 ],
             },
             {
@@ -180,15 +362,20 @@ def create_colab_notebook_content() -> str:
                 "outputs": [],
                 "source": [
                     "# Step 5: Download Verified Results Package\n",
-                    "from google.colab import files\n",
                     "import os\n",
+                    "\n",
+                    "from google.colab import files\n",
                     "\n",
                     "results_path = '/content/run/dualsphysics_results.tar.gz'\n",
                     "if os.path.exists(results_path):\n",
-                    "    print('Downloading results package for PravahX import...')\n",
+                    "    size_mb = os.path.getsize(results_path) / (1024 * 1024)\n",
+                    "    print(\n",
+                    "        f'Downloading results ({size_mb:.2f} MB) for PravahX import...'\n",
+                    "    )\n",
                     "    files.download(results_path)\n",
                     "else:\n",
-                    "    print('Error: dualsphysics_results.tar.gz not found.')",
+                    "    print('Error: dualsphysics_results.tar.gz not found.')\n",
+                    "    print('Check the output of Step 4 for simulation errors.')\n",
                 ],
             },
         ],
@@ -201,3 +388,4 @@ def create_colab_notebook_content() -> str:
         "nbformat_minor": 0,
     }
     return json.dumps(notebook_dict, indent=2)
+

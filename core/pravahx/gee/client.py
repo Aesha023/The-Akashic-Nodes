@@ -17,6 +17,13 @@ class GEEClient:
         key_file: str | Path | None = None,
         project: str | None = None,
     ) -> None:
+        try:
+            from dotenv import load_dotenv
+
+            load_dotenv()
+        except ImportError:
+            pass
+
         self.service_account = (
             service_account
             or os.environ.get("GEE_SERVICE_ACCOUNT_EMAIL")
@@ -78,3 +85,9 @@ class GEEClient:
     def is_connected(self) -> bool:
         """Return whether active connection to Earth Engine is established."""
         return self._is_initialized
+
+    def is_authenticated(self) -> bool:
+        """Check or establish Earth Engine authentication status."""
+        if self._is_initialized:
+            return True
+        return self.initialize()

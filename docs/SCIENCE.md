@@ -148,6 +148,28 @@ $$Q_{p,\text{empirical}} = 0.607 \cdot V_w^{0.295} \cdot h_w^{1.24} \quad (\text
 
 ---
 
+## 6. Satellite SAR Flood Mapping & Observational Limitations
+
+### 6.1 UN-SPIDER Recommended Practice
+PravahX implements the UN-SPIDER Google Earth Engine Recommended Practice for SAR-based flood mapping:
+1. **Sensor & Mode:** Sentinel-1 C-band ($5.6\text{ cm}$) Interferometric Wide (IW) swath Ground Range Detected (GRD) in dual-polarization (VV + VH).
+2. **Orbital Geometry Matching:** Pre-event and post-event acquisitions MUST share the identical orbit pass direction (`ASCENDING` or `DESCENDING`) and the exact **Relative Orbit Number** (track). Comparing different tracks introduces geometric backscatter distortions from varying incidence angles and terrain look directions.
+3. **Speckle Filtering:** A $50\text{ m}$ circular median focal filter reduces coherent speckle noise.
+4. **Change Ratio Threshold:** A threshold ratio of $1.25$ is evaluated against a pre-monsoon baseline.
+5. **Permanent Water Masking:** JRC Global Surface Water ($seasonality \ge 10\text{ months/year}$) eliminates permanent river channels, lakes, and reservoirs.
+6. **Topographic Slope Masking:** WWF HydroSHEDS 3-arcsecond DEM masks slopes $> 5\%$ (percent, not degrees).
+7. **Connected-Pixel Filter (PravahX Implementation):** Isolated clusters with fewer than $8$ connected pixels are filtered out.
+
+### 6.2 Physical Limitations of C-Band SAR
+* **Canopy & Vegetation Attenuation (Double-Bounce Scattering):**
+  C-band microwave radiation ($\lambda \approx 5.6\text{ cm}$) has limited penetration through dense vegetative canopies (e.g. coconut palms, rubber plantations, orchards) and complex urban homestead settlements (e.g. Periyar basin around Aluva). When floodwaters infiltrate vegetated or built-up areas, radar pulses undergo corner-reflector dihedral double-bounce (ground-water to trunk, ground-water to wall). This **increases** backscatter (+0.25 dB in Aluva during the August 2018 flood) rather than producing the specular drop typical of open water. Single-threshold specular water detection algorithms detect only bare, un-vegetated open water surfaces, severely under-detecting inundation under canopy and in residential areas.
+* **Temporal Revisit Gaps:**
+  Sentinel-1 operates on a 12-day orbital repeat cycle per satellite over a given track. During acute, fast-peaking flood events (such as the Kerala flood peak of 15–18 August 2018), satellite passes may fall outside the peak inundation window (e.g. acquisitions occurred on 9 August and 21 August, but none during 10–20 August). By 21 August, upstream flood pulses had already receded, while low-lying coastal polders (Kuttanad) remained submerged.
+* **Why PravahX Pairs Satellite Mapping with Hydrodynamic Modelling:**
+  Because satellite remote sensing suffers from temporal latency, cloud obscuration (optical), and canopy double-bounce blind spots (C-band SAR), satellite observations alone cannot provide continuous real-time flood intelligence during dam-break emergencies. PravahX utilizes satellite SAR to establish empirical open-water calibration baselines and post-disaster validation extents, while relying on physics-based hydrodynamic models (Tier 0 HAND, Tier 1 2D SWE / Delft3D FM, Tier 2 3D SPH / DualSPHysics) to compute peak depths, flow velocities, wave arrival times, and inundation footprints beneath canopy and in built-up areas.
+
+---
+
 ## 7. Tier 2: 3D Smoothed Particle Hydrodynamics (DualSPHysics)
 
 For complex near-field dam break hydraulics, 3D Smoothed Particle Hydrodynamics (SPH) models free-surface fragmentation, plunging waves, vertical accelerations, and turbulent surge front propagation without mesh distortion.
@@ -172,20 +194,24 @@ For complex near-field dam break hydraulics, 3D Smoothed Particle Hydrodynamics 
 
 ---
 
-## 8. Idealized Dam-Break Reference Solution: Martin & Moyce (1952)
+## 8. Idealized Dam-Break Reference Formulation `[BENCHMARK STATUS: NOT VERIFIED]`
 
-* *Literature Reference:* Martin & Moyce (1952), *An Experimental Study of the Collapse of Liquid Columns on a Rigid Horizontal Plane*, Phil. Trans. R. Soc. Lond. A `[UNVERIFIED - Standard SPHERIC Benchmark 2 Reference]`.
+* *Literature Citation:* Martin & Moyce (1952), *An Experimental Study of the Collapse of Liquid Columns on a Rigid Horizontal Plane*, Phil. Trans. R. Soc. Lond. A `[NOT VERIFIED - Source Paywalled]`.
+* *Analytical Approximation:* Stoker (1957) shallow-water wave solution for frictionless dam-break column collapse.
 
 ### 8.1 Non-Dimensional Scaling
 For a rectangular water column of initial base width $a$ and height $h_0 = 2a$:
 * Non-dimensional time: $t^* = t \cdot \sqrt{\frac{2g}{a}}$
 * Non-dimensional surge front position: $x^* = \frac{x}{a}$
 
-### 8.2 Surge Front Kinematics
-1. **Initial Hydrostatic Acceleration Phase ($t^* < 1.0$):**
+### 8.2 Theoretical Kinematics (Stoker Analytical Model)
+1. **Initial Acceleration Phase ($t^* < 1.0$):**
    $$x^*(t^*) = 1.0 + 0.5 \cdot (t^*)^2$$
 2. **Asymptotic Constant-Surge Propagation ($t^* \ge 1.0$):**
    $$x^*(t^*) = 1.0 + 2.0 \cdot (t^* - 0.4)$$
+
+> [!NOTE]
+> Physical experimental benchmark values from Martin & Moyce (1952) remain **NOT VERIFIED** until an open-access paper tabulating or plotting them is fetched into the repository.
 
 ---
 
@@ -258,5 +284,13 @@ Identifies high-resolution candidate sub-domains for Pass 2 based on:
    `https://damfailures.org/case-study/teton-dam-idaho-1976/`
 4. **USBR Teton History & Facility Documentation:**
    `https://www.usbr.gov/pn/snakeriver/dams/uppersnake/teton/index.html`
+5. **UN-SPIDER Flood Mapping Recommended Practice (Google Earth Engine):**
+   `https://un-spider.org/advisory-support/recommended-practices/recommended-practice-flood-mapping/step-by-step`
+6. **Tiwari et al. (2020), PLOS ONE (Kerala 2018 Flood Inundation Mapping with SAR & GEE):**
+   `https://doi.org/10.1371/journal.pone.0237324`
+7. **International Charter Space and Major Disasters (Activation 582: Flood in India, August 2018):**
+   `https://disasterscharter.org/web/guest/activations/-/article/flood-in-india-activation-582-`
+8. **ReliefWeb / Govt. of India / NRSC Flood Inundated Areas Map (18 August 2018):**
+   `https://reliefweb.int/map/india/india-flood-inundated-areas-part-kerala-state-18-august-2018-0400-hrs`
 
 

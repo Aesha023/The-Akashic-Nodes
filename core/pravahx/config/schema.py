@@ -101,6 +101,14 @@ class DualSPHysicsMode(StrEnum):
     PRECOMPUTED = "precomputed"
 
 
+class Delft3DFMMode(StrEnum):
+    """Delft3D FM adapter execution mode."""
+
+    CPU = "cpu"
+    REMOTE = "remote"
+    PRECOMPUTED = "precomputed"
+
+
 # ── Sub-models ───────────────────────────────────────────────────────────────
 
 
@@ -236,6 +244,25 @@ class Delft3DFMConfig(BaseModel):
         default=12.0,
         description="Simulation horizon in hours.",
     )
+    mode: Delft3DFMMode = Field(
+        default=Delft3DFMMode.CPU,
+        description="Execution mode: cpu, remote, or precomputed.",
+    )
+    precomputed_dir: Path | None = Field(
+        default=None,
+        description="Directory with precomputed results (when mode=precomputed).",
+    )
+    precomputed_run_date: str | None = Field(
+        default=None,
+        description="ISO date when precomputed results were generated.",
+    )
+
+    @model_validator(mode="after")
+    def _precomputed_needs_dir(self) -> Delft3DFMConfig:
+        if self.mode == Delft3DFMMode.PRECOMPUTED and self.precomputed_dir is None:
+            msg = "precomputed_dir is required when mode is 'precomputed'."
+            raise ValueError(msg)
+        return self
 
     @field_validator("cell_size_m")
     @classmethod

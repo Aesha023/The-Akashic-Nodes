@@ -217,7 +217,8 @@ with open('output/manifest.json', 'w') as mf:
 "
 echo "=== Simulation Complete. Manifest Generated. ==="
 """
-        script_path.write_text(script_content, encoding="utf-8")
+        with open(script_path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(script_content)
 
         # Create package tar.gz
         archive_path = output_dir / f"{case_base}_gpu_package.tar.gz"
@@ -297,8 +298,8 @@ echo "=== Simulation Complete. Manifest Generated. ==="
         with open(manifest_path, encoding="utf-8") as f:
             manifest_data = json.load(f)
 
-        expected_files = manifest_data.get("files", {})
-        if not expected_files:
+        expected_files = manifest_data.get("files", manifest_data)
+        if not expected_files or not isinstance(expected_files, dict):
             raise EngineError("Empty file list in manifest.json", engine="dualsphysics")
 
         verification_logs: list[str] = [

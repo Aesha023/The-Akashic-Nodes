@@ -48,16 +48,31 @@ class Delft3DFMAdapter(EngineAdapter):
             ) from e
 
     def run(self, prepared: PreparedCase) -> RawResult:
-        """Execute Delft3D FM solver in its container.
+        """Execute Delft3D FM solver via runner.
 
-        Currently blocked pending access to Deltares Harbor container registry.
+        Supports CPU, remote package generation, and precomputed import.
         """
-        self.status = EngineStatus.FAILED
-        raise EngineError(
-            "Delft3D FM solver execution is blocked pending Deltares container registry access "
-            "and container runner deployment (Phase 2b).",
-            engine="delft3d_fm",
-        )
+        logger.info("Executing Delft3D FM solver...")
+        self.status = EngineStatus.RUNNING
+
+        from pravahx.engines.delft3d_fm.runner import Delft3DRunner
+        runner = Delft3DRunner()
+
+        mode = prepared.metadata.get("mode", "cpu")
+        import_source = None
+        if "precomputed_dir" in prepared.metadata and prepared.metadata["precomputed_dir"]:
+            import_source = Path(prepared.metadata["precomputed_dir"])
+
+        try:
+            raw = runner.run(prepared, mode=mode, import_source=import_source)
+            self.status = EngineStatus.IDLE
+            return raw
+        except Exception as e:
+            self.status = EngineStatus.FAILED
+            raise EngineError(
+                f"Failed to execute Delft3D FM: {e}",
+                engine="delft3d_fm",
+            ) from e
 
     def postprocess(self, raw_result: RawResult, context: RunContext) -> NormalisedOutput:
         """Read Delft3D FM NetCDF map output (*_map.nc) and export normalised layers."""

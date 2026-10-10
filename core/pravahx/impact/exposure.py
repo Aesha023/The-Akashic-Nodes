@@ -75,16 +75,16 @@ def _sample_raster_at_point(
 
 def compute_village_exposure(
     villages_data: list[dict[str, Any]],
-    depth_raster_path: str | Path,
+    depth_raster_path: str | Path | None = None,
     arrival_raster_path: str | Path | None = None,
     velocity_raster_path: str | Path | None = None,
     depth_threshold_m: float = 0.15,
 ) -> list[VillageExposure]:
-    """Compute flood exposure for settlements from hydrodynamic rasters.
+    """Compute flood exposure for settlements from hydrodynamic rasters or direct attributes.
 
     Args:
         villages_data: List of dicts containing name, district, population, cropland_ha, x, y.
-        depth_raster_path: Path to max water depth GeoTIFF raster.
+        depth_raster_path: Optional path to max water depth GeoTIFF raster.
         arrival_raster_path: Optional path to arrival time GeoTIFF raster.
         velocity_raster_path: Optional path to max velocity GeoTIFF raster.
         depth_threshold_m: Inundation threshold depth (default 0.15 m).
@@ -94,71 +94,126 @@ def compute_village_exposure(
     """
     results: list[VillageExposure] = []
 
-    with rasterio.open(depth_raster_path) as d_src:
-        arr_src = rasterio.open(arrival_raster_path) if arrival_raster_path else None
-        v_src = rasterio.open(velocity_raster_path) if velocity_raster_path else None
+    if depth_raster_path is not None:
+        with rasterio.open(depth_raster_path) as d_src:
+            arr_src = rasterio.open(arrival_raster_path) if arrival_raster_path else None
+            v_src = rasterio.open(velocity_raster_path) if velocity_raster_path else None
 
-        try:
-            for v in villages_data:
-                name = v.get("name", "Unknown")
-                dist = v.get("district", "Unknown")
-                pop = int(v.get("population", 0))
-                cropland = float(v.get("cropland_ha", 0.0))
-                x = float(v.get("x", 0.0))
-                y = float(v.get("y", 0.0))
+            try:
+                for v in villages_data:
+                    name = v.get("name") or v.get("village_name", "Unknown")
+                    dist = v.get("district", "Unknown")
+                    pop = int(v.get("population", 0))
+                    cropland = float(v.get("cropland_ha", 0.0))
+                    x = float(v.get("x", 0.0))
+                    y = float(v.get("y", 0.0))
 
-                depth = _sample_raster_at_point(d_src, x, y)
-                arr_time = _sample_raster_at_point(arr_src, x, y) if arr_src else float("inf")
-                vel = _sample_raster_at_point(v_src, x, y) if v_src else 0.0
+                    depth = _sample_raster_at_point(d_src, x, y)
+                    arr_time = _sample_raster_at_point(arr_src, x, y) if arr_src else float("inf")
+                    vel = _sample_raster_at_point(v_src, x, y) if v_src else 0.0
 
-                is_inundated = depth >= depth_threshold_m
+                    is_inundated = depth >= depth_threshold_m
 
-                if is_inundated:
-                    hazard_obj = classify_hazard(depth, vel)
-                    hazard = (
-                        hazard_obj.value if isinstance(hazard_obj, HazardClass) else str(hazard_obj)
+                    if is_inundated:
+                        hazard_obj = classify_hazard(depth, vel)
+                        hazard = (
+                            hazard_obj.value
+                            if isinstance(hazard_obj, HazardClass)
+                            else str(hazard_obj)
+                        )
+                        pop_fraction = min(1.0, depth / 1.5) if depth < 1.5 else 1.0
+                        crop_fraction = min(1.0, depth / 0.5) if depth < 0.5 else 1.0
+
+                        affected_pop = int(pop * pop_fraction)
+                        inundated_crop = cropland * crop_fraction
+                    else:
+                        hazard = "none"
+                        affected_pop = 0
+                        inundated_crop = 0.0
+                        arr_time = float("inf")
+
+                    results.append(
+                        VillageExposure(
+                            village_name=name,
+                            district=dist,
+                            population=pop,
+                            cropland_ha=cropland,
+                            is_inundated=is_inundated,
+                            max_depth_m=round(depth, 3),
+                            arrival_time_min=round(arr_time, 1)
+                            if arr_time != float("inf")
+                            else float("inf"),
+                            hazard_class=hazard,
+                            affected_population=affected_pop,
+                            inundated_cropland_ha=round(inundated_crop, 2),
+                            geom={"type": "Point", "coordinates": [x, y]},
+                        )
                     )
-                    # Fractional impact scaling with depth
-                    pop_fraction = min(1.0, depth / 1.5) if depth < 1.5 else 1.0
-                    crop_fraction = min(1.0, depth / 0.5) if depth < 0.5 else 1.0
+            finally:
+                if arr_src:
+                    arr_src.close()
+                if v_src:
+                    v_src.close()
+    else:
+        for v in villages_data:
+            name = v.get("name") or v.get("village_name", "Unknown")
+            dist = v.get("district", "Unknown")
+            pop = int(v.get("population", 0))
+            cropland = float(v.get("cropland_ha", 0.0))
+            x = float(v.get("x", 0.0))
+            y = float(v.get("y", 0.0))
 
-                    affected_pop = int(pop * pop_fraction)
-                    inundated_crop = cropland * crop_fraction
-                else:
-                    hazard = "none"
-                    affected_pop = 0
-                    inundated_crop = 0.0
-                    arr_time = float("inf")
+            depth = float(v.get("max_depth_m", v.get("depth_m", v.get("depth", 0.0))))
+            arr_raw = v.get("arrival_time_min")
+            if arr_raw is not None:
+                arr_time = float(arr_raw)
+            elif "arrival_time_hr" in v:
+                arr_time = float(v["arrival_time_hr"]) * 60.0
+            else:
+                arr_time = float("inf")
 
-                results.append(
-                    VillageExposure(
-                        village_name=name,
-                        district=dist,
-                        population=pop,
-                        cropland_ha=cropland,
-                        is_inundated=is_inundated,
-                        max_depth_m=round(depth, 3),
-                        arrival_time_min=round(arr_time, 1)
-                        if arr_time != float("inf")
-                        else float("inf"),
-                        hazard_class=hazard,
-                        affected_population=affected_pop,
-                        inundated_cropland_ha=round(inundated_crop, 2),
-                        geom={"type": "Point", "coordinates": [x, y]},
-                    )
+            vel = float(v.get("velocity_m_s", v.get("velocity", 0.0)))
+            is_inundated = depth >= depth_threshold_m
+
+            if is_inundated:
+                hazard_obj = classify_hazard(depth, vel)
+                hazard = (
+                    hazard_obj.value if isinstance(hazard_obj, HazardClass) else str(hazard_obj)
                 )
-        finally:
-            if arr_src:
-                arr_src.close()
-            if v_src:
-                v_src.close()
+                pop_fraction = min(1.0, depth / 1.5) if depth < 1.5 else 1.0
+                crop_fraction = min(1.0, depth / 0.5) if depth < 0.5 else 1.0
+                affected_pop = int(pop * pop_fraction)
+                inundated_crop = cropland * crop_fraction
+            else:
+                hazard = "none"
+                affected_pop = 0
+                inundated_crop = 0.0
+                arr_time = float("inf")
+
+            results.append(
+                VillageExposure(
+                    village_name=name,
+                    district=dist,
+                    population=pop,
+                    cropland_ha=cropland,
+                    is_inundated=is_inundated,
+                    max_depth_m=round(depth, 3),
+                    arrival_time_min=(
+                        round(arr_time, 1) if arr_time != float("inf") else float("inf")
+                    ),
+                    hazard_class=hazard,
+                    affected_population=affected_pop,
+                    inundated_cropland_ha=round(inundated_crop, 2),
+                    geom={"type": "Point", "coordinates": [x, y]},
+                )
+            )
 
     return results
 
 
 def compute_asset_exposure(
     assets_data: list[dict[str, Any]],
-    depth_raster_path: str | Path,
+    depth_raster_path: str | Path | None = None,
     arrival_raster_path: str | Path | None = None,
     velocity_raster_path: str | Path | None = None,
     depth_threshold_m: float = 0.15,
@@ -166,47 +221,88 @@ def compute_asset_exposure(
     """Evaluate flood impact on critical infrastructure assets."""
     results: list[CriticalAssetExposure] = []
 
-    with rasterio.open(depth_raster_path) as d_src:
-        arr_src = rasterio.open(arrival_raster_path) if arrival_raster_path else None
-        v_src = rasterio.open(velocity_raster_path) if velocity_raster_path else None
+    if depth_raster_path is not None:
+        with rasterio.open(depth_raster_path) as d_src:
+            arr_src = rasterio.open(arrival_raster_path) if arrival_raster_path else None
+            v_src = rasterio.open(velocity_raster_path) if velocity_raster_path else None
 
-        try:
-            for a in assets_data:
-                name = a.get("name", "Asset")
-                atype = a.get("type", "Infrastructure")
-                x = float(a.get("x", 0.0))
-                y = float(a.get("y", 0.0))
+            try:
+                for a in assets_data:
+                    name = a.get("name") or a.get("asset_name", "Asset")
+                    atype = a.get("type") or a.get("asset_type", "Infrastructure")
+                    x = float(a.get("x", 0.0))
+                    y = float(a.get("y", 0.0))
 
-                depth = _sample_raster_at_point(d_src, x, y)
-                arr_time = _sample_raster_at_point(arr_src, x, y) if arr_src else float("inf")
-                vel = _sample_raster_at_point(v_src, x, y) if v_src else 0.0
+                    depth = _sample_raster_at_point(d_src, x, y)
+                    arr_time = _sample_raster_at_point(arr_src, x, y) if arr_src else float("inf")
+                    vel = _sample_raster_at_point(v_src, x, y) if v_src else 0.0
 
-                is_inundated = depth >= depth_threshold_m
-                if is_inundated:
-                    hazard_obj = classify_hazard(depth, vel)
-                    hazard = (
-                        hazard_obj.value if isinstance(hazard_obj, HazardClass) else str(hazard_obj)
+                    is_inundated = depth >= depth_threshold_m
+                    if is_inundated:
+                        hazard_obj = classify_hazard(depth, vel)
+                        hazard = (
+                            hazard_obj.value
+                            if isinstance(hazard_obj, HazardClass)
+                            else str(hazard_obj)
+                        )
+                    else:
+                        hazard = "none"
+
+                    results.append(
+                        CriticalAssetExposure(
+                            asset_name=name,
+                            asset_type=atype,
+                            is_inundated=is_inundated,
+                            max_depth_m=round(depth, 3),
+                            arrival_time_min=round(arr_time, 1)
+                            if arr_time != float("inf")
+                            else float("inf"),
+                            hazard_class=hazard,
+                            geom={"type": "Point", "coordinates": [x, y]},
+                        )
                     )
-                else:
-                    hazard = "none"
+            finally:
+                if arr_src:
+                    arr_src.close()
+                if v_src:
+                    v_src.close()
+    else:
+        for a in assets_data:
+            name = a.get("name") or a.get("asset_name", "Asset")
+            atype = a.get("type") or a.get("asset_type", "Infrastructure")
+            x = float(a.get("x", 0.0))
+            y = float(a.get("y", 0.0))
+            depth = float(a.get("max_depth_m", a.get("depth_m", a.get("depth", 0.0))))
+            arr_raw = a.get("arrival_time_min")
+            if arr_raw is not None:
+                arr_time = float(arr_raw)
+            elif "arrival_time_hr" in a:
+                arr_time = float(a["arrival_time_hr"]) * 60.0
+            else:
+                arr_time = float("inf")
+            vel = float(a.get("velocity_m_s", a.get("velocity", 0.0)))
 
-                results.append(
-                    CriticalAssetExposure(
-                        asset_name=name,
-                        asset_type=atype,
-                        is_inundated=is_inundated,
-                        max_depth_m=round(depth, 3),
-                        arrival_time_min=round(arr_time, 1)
-                        if arr_time != float("inf")
-                        else float("inf"),
-                        hazard_class=hazard,
-                        geom={"type": "Point", "coordinates": [x, y]},
-                    )
+            is_inundated = depth >= depth_threshold_m
+            if is_inundated:
+                hazard_obj = classify_hazard(depth, vel)
+                hazard = (
+                    hazard_obj.value if isinstance(hazard_obj, HazardClass) else str(hazard_obj)
                 )
-        finally:
-            if arr_src:
-                arr_src.close()
-            if v_src:
-                v_src.close()
+            else:
+                hazard = "none"
+
+            results.append(
+                CriticalAssetExposure(
+                    asset_name=name,
+                    asset_type=atype,
+                    is_inundated=is_inundated,
+                    max_depth_m=round(depth, 3),
+                    arrival_time_min=round(arr_time, 1)
+                    if arr_time != float("inf")
+                    else float("inf"),
+                    hazard_class=hazard,
+                    geom={"type": "Point", "coordinates": [x, y]},
+                )
+            )
 
     return results

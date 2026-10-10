@@ -84,3 +84,9 @@ patch.diff
 artifacts/
 runs/
 *.db
+dualsphysics_results.tar.gz
+dualsphysics_results/
+CaseDamBreak_out/
+needs_human_check/
+scratch/
+

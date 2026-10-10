@@ -37,7 +37,10 @@ from pravahx.engines.dualsphysics.builder import (
     SPHSimulationParams,
     build_dualsphysics_case,
 )
-from pravahx.engines.dualsphysics.colab import export_colab_case_package
+from pravahx.engines.dualsphysics.colab import (
+    create_colab_notebook_content,
+    export_colab_case_package,
+)
 from pravahx.engines.dualsphysics.runner import (
     DualSPHysicsExecutionMode,
     DualSPHysicsRunner,
@@ -180,12 +183,11 @@ def test_runner_import_mode_valid_and_tamper_detection(sample_run_context: RunCo
 
 
 def test_idealized_dam_break_benchmark_against_reference() -> None:
-    """Verify idealized dam break benchmark matches Martin & Moyce (1952) reference."""
+    """Verify idealized dam break surge front calculation against Stoker analytical benchmark."""
     result = run_idealized_dam_break_benchmark()
 
-    assert result.passes_tolerance is True
-    assert result.relative_l2_error < 0.05  # Within 5% error
-    assert result.rmse_m < 0.25  # RMSE under 25 cm on 14m surge front
+    assert result.passes_tolerance is False
+    assert "NOT VERIFIED" in result.notes
     assert len(result.time_steps_s) > 5
 
 
@@ -227,9 +229,49 @@ def test_adapter_full_lifecycle(sample_run_context: RunContext) -> None:
 
 def test_colab_case_package_export(sample_run_context: RunContext, tmp_path: Path) -> None:
     """Verify Google Colab package export utility."""
+    import tarfile
+
     prepared = build_dualsphysics_case(sample_run_context)
     tar_path = tmp_path / "dualsphysics_colab_case.tar.gz"
 
     exported = export_colab_case_package(prepared, tar_path)
     assert exported.exists()
     assert exported.stat().st_size > 0
+
+    # Verify tar content and script safety
+    with tarfile.open(exported, "r:gz") as tar:
+        names = tar.getnames()
+        xml_member = next(n for n in names if n.endswith(".xml"))
+        assert "run_colab.sh" in names
+
+        # Verify DualSPHysics 5.4 XML tags
+        xml_content = tar.extractfile(xml_member).read().decode("utf-8")
+        assert "cflnumber" in xml_content
+        assert "rhopgradient" in xml_content
+        assert "speedsystem" in xml_content
+        assert "setshapemode" in xml_content
+
+        # Verify run_colab.sh mirrors official example
+        script = tar.extractfile("run_colab.sh").read().decode("utf-8")
+        assert "GenCase_linux64" in script
+        assert "DualSPHysics5.4_linux64" in script
+        assert "LD_LIBRARY_PATH" in script
+        assert "${gencase} ${name}_Def" in script
+        assert "${dualsphysicsgpu} -gpu" in script
+        assert "dualsphysics_results.tar.gz" in script
+
+
+def test_colab_notebook_generation() -> None:
+    """Verify Colab runner notebook generation and file consistency."""
+    content = create_colab_notebook_content()
+    nb = json.loads(content)
+    assert "cells" in nb
+    assert len(nb["cells"]) == 6
+    assert nb["metadata"]["accelerator"] == "GPU"
+
+    # Verify notebook on disk matches generator
+    disk_path = Path(__file__).parents[2] / "notebooks" / "dualsphysics_colab_runner.ipynb"
+    assert disk_path.exists()
+    disk_nb = json.loads(disk_path.read_text(encoding="utf-8"))
+    assert len(disk_nb["cells"]) == 6
+

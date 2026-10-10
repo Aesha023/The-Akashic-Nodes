@@ -107,35 +107,40 @@ Evaluating the HEC-RAS regression methods for Teton Dam ($V_w = 310.47\text{ MCM
 
 ---
 
-## 7. Idealized Dam-Break Benchmark: Martin & Moyce (1952) / SPHERIC Benchmark 2
+## 7. Idealized Dam-Break Simulation: DualSPHysics 3D SPH `[BENCHMARK STATUS: NOT VERIFIED]`
 
-To verify the DualSPHysics 3D SPH formulation before applying it to complex 3D topography, the code is evaluated against the classic Martin & Moyce (1952) water column collapse experiment ($a = 1.0\text{ m}, h_0 = 2.0\text{ m}, g = 9.81\text{ m/s}^2$).
+To verify the DualSPHysics 3D SPH formulation before applying it to complex 3D topography, the solver was executed on an idealized water column collapse setup ($a = 1.0\text{ m}, h_0 = 2.0\text{ m}, g = 9.81\text{ m/s}^2$) on an **NVIDIA Tesla T4 GPU (Google Colab)** using DualSPHysics 5.4.355 with 314,801 total particles (242,550 fluid particles, $dp = 0.02\text{ m}$).
 
-### 7.1 Quantitative Benchmark Results
+### 7.1 Execution Record on Real Hardware
+* **Hardware & Runtime:** NVIDIA Tesla T4 GPU, 389.09 s wall time (2.0 s physical time, 29,873 time steps, 41 PART files).
+* **Provenance Archive:** `dualsphysics_results.tar.gz` (554 MB, sha256: `461646b67d4954f52dcfca0000a36f41a051b2306234296f388648f9744b7da5`).
+* **Operational Status:** **RAN ON REAL DATA**.
 
-* *Non-Dimensional Time:* $t^* = t \cdot \sqrt{2g / a}$
-* *Reference Analytical/Experimental Surge Front:* $x_{\text{ref}}(t) = a \cdot x^*(t^*)$
-* *SPH Particle Model Surge Front:* Simulated front progression $x_{\text{SPH}}(t)$.
+### 7.2 Benchmark Verification Status: NOT VERIFIED
 
-| Time $t$ (s) | Non-Dimensional Time $t^*$ | Reference Front $x_{\text{ref}}$ (m) | Simulated Front $x_{\text{SPH}}$ (m) | Difference $\Delta x$ (m) | Error Rel. to Front (%) |
-|---|---|---|---|---|---|
-| **$0.00$** | $0.000$ | $1.000$ | $1.000$ | $0.000$ | $0.00\%$ |
-| **$0.10$** | $0.443$ | $1.098$ | $1.094$ | $-0.004$ | $-0.36\%$ |
-| **$0.20$** | $0.886$ | $1.392$ | $1.377$ | $-0.015$ | $-1.08\%$ |
-| **$0.30$** | $1.329$ | $2.858$ | $2.772$ | $-0.086$ | $-3.01\%$ |
-| **$0.40$** | $1.772$ | $3.744$ | $3.636$ | $-0.108$ | $-2.88\%$ |
-| **$0.50$** | $2.215$ | $4.630$ | $4.500$ | $-0.130$ | $-2.81\%$ |
-| **$0.60$** | $2.658$ | $5.516$ | $5.364$ | $-0.152$ | $-2.76\%$ |
-| **$0.80$** | $3.544$ | $7.288$ | $7.092$ | $-0.196$ | $-2.69\%$ |
-| **$1.00$** | $4.429$ | $9.058$ | $8.818$ | $-0.240$ | $-2.65\%$ |
-| **$1.20$** | $5.315$ | $10.830$ | $10.546$ | $-0.284$ | $-2.62\%$ |
-| **$1.50$** | $6.644$ | $13.488$ | $13.137$ | $-0.351$ | $-2.60\%$ |
-
-### 7.2 Summary Statistics & Tolerance Verification
-
-* **Relative $L_2$ Error:** **$2.65\%$** (Tolerance threshold: $\le 5.0\%$) $\rightarrow$ **PASS**
-* **Root Mean Square Error (RMSE):** **$0.1809\text{ m}$**
-* **Maximum Absolute Error:** **$0.3512\text{ m}$** (at $t = 1.50\text{ s}$, domain extent $> 13\text{ m}$)
-* **Evaluation:** SPH particle front captures both initial hydrostatic inertia acceleration and the asymptotic constant-velocity shallow surge propagation within experimental measurement uncertainty.
+> [!WARNING]
+> **Status: NOT VERIFIED**
+> The physical reference dataset often cited for this case (Martin & Moyce, 1952, Phil. Trans. R. Soc. Lond. A, DOI `10.1098/rsta.1952.0006`) is behind a publisher access paywall (HTTP 403 Forbidden). No open-access source tabulating the exact experimental points has been fetched yet into this workspace.
+>
+> In accordance with PravahX strict verification rules:
+> 1. No quantitative comparison table is accepted without a fetched open-access primary source.
+> 2. No pass/fail verdict is claimed.
+> 3. The benchmark status remains strictly **NOT VERIFIED** until an open-access paper tabulating or plotting the Martin and Moyce data is fetched and cited with its URL.
 
 
+
+
+## 8. Idealized Dam-Break Simulation: Delft3D Flexible Mesh `[BENCHMARK STATUS: NOT VERIFIED]`
+
+To verify the Delft3D FM formulation before applying it to complex 2D topography, the solver will be executed on an idealized dam-break setup.
+
+### 8.1 Execution Record on Real Hardware
+* **Hardware & Runtime:** Google Colab (CPU)
+* **Provenance Archive:** Pending successful remote execution.
+* **Operational Status:** **NOT RUN**.
+
+### 8.2 Benchmark Verification Status: NOT VERIFIED
+
+> [!WARNING]
+> **Status: NOT VERIFIED**
+> No validation runs against a fetched physical reference dataset have been performed for Delft3D FM yet.

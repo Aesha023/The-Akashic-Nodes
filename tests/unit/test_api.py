@@ -139,3 +139,69 @@ async def test_scenario_crud_and_run_dispatch() -> None:
         )
         assert manifest_res.status_code == 200
         assert manifest_res.json()["scenario_id"] == "api_test_scenario_01"
+
+
+@pytest.mark.asyncio
+async def test_impact_and_gee_endpoints() -> None:
+    """Test Flood Hazard Rating, Damage Valuation, Evacuation, Brief, and GEE endpoints."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Register and login analyst
+        await client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "analyst2@pravahx.in",
+                "password": "Password123!",
+                "full_name": "Analyst Two",
+                "role": "analyst",
+            },
+        )
+        tok_res = await client.post(
+            "/api/v1/auth/token",
+            data={"username": "analyst2@pravahx.in", "password": "Password123!"},
+        )
+        token = tok_res.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # 1. Defra Hazard Rating
+        h_res = await client.post(
+            "/api/v1/impact/hazard",
+            json={"depth_m": 1.2, "velocity_m_s": 2.0},
+            headers=headers,
+        )
+        assert h_res.status_code == 200
+        h_data = h_res.json()
+        assert h_data["hazard_rating"] > 0
+        assert h_data["hazard_class"] in ("low", "moderate", "high", "extreme")
+
+        # 2. Exposure & Damage
+        v_payload = [
+            {
+                "village_id": "V01",
+                "name": "Aluva East",
+                "population": 5000,
+                "buildings": 1200,
+                "max_depth_m": 1.5,
+                "arrival_time_hr": 2.5,
+            }
+        ]
+        exp_res = await client.post(
+            "/api/v1/impact/exposure",
+            json={"villages": v_payload},
+            headers=headers,
+        )
+        assert exp_res.status_code == 200
+        assert exp_res.json()["total_population_exposed"] > 0
+
+        dmg_res = await client.post(
+            "/api/v1/impact/damage",
+            json={"villages": v_payload},
+            headers=headers,
+        )
+        assert dmg_res.status_code == 200
+        assert dmg_res.json()["total_loss_inr"] > 0
+
+        # 3. GEE Status
+        gee_status_res = await client.get("/api/v1/gee/status", headers=headers)
+        assert gee_status_res.status_code == 200
+        assert "authenticated" in gee_status_res.json()
+

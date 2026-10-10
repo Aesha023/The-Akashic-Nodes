@@ -95,9 +95,25 @@
   - Supported 3 execution modes so local development requires no NVIDIA GPU: CPU build/verification, remote GPU packaging, and imported precomputed results with cryptographic hash manifests.
   - Implemented idealized dam-break benchmark (Martin & Moyce 1952 / SPHERIC Benchmark 2) before real terrain.
   - Provided Google Colab notebook for free remote GPU execution producing verified `.tar.gz` import packages.
-- Deviations from the build spec: None
-- Tests: 85 unit tests passing locally across the repo. Mypy and Ruff 100% clean.
-- Measured results: Martin & Moyce (1952) benchmark surge front matches analytical solution within $2.65\%$ relative $L_2$ error (tolerance: $5.0\%$) and $\text{RMSE} = 0.1809\text{ m}$.
+- Tests: 8 unit tests in `test_dualsphysics.py` passing locally across the repo.
+- Measured results:
+  - **First Real SPH GPU Run Completed (2026-10-09)**:
+    - **Hardware**: NVIDIA Tesla T4 GPU (SM 7.5, 14,913 MiB global memory) via Google Colab.
+    - **Solver**: DualSPHysics 5.4.355 (07-04-2025) x64 CUDA binary with GenCase 5.4.354.01.
+    - **Particle Count**: 314,801 initial particles (72,251 DBC boundary particles + 242,550 fluid particles, spacing $dp = 0.02\text{ m}$).
+    - **Simulation Runtime**: 2.00 s simulated time, 29,873 time steps, wall time 389.09 s (runtime per physical second: 194.44 s, 76.82 steps/s).
+    - **Outputs**: 41 PART files (`PartFluid_0000.vtk` to `PartFluid_0040.vtk`, $\Delta t = 0.05\text{ s}$), full PartVTK output complete.
+    - **Archive**: `dualsphysics_results.tar.gz` (554 MB, sha256: `461646b67d4954f52dcfca0000a36f41a051b2306234296f388648f9744b7da5`).
+    - **Martin & Moyce (1952) Idealized Setup**:
+      - Column: width $a = 1.0\text{ m}$, height $h_0 = 2.0\text{ m}$ ($n=2$), channel length $L = 4.0\text{ m}$.
+      - Simulation executed on real GPU: 314,801 particles, 2.0 s physical time, 389.09 s wall time.
+      - **Benchmark Status: NOT VERIFIED**. Primary 1952 reference values have no fetched open-access source; comparison table and pass verdicts removed per project verification standards.
+      - Diagnostic plot saved under `needs_human_check/martin_moyce_benchmark.png`.
+    - **Diagnostic & Bug Fixes**:
+      - **Splash & Particle Loss**: Wave reached end wall ($x = 4.0\text{ m}$) at $t = 0.70\text{ s}$, forming a vertical jet splashing up to $z = 3.733\text{ m}$. At $t \ge 1.10\text{ s}$, the vertical jet clipped the original domain ceiling ($z = 2.5\text{ m} + 50\% = 3.75\text{ m}$), causing 6,700 splash particles to exit. Resolution: raised tank height to $z = 4.0\text{ m}$, pointmax to $4.55\text{ m}$, and posmax to `default + 100%`.
+      - **Deprecated Parameter**: Replaced deprecated `PartsOutMax` with `MinFluidStop="0.1"` in `builder.py` and case XML.
+      - **MeasureTool**: Removed MeasureTool binary download and call since no measurement points/gauges were defined.
+      - **Manifest KeyError**: Handled both nested `{"files": {...}}` and flat `{...}` structures in `runner.py` and `colab.py`.
 - Known issues and limits: None for Phase 3.
 - Requirement IDs advanced: R3 (3D near-field capability)
 - Feature IDs advanced: F04 (SPH solver adapter), F08 (Remote GPU / Colab runner)

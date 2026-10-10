@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, TypedDict
 
@@ -48,11 +49,13 @@ def route_hydrograph(
     reservoir_exponent: float,
     side_slope_z: float = 1.0,
     progression_mode: Literal[
-        "vertical_and_horizontal", "horizontal_only"
+        "vertical_and_horizontal", "horizontal_only", "piping_orifice_to_weir"
     ] = "vertical_and_horizontal",
     dt_hr: float = 0.01,
     c_v1: float = 1.70,
     c_v2: float = 1.35,
+    piping_collapse_fraction: float | None = None,
+    piping_centerline_height_m: float | None = None,
 ) -> BreachHydrograph:
     """Route stored volume through a growing trapezoidal breach using broad-crested weir relations.
 
@@ -83,6 +86,11 @@ def route_hydrograph(
                      Source: Fread (1988), Wahl (1998, Eq. 2), HEC-RAS Manual Ch. 14.
         C_v2       = Metric broad-crested triangular side-slope coefficient (~1.35 m^0.5/s;
                      2.45 in US Customary). Source: Fread (1988), Wahl (1998, Eq. 2).
+        C_d (pipe) = Submerged piping orifice coefficient (~0.59; within 0.5 to 0.6 range).
+                     Exact HEC-RAS Technical Reference Manual (Ch. 14) quote:
+                     "While a coefficient for a true orifice is typically around 0.8,
+                      values in the range of 0.5 to 0.6 are suggested for piping flow
+                      to account for energy losses."
 
     Args:
         initial_volume_m3: Initial reservoir storage volume (m^3).
@@ -91,10 +99,15 @@ def route_hydrograph(
         t_f_hr: Breach formation time (hours).
         reservoir_exponent: Hypsometric shape exponent m in V = K * h^m (required).
         side_slope_z: Final breach side slope z (horizontal:vertical). Default 1.0.
-        progression_mode: 'vertical_and_horizontal' (HEC-RAS) or 'horizontal_only'.
+        progression_mode: 'vertical_and_horizontal' (HEC-RAS), 'horizontal_only', or
+                          'piping_orifice_to_weir'.
         dt_hr: Time step for routing (hours). Default 0.01 hr.
         c_v1: Rectangular weir coefficient (m^0.5/s). Default 1.70.
         c_v2: Triangular side-slope weir coefficient (m^0.5/s). Default 1.35.
+        piping_collapse_fraction: Required fraction of formation time (in [0.1, 0.9]) at which
+                                  the embankment crest collapses into weir flow. Required if
+                                  progression_mode is 'piping_orifice_to_weir'.
+        piping_centerline_height_m: Optional elevation of pipe centerline (m above final invert).
 
     Returns:
         BreachHydrograph containing hydrograph points and empirical validation metrics.
@@ -105,6 +118,11 @@ def route_hydrograph(
         raise ValueError("Initial volume must be positive")
     if reservoir_exponent <= 0:
         raise ValueError("Reservoir exponent must be positive")
+    if progression_mode == "piping_orifice_to_weir" and piping_collapse_fraction is None:
+        raise ValueError(
+            "piping_collapse_fraction is a required parameter with no default for "
+            "piping_orifice_to_weir progression mode (must be explicitly provided by analyst)."
+        )
 
     # Final bottom width from average width and side slope
     b_bottom_final = max(0.0, b_avg_m - side_slope_z * dam_height_m)
@@ -130,17 +148,44 @@ def route_hydrograph(
         b_t = b_bottom_final * expansion_factor
         z_t = side_slope_z * expansion_factor
 
-        # Active head over instantaneous breach invert
-        if progression_mode == "vertical_and_horizontal":
+        # Active head and discharge computation
+        if progression_mode == "piping_orifice_to_weir":
+            # HEC-RAS standard piping breach transition:
+            # Phase 1 (pre-collapse): submerged orifice flow through expanding piping tunnel.
+            # Exact HEC-RAS Manual (Ch. 14) quote:
+            # "While a coefficient for a true orifice is typically around 0.8,
+            #  values in the range of 0.5 to 0.6 are suggested for piping flow
+            #  to account for energy losses."
+            pipe_elev = (
+                dam_height_m * 0.25
+                if piping_centerline_height_m is None
+                else piping_centerline_height_m
+            )
+            collapse_factor = max(0.1, min(0.9, float(piping_collapse_fraction)))
+            if expansion_factor < collapse_factor:
+                # Submerged expanding orifice
+                rel_expansion = expansion_factor / collapse_factor
+                pipe_dim = max(0.1, b_bottom_final * rel_expansion)
+                pipe_area = max(0.01, pipe_dim * pipe_dim * 0.8)
+                head_over_pipe = max(0.0, h_pool - pipe_elev)
+                # Orifice equation: Q = C_d * A * sqrt(2*g*H) (HEC-RAS standard C_d ~ 0.59)
+                c_orifice = 0.59
+                q_m3s = c_orifice * pipe_area * math.sqrt(2.0 * 9.81 * head_over_pipe)
+            else:
+                # Post-collapse: open-channel weir flow
+                weir_progression = (expansion_factor - collapse_factor) / (1.0 - collapse_factor)
+                b_weir = b_bottom_final * (0.6 + 0.4 * weir_progression)
+                h_weir = max(0.0, h_pool)
+                q_m3s = c_v1 * b_weir * (h_weir**1.5) + c_v2 * z_t * (h_weir**2.5)
+        elif progression_mode == "vertical_and_horizontal":
             # Invert falls linearly from crest (dam_height) to bottom (0) over t_f
             h_invert_above_bottom = (1.0 - expansion_factor) * dam_height_m
             h_weir = max(0.0, h_pool - h_invert_above_bottom)
+            q_m3s = c_v1 * b_t * (h_weir**1.5) + c_v2 * z_t * (h_weir**2.5)
         else:
             # Full depth from t=0
             h_weir = h_pool
-
-        # Trapezoidal weir discharge: rectangular bottom + triangular side slopes
-        q_m3s = c_v1 * b_t * (h_weir**1.5) + c_v2 * z_t * (h_weir**2.5)
+            q_m3s = c_v1 * b_t * (h_weir**1.5) + c_v2 * z_t * (h_weir**2.5)
 
         if q_m3s > max_q:
             max_q = q_m3s

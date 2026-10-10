@@ -66,10 +66,13 @@ async def evaluate_hazard(
         velocity=req.velocity_m_s,
         debris_factor=req.debris_factor,
     )
-    h_class = classify_hazard(
-        depth=req.depth_m,
-        velocity=req.velocity_m_s,
-        debris_factor=req.debris_factor,
+    h_class = cast(
+        HazardClass,
+        classify_hazard(
+            depth=req.depth_m,
+            velocity=req.velocity_m_s,
+            debris_factor=req.debris_factor,
+        ),
     )
     descriptions = {
         "Low": "Caution - Shallow or slow-moving water",

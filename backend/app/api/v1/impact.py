@@ -67,7 +67,7 @@ async def evaluate_hazard(
         debris_factor=req.debris_factor,
     )
     h_class = cast(
-        HazardClass,
+        "HazardClass",
         classify_hazard(
             depth=req.depth_m,
             velocity=req.velocity_m_s,

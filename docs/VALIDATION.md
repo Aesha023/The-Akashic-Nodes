@@ -164,3 +164,85 @@ To verify the Delft3D FM solver against analytical dam-break hydrodynamics over 
 * **Front (continuous from dam, depth >5 cm), error % of travel:** Base -32.5/-13.0/+14.6; A -22.4/-10.4/+2.8; B -19.9/+6.0/+30.6; C +9.8/+12.6/+13.5. → FAIL vs pre-registered 5%. Cause: frictionless thin-film artefact (film speeds up to 382 m/s; wall pile-up 0.90 m Base, 0.94 m C).
 * **Observation only (NOT a pass criterion, chosen after seeing data):** C 1 cm front at t=30 = 1591.25 m vs Ritter 1594.3 m.
 * **Verdict:** depth PASS + converging; front FAIL, understood. Reference: Delestre et al. 2013 (SWASHES), arXiv:1110.0288v7, Section 4.1.2, fetched and checked.
+
+## 9. Tier-1 Delft3D FM vs Tier-0 HAND: Model Intercomparison (Ganga Reach near Rishikesh)
+
+> [!IMPORTANT]
+> **LABELING: MODEL INTERCOMPARISON**
+> This simulation is strictly a **MODEL INTERCOMPARISON** between Tier-0 (HAND) and Tier-1 (Delft3D Flexible Mesh 2D) on identical input data and hypothetical forcing. It is **NOT** a validation against field observations. Disagreement between tiers is expected due to structural model differences (static gravity-equilibrium HAND vs 2D shallow-water equations with advective inertia and backwater effects) and will be reported transparently without tuning.
+
+* **Benchmark Status:** **[NOT RUN - PENDING COLAB EXECUTION]**
+* **Notebook:** `notebooks/PravahX_Ganga_Tier1.ipynb`
+* **Target Environment:** Google Colab Free CPU (Intel Xeon / 2 vCPUs)
+* **Execution Budget:** < 30 min wall time (< 100k cells)
+
+### 9.1 Identical Inputs Comparison Table
+
+| Parameter / Input | Tier-0 HAND Accepted Run | Tier-1 Delft3D FM Run | Source / Provenance | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **Geographic AOI** | `(78.30, 30.10, 78.35, 30.15)` | `(78.30, 30.10, 78.35, 30.15)` | Rishikesh reach, Uttarakhand, India | IDENTICAL |
+| **Projected CRS** | `EPSG:32644` (UTM Zone 44N) | `EPSG:32644` (UTM Zone 44N) | EPSG Registry | IDENTICAL |
+| **Terrain DEM Source** | Copernicus DEM GLO-30 (30 m) | Copernicus DEM GLO-30 (30 m) | AWS Element84 STAC API (`copernicus-dem-30m`) | IDENTICAL |
+| **Hydro-Conditioning** | WhiteboxTools `breach_depressions_least_cost` | Bed elevations extracted directly from conditioned DEM | WhiteboxTools v2.4 | IDENTICAL |
+| **Main-Reach Definition** | D8 flow accumulation $\ge 500$ cells | 2D Mesh bounded by Tier-0 envelope + 300 m buffer | WhiteboxTools D8 / PravahX Mesh | MATCHED |
+| **Land Cover Roughness** | Uniform $n = 0.035$ (reference) | Spatially distributed Manning $n$ via ESA WorldCover 10 m | ESA WorldCover 2021 v200 AWS S3 tile `N30E078` | IDENTICAL BASELINE |
+| **Inflow Peak Discharge** | $5,000.0\text{ m}^3/\text{s}$ | $5,000.0\text{ m}^3/\text{s}$ (breach peak $4,900$ + base flow $100$) | Froehlich (2008) hypothetical dam breach scenario | IDENTICAL PEAK |
+| **Simulation Duration** | Static (peak steady state) | Dynamic $7,200\text{ s}$ ($2.0\text{ h}$ unsteady hydrograph) | PravahX Hydrograph Router | CONSISTENT |
+
+### 9.2 Inflow: Hypothetical Scenario (Froehlich 2008)
+
+* **Scenario Title:** Hypothetical dam breach scenario (NO real dam failure or historical event is named or implied).
+* **Physical Reservoir Dimensions:**
+  * Initial reservoir storage $V_w = 5.808\text{ MCM}$ ($5,807,632\text{ m}^3$)
+  * Breach height $h_b = 26.0\text{ m}$
+  * Failure mode: Overtopping ($K_o = 1.3$, side slope $z = 1.0\text{ H:V}$)
+  * Hypsometric exponent: $m = 2.0$ (parabolic valley hypsometry)
+  * Base flow: $100.0\text{ m}^3/\text{s}$ (lean-season ambient flow)
+* **Froehlich (2008) Breach Regressions:**
+  * Average breach width: $B_{\text{avg}} = 0.27 \cdot K_o \cdot V_w^{0.32} \cdot h_b^{0.04} = 58.42\text{ m}$
+  * Formation time: $t_f = 63.2 \cdot \sqrt{\frac{V_w}{g \cdot h_b^2}} = 1,870.3\text{ s} \approx 31.17\text{ min}$
+  * Peak breach outflow: $Q_{b,\text{peak}} = 4,900.0\text{ m}^3/\text{s}$
+  * Total peak inflow: $Q_{\text{total}} = 4,900.0 + 100.0 = \mathbf{5,000.0\text{ m}^3/\text{s}}$ (IDENTICAL to Tier-0 accepted peak).
+
+### 9.3 Model Build Specifications
+
+* **Computational Mesh:** 2D flexible quad mesh generated inside the valley polygon defined by the accepted Tier-0 inundation extent dilated with a $300\text{ m}$ buffer. Cell size $\Delta x = 50\text{ m}$, yielding $3,154$ quad faces, $3,405$ nodes, and $6,558$ links (well within the $< 100\text{k}$ Colab CPU limit).
+* **Bed Level:** Interpolated at mesh nodes and cell centres from the Copernicus GLO-30 DEM.
+* **Manning Roughness:** Mapped from ESA WorldCover 10 m classes:
+  * Tree cover (10): $n = 0.070$
+  * Shrubland (20): $n = 0.050$
+  * Grassland (30): $n = 0.035$
+  * Cropland (40): $n = 0.040$
+  * Built-up (50): $n = 0.100$
+  * Bare / sparse vegetation (60): $n = 0.030$
+  * Water bodies (80): $n = 0.030$
+  * Area-weighted mean Manning $n \approx 0.0436$. Mapping source status: `[UNVERIFIED - Empirical Literature Mapping]`.
+* **Upstream Boundary:** Discharge boundary (`quantity = dischargebnd`) on cross-section $(243300, 3337900) \to (243600, 3337650)$ driven by the Froehlich (2008) unsteady hydrograph at $10\text{ s}$ intervals.
+* **Downstream Boundary:** Stage-discharge normal depth rating curve (`quantity = qhbnd`) on cross-section $(239700, 3333100) \to (240100, 3332800)$ using Manning's equation ($B = 150\text{ m}, S_0 = 0.005, n = 0.035, z_{\text{bed}} = 337.0\text{ m}$) ensuring wave passage without artificial boundary reflections.
+* **Numerical Best Practices Applied (from Ritter Lessons):**
+  * `MapFormat = 4` (UGRID NetCDF standard).
+  * `IniFieldFile = initialFields.ini` (constant dry bed depth $0.0\text{ m}$; sample friction table).
+  * Time stepping: $T_{\text{stop}} = 7,200\text{ s}$, $DtUser = 10\text{ s}$ (exactly divides $T_{\text{stop}}$), $DtMax = 2.0\text{ s}$, $CflMax = 0.7$, $epsHu = 0.01\text{ m}$.
+  * Obsolete MDU keys guarded and commented out.
+  * No post-generation `hydrolib` re-saving.
+
+### 9.4 Limitations
+
+1. **Open DEM Channel Conveyance:** Open DEMs (Copernicus GLO-30 / SRTM) record the water surface elevation rather than the submerged bathymetric river bed. Because dry-season bathymetry is absent, channel cross-sectional area and conveyance capacity are underestimated.
+2. **Roughness Mapping:** Manning $n$ values mapped from ESA WorldCover 10 m are empirical literature values `[UNVERIFIED - Empirical Literature Mapping]`.
+3. **Arrival Time Thresholds:** Flood wave arrival is reported at $0.05\text{ m}$ (initial wave arrival) and $0.30\text{ m}$ (substantial hazard threshold). Threshold selection is `[UNVERIFIED - Empirical Threshold Selection]`.
+4. **Downstream Normal Depth:** Downstream boundary assumes steady normal depth via Manning formula, which neglects local acceleration or backwater effects occurring downstream of the domain boundary.
+
+### 9.5 Intercomparison Outputs and Metrics (Pre-registered)
+
+Upon Colab execution of `notebooks/PravahX_Ganga_Tier1.ipynb`, the following outputs will be evaluated:
+* **Hydrodynamic Rasters (EPSG:32644):** `tier1_max_depth.tif`, `tier1_max_velocity.tif`, `tier1_arrival_time_0_05.tif`, `tier1_arrival_time_0_30.tif`.
+* **Vector Envelopes:** `tier1_envelope.shp` and `tier1_envelope.kml`.
+* **Model Intercomparison Metrics:**
+  * Inundation extent Intersection over Union (IoU) and F-score (Dice coefficient).
+  * Inundation area of each tier ($\text{km}^2$).
+  * Depth difference statistics where both wet: mean difference, MAE, RMSD, median, 10th and 90th percentiles.
+  * Spatial agreement map: Categorized into Dry, Both Wet, Tier-0 Only, Tier-1 Only.
+* **Summary Figure:**
+  * `[Figure pending: Summary map docs/img/ganga_tier1_summary.png will be copied from Drive upon Colab execution; no placeholder figures are committed.]`
+

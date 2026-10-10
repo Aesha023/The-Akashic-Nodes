@@ -50,7 +50,7 @@ class Delft3DBenchmark:
         self.uniffrictcoef = uniffrictcoef
         self.epshu = epshu
 
-    def generate_mesh(self, net_path: Path):
+    def generate_mesh(self, net_path: Path) -> None:
         """Generate a 2D UGRID NetCDF mesh."""
         nx = int(self.length / self.dx)
         ny = int(self.width / self.dx)
@@ -63,7 +63,7 @@ class Delft3DBenchmark:
         node_y = y_grid.flatten()
 
         # Faces
-        faces = []
+        faces_list = []
         for j in range(ny):
             for i in range(nx):
                 n0 = j * (nx + 1) + i
@@ -71,8 +71,8 @@ class Delft3DBenchmark:
                 n2 = (j + 1) * (nx + 1) + (i + 1)
                 n3 = (j + 1) * (nx + 1) + i
                 # 1-based indexing for d-flowfm net.nc
-                faces.append([n0 + 1, n1 + 1, n2 + 1, n3 + 1])
-        faces = np.array(faces, dtype=np.int32)
+                faces_list.append([n0 + 1, n1 + 1, n2 + 1, n3 + 1])
+        faces = np.array(faces_list, dtype=np.int32)
 
         # Face coordinates (centers)
         face_x = np.zeros(len(faces))
@@ -85,16 +85,16 @@ class Delft3DBenchmark:
 
         # Edges (Links)
         # Delft3D requires NetLink: [node1, node2] (1-based)
-        links = []
+        links_list = []
         # Horizontal edges
         for j in range(ny + 1):
             for i in range(nx):
-                links.append([j * (nx + 1) + i + 1, j * (nx + 1) + i + 2])
+                links_list.append([j * (nx + 1) + i + 1, j * (nx + 1) + i + 2])
         # Vertical edges
         for j in range(ny):
             for i in range(nx + 1):
-                links.append([j * (nx + 1) + i + 1, (j + 1) * (nx + 1) + i + 1])
-        links = np.array(links, dtype=np.int32)
+                links_list.append([j * (nx + 1) + i + 1, (j + 1) * (nx + 1) + i + 1])
+        links = np.array(links_list, dtype=np.int32)
 
         ds = netCDF4.Dataset(net_path, "w", format="NETCDF4")
 
@@ -203,14 +203,14 @@ class Delft3DBenchmark:
                 new_lines.append("MapFormat = 4")
                 continue
             new_lines.append(line)
-        
+
         # Inject IniFieldFile if it's not present
-        if not any(l.lower().startswith("inifieldfile") for l in new_lines):
+        if not any(entry.lower().startswith("inifieldfile") for entry in new_lines):
             for idx, line in enumerate(new_lines):
                 if line.lower().startswith("[geometry]"):
                     new_lines.insert(idx + 1, "IniFieldFile = initialFields.ini")
                     break
-                    
+
         mdu_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
 
         # Run script
@@ -229,7 +229,7 @@ class Delft3DBenchmark:
 
         return case_dir
 
-    def package_for_remote(self, case_dir: Path, output_tar: Path):
+    def package_for_remote(self, case_dir: Path, output_tar: Path) -> None:
         with tarfile.open(output_tar, "w:gz") as tar:
             for item in case_dir.iterdir():
                 tar.add(item, arcname=item.name)
@@ -313,10 +313,13 @@ class Delft3DBenchmark:
             max_front_rel = max(max_front_rel, front_rel)
 
             rel_pct = front_rel * 100
-            
-            fronts_str = f"fronts(0.01/0.05/0.1m)={front_sims[0.01]:.1f}/{front_sims[0.05]:.1f}/{front_sims[0.1]:.1f}"
+            f_01 = front_sims[0.01]
+            f_05 = front_sims[0.05]
+            f_10 = front_sims[0.1]
+            fronts_str = f"fronts(0.01/0.05/0.1m)={f_01:.1f}/{f_05:.1f}/{f_10:.1f}"
             notes.append(
-                f"t={actual_t}s: RMSE={rmse:.3f}m, FrontErr={front_err:.1f}m ({rel_pct:.1f}%), {fronts_str}"
+                f"t={actual_t}s: RMSE={rmse:.3f}m, "
+                f"FrontErr={front_err:.1f}m ({rel_pct:.1f}%), {fronts_str}"
             )
 
         ds.close()

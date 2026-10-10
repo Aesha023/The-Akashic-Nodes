@@ -87,7 +87,7 @@ def test_delft3d_fm_mdu_writer(tmp_path: Path) -> None:
     prepared = adapter.prepare(ctx)
     mdu_path = prepared.case_dir / "flow2d3d.mdu"
     assert mdu_path.exists()
-    
+
     # Read the text of the MDU to verify Hydrolib-core wrote it correctly
     mdu_text = mdu_path.read_text(encoding="utf-8")
     assert "RefDate" in mdu_text or "refdate" in mdu_text.lower()
@@ -95,7 +95,7 @@ def test_delft3d_fm_mdu_writer(tmp_path: Path) -> None:
     assert "Tstart" in mdu_text or "tstart" in mdu_text.lower()
     assert "Tstop" in mdu_text or "tstop" in mdu_text.lower()
     assert "14400" in mdu_text
-    
+
     # Verify MDU writer rules
     obsolete_keys = ["TransportMethod", "Qhrelax", "Jaorgsethu", "EffectSpiral", "Gapres", "WaveNikuradse", "Writebalancefile"]
     lines = [line.strip() for line in mdu_text.splitlines() if line.strip()]
@@ -103,7 +103,7 @@ def test_delft3d_fm_mdu_writer(tmp_path: Path) -> None:
         for line in lines:
             if line.lower().startswith(key.lower() + "=") or line.lower().startswith(key.lower() + " "):
                 assert False, f"Obsolete key {key} found active in MDU"
-                
+
     mapformat_found = False
     mapinterval_found = False
     obsfile_empty = True
@@ -121,7 +121,7 @@ def test_delft3d_fm_mdu_writer(tmp_path: Path) -> None:
             val = line.split("=", 1)[1].strip()
             if val:
                 obsfile_empty = False
-                
+
     assert mapformat_found
     assert mapinterval_found
     assert obsfile_empty
@@ -136,27 +136,27 @@ def test_delft3d_fm_mdu_writer_keeps_obsfile(tmp_path: Path) -> None:
         terrain_dir=tmp_path,
         breach_hydrograph_path=None,
     )
-    
+
     # Create the case dir early and touch the dummy obsfile
     case_dir = tmp_path / "delft3d_fm"
     case_dir.mkdir(parents=True, exist_ok=True)
     obs_file = case_dir / "my_obs_file.obs"
     obs_file.touch()
-    
+
     # We must patch the hydrolib mdu model saving to insert this obsfile
     # Wait, the easiest way is to mock builder.build_delft3d_case or let the real adapter run
     # and we modify the mdu file before the post-processing? Actually, the builder code creates
     # the mdu from scratch and does not set ObsFile. Wait!
-    # Hydrolib-core by default writes `ObsFile =` (empty) or doesn't write it. 
-    # Let's just create a dummy mdu, pass it to the post-processing logic directly, or 
-    # inject it. Since builder.py rewrites the MDU from Hydrolib-core, and Hydrolib-core 
-    # doesn't write an ObsFile by default in our current setup (as verified), 
+    # Hydrolib-core by default writes `ObsFile =` (empty) or doesn't write it.
+    # Let's just create a dummy mdu, pass it to the post-processing logic directly, or
+    # inject it. Since builder.py rewrites the MDU from Hydrolib-core, and Hydrolib-core
+    # doesn't write an ObsFile by default in our current setup (as verified),
     # let's just test the post-processing logic directly or patch the FMModel.
-    
+
     # But wait, to make it simple, let's just write the mdu text and run the post-processing code
     # directly as it's written in builder.py. Or I can monkeypatch FMModel.save to write an ObsFile.
     import pravahx.engines.delft3d_fm.builder as builder
-    
+
     original_save = builder.FMModel.save
     def mock_save(self, filepath, *args, **kwargs):
         # Let it save normally
@@ -165,16 +165,16 @@ def test_delft3d_fm_mdu_writer_keeps_obsfile(tmp_path: Path) -> None:
         text = filepath.read_text(encoding="utf-8")
         text += "\nObsFile = my_obs_file.obs\n"
         filepath.write_text(text, encoding="utf-8")
-        
+
     builder.FMModel.save = mock_save
     try:
         prepared = adapter.prepare(ctx)
     finally:
         builder.FMModel.save = original_save
-        
+
     mdu_path = prepared.case_dir / "flow2d3d.mdu"
     mdu_text = mdu_path.read_text(encoding="utf-8")
-    
+
     obsfile_kept = False
     for line in mdu_text.splitlines():
         if line.lower().startswith("obsfile"):

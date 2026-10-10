@@ -137,28 +137,35 @@ class Delft3DBenchmark:
         # Initial condition (water depth h0 upstream)
         pol_path = case_dir / "upstream.pol"
         with open(pol_path, "w") as f:
-            f.write("upstream\n1 4\n")
+            f.write("upstream\n5 2\n")
             f.write(f"{-10.0} {-10.0}\n")
             f.write(f"{self.dam_x} {-10.0}\n")
             f.write(f"{self.dam_x} {self.width + 10.0}\n")
             f.write(f"{-10.0} {self.width + 10.0}\n")
+            f.write(f"{-10.0} {-10.0}\n")
 
-        # Custom INI file since hydrolib-core IniModel might be overkill for this case
-        ini_path = case_dir / "initial.ini"
+        # Custom INI file for initial fields
+        ini_path = case_dir / "initialFields.ini"
         with open(ini_path, "w") as f:
+            f.write("[General]\n")
+            f.write("fileVersion = 2.00\n")
+            f.write("fileType = iniField\n")
             f.write("[Initial]\n")
-            f.write("quantity = waterdepth\n")
-            f.write("locationfile = upstream.pol\n")
+            f.write("quantity = waterlevel\n")
+            f.write("dataFileType = polygon\n")
+            f.write("interpolationMethod = constant\n")
+            f.write("operand = O\n")
             f.write(f"value = {self.h0}\n")
+            f.write("locationFile = upstream.pol\n")
 
         mdu_path = case_dir / "ritter.mdu"
         fm = FMModel()
         fm.geometry.netfile = "grid_net.nc"
-        fm.geometry.waterlevinifile = "initial.ini"
         fm.time.refdate = 20260101
         fm.time.tstart = 0.0
         fm.time.tstop = 40.0
-        fm.time.dtmax = 1.0
+        fm.time.dtmax = 0.5
+        fm.time.dtuser = 5.0
         fm.output.mapinterval = [5.0]
         fm.output.hisinterval = [5.0]
         fm.physics.uniffrictcoef = 0.0  # Frictionless
@@ -175,6 +182,7 @@ class Delft3DBenchmark:
             "Gapres",
             "WaveNikuradse",
             "Writebalancefile",
+            "wrishp_enc",
         ]
         new_lines = []
         for line in lines:
@@ -189,6 +197,14 @@ class Delft3DBenchmark:
                 new_lines.append("MapFormat = 4")
                 continue
             new_lines.append(line)
+        
+        # Inject IniFieldFile if it's not present
+        if not any(l.lower().startswith("inifieldfile") for l in new_lines):
+            for idx, line in enumerate(new_lines):
+                if line.lower().startswith("[geometry]"):
+                    new_lines.insert(idx + 1, "IniFieldFile = initialFields.ini")
+                    break
+                    
         mdu_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
 
         # Run script
@@ -197,6 +213,10 @@ class Delft3DBenchmark:
             "#!/bin/bash\nset -e\n"
             "export LD_LIBRARY_PATH=/content/delft3d_bin/lib:$LD_LIBRARY_PATH\n"
             "/content/delft3d_bin/bin/dflowfm --nodisplay --autostart ritter.mdu\n"
+            "if grep -E 'keyword.*is obsolete' *_*.dia; then\n"
+            "  echo 'ERROR: Engine found obsolete keys in MDU! See above.'\n"
+            "  exit 1\n"
+            "fi\n"
         )
         sh_path.write_text(sh_content, encoding="utf-8")
         sh_path.chmod(0o755)
@@ -247,11 +267,25 @@ class Delft3DBenchmark:
             # Theoretical front
             x_front_theory = self.dam_x + 2 * actual_t * c
 
-            # Simulated front (first x where depth < threshold)
-            wet_mask = cd > 0.05
-            x_front_sim = cx[wet_mask][-1] if np.any(wet_mask) else cx[0]
+            # Continuous front (first x after dam where depth < threshold)
+            front_sims = {}
+            for thresh in [0.01, 0.05, 0.1]:
+                # find indices after dam
+                post_dam = np.where(cx >= self.dam_x)[0]
+                if len(post_dam) > 0:
+                    dry = np.where(cd[post_dam] < thresh)[0]
+                    if len(dry) > 0:
+                        # front is the last wet cell before the dry one
+                        idx = post_dam[dry[0]] - 1
+                        idx = max(idx, 0)
+                        front_sims[thresh] = cx[idx]
+                    else:
+                        front_sims[thresh] = cx[-1]
+                else:
+                    front_sims[thresh] = cx[-1]
 
-            front_err = abs(x_front_sim - x_front_theory)
+            x_front_sim_05 = front_sims[0.05]
+            front_err = abs(x_front_sim_05 - x_front_theory)
             front_rel = front_err / x_front_theory if x_front_theory > 0 else 0.0
 
             # Theoretical depth profile
@@ -273,8 +307,10 @@ class Delft3DBenchmark:
             max_front_rel = max(max_front_rel, front_rel)
 
             rel_pct = front_rel * 100
+            
+            fronts_str = f"fronts(0.01/0.05/0.1m)={front_sims[0.01]:.1f}/{front_sims[0.05]:.1f}/{front_sims[0.1]:.1f}"
             notes.append(
-                f"t={actual_t}s: RMSE={rmse:.3f}m, FrontErr={front_err:.1f}m ({rel_pct:.1f}%)"
+                f"t={actual_t}s: RMSE={rmse:.3f}m, FrontErr={front_err:.1f}m ({rel_pct:.1f}%), {fronts_str}"
             )
 
         ds.close()

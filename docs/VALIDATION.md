@@ -130,7 +130,7 @@ To verify the DualSPHysics 3D SPH formulation before applying it to complex 3D t
 
 
 
-## 8. Idealized Dam-Break Simulation: Delft3D Flexible Mesh `[BENCHMARK STATUS: NOT VERIFIED]`
+## 8. Idealized Dam-Break Simulation: Delft3D Flexible Mesh
 
 To verify the Delft3D FM formulation before applying it to complex 2D topography, the solver will be executed on an idealized dam-break setup.
 
@@ -158,6 +158,10 @@ To verify the Delft3D FM solver against analytical dam-break hydrodynamics over 
   * **Front position error:** $\le 5\%$ relative error vs theoretical wave front $x_f(t)$.
   * **Water depth RMSE (along centerline):** $\le 0.5$ m (expecting some smearing at the front due to numerical diffusion and wet/dry thresholds).
 
-> [!WARNING]
-> **Status: NOT VERIFIED**
-> The Ritter (1892) reference formulas will be fetched from Delestre et al. (2013, arXiv:1110.0288). Until this reference is fetched and values compared, the benchmark is NOT VERIFIED.
+**RESULTS:**
+* **Generator required these fixes to run at all:** (1) hydrolib-core missing in Colab; (2) DtUser defaulted to 300 s (> Tstop 40 s) → set DtUser 5, DtMax 0.5, HisInterval 5, MapInterval 5; (3) hydrolib writes obsolete key wrishp_enc → engine rejects; (4) initial water was wired via waterLevIniFile (expects .xyz samples) → reservoir empty; fixed with IniFieldFile = initialFields.ini ([General] fileVersion 2.00, fileType iniField; [Initial] quantity waterlevel, dataFileType polygon, interpolationMethod constant, operand O, value 10.0); (5) upstream.pol header was "1 4" → must be "5 2" with closing point.
+* **After fixes:** 2000/4000 cells wet at t=0, mass conserved exactly (500,000 m3 at t=0 and t=30 s).
+* **Frictionless (pre-registered config):** depth RMSE 0.055/0.055/0.059 m at t=10/20/30 → PASS (tol 0.5 m). Front FAIL: thin-film artefact, film speeds 382 m/s (t=5) and 126 m/s (t=10) vs Ritter max 19.8 m/s; water piles at far wall (0.90 m at x=1997.5, t=30).
+* **Spot values vs Ritter:** x=1400 t=30: 0.475 vs 0.474 m; x=1200 t=20: 1.14 vs 1.09 m; dam site ≈4.37–4.42 vs 4.44 m.
+* **Sensitivity (NOT the pass criterion, recorded as such):** A) epsHu 0.01 m: wall pile-up gone, continuous front +194/+126/+108 m ahead, RMSE ≈0.05 m. B) Manning n 0.005: front err -40.1%/+4.7%/+16.3%, RMSE ≈0.06–0.07 m (friction departs from Ritter's assumption).
+* **Verdict:** depth PASS, front FAIL (understood numerical artefact). Reference: Delestre et al. 2013 (SWASHES), arXiv:1110.0288v7, Section 4.1.2, fetched and checked.

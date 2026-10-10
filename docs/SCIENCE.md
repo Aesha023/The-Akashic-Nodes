@@ -253,6 +253,7 @@ Comparing Model A against Model B over binary inundated masks ($d \ge d_{\text{t
 - **Depth MAE:** $\text{MAE}_d = \frac{1}{N_{TP}} \sum |d_A - d_B|$
 - **Depth Bias:** $\text{Bias}_d = \frac{1}{N_{TP}} \sum (d_A - d_B)$
 - **Arrival Time MAE:** $\text{MAE}_t = \frac{1}{N_{\text{arr}}} \sum |t_{\text{arr}, A} - t_{\text{arr}, B}|$
+  * *Threshold Decision:* Arrival time ($t_{\text{arr}}$) and continuous wave front position calculations MUST use a configurable minimum depth threshold to avoid numerical thin-film artefacts (e.g., films $\le 0.05\text{ m}$ artificially accelerating due to frictionless boundary assumptions in shallow water equations). Reporting standard thresholds are $0.01\text{ m}$, $0.05\text{ m}$, and $0.1\text{ m}$. `[UNVERIFIED - Standard practice in numerical dam break benchmarking; see Delestre et al. 2013]`
 
 ### 10.3 5-Class Spatial Agreement Categorization
 Grid cells are classified into 5 discrete categories:

@@ -138,6 +138,7 @@ def build_delft3d_case(context: RunContext) -> PreparedCase:
         "Gapres",
         "WaveNikuradse",
         "Writebalancefile",
+        "wrishp_enc",
     ]
     new_lines = []
     for line in lines:

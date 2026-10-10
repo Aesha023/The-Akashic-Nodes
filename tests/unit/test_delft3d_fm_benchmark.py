@@ -15,7 +15,7 @@ def test_delft3d_benchmark_generation(tmp_path: Path):
     assert case_dir.exists()
     assert (case_dir / "grid_net.nc").exists()
     assert (case_dir / "upstream.pol").exists()
-    assert (case_dir / "initial.ini").exists()
+    assert (case_dir / "initialFields.ini").exists()
     assert (case_dir / "ritter.mdu").exists()
     assert (case_dir / "run_linux.sh").exists()
 
@@ -29,7 +29,7 @@ def test_delft3d_benchmark_generation(tmp_path: Path):
     # Check MDU parses back (or at least has no obsolete keys)
     mdu_text = (case_dir / "ritter.mdu").read_text(encoding="utf-8")
     assert "mapformat = 4" in mdu_text.lower()
-    assert "initial.ini" in mdu_text.lower()
+    assert "initialfields.ini" in mdu_text.lower()
     assert "TransportMethod" not in [
         line.split("=")[0].strip() for line in mdu_text.splitlines() if not line.startswith("#")
     ]

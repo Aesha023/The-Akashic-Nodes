@@ -57,6 +57,7 @@ class Delft3DFMAdapter(EngineAdapter):
         self.status = EngineStatus.RUNNING
 
         from pravahx.engines.delft3d_fm.runner import Delft3DRunner
+
         runner = Delft3DRunner()
 
         mode = prepared.metadata.get("mode", "cpu")

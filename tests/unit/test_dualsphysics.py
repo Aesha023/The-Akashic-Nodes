@@ -274,4 +274,3 @@ def test_colab_notebook_generation() -> None:
     assert disk_path.exists()
     disk_nb = json.loads(disk_path.read_text(encoding="utf-8"))
     assert len(disk_nb["cells"]) == 6
-

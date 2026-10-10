@@ -204,4 +204,3 @@ async def test_impact_and_gee_endpoints() -> None:
         gee_status_res = await client.get("/api/v1/gee/status", headers=headers)
         assert gee_status_res.status_code == 200
         assert "authenticated" in gee_status_res.json()
-

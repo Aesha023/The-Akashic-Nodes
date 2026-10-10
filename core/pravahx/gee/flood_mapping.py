@@ -376,9 +376,7 @@ def export_binary_mask_to_kml(
         if val > 0 and geom["type"] in ("Polygon", "MultiPolygon"):
             poly_idx += 1
             coords_list = (
-                [geom["coordinates"]]
-                if geom["type"] == "Polygon"
-                else geom["coordinates"]
+                [geom["coordinates"]] if geom["type"] == "Polygon" else geom["coordinates"]
             )
             for poly_coords in coords_list:
                 ext_ring = poly_coords[0]
@@ -512,9 +510,7 @@ def execute_unspider_sar_gee(
     # Step 9: Slope filter (WWF HydroSHEDS <= 5%)
     dem = ee.Image("WWF/HydroSHEDS/03CONDEM")
     slope_deg = ee.Terrain.slope(dem)
-    slope_mask = (
-        slope_deg.multiply(math.pi / 180.0).tan().multiply(100.0).lte(max_slope_percent)
-    )
+    slope_mask = slope_deg.multiply(math.pi / 180.0).tan().multiply(100.0).lte(max_slope_percent)
 
     # Step 9: JRC permanent water mask (seasonality >= 10 months)
     jrc = ee.Image("JRC/GSW1_4/GlobalSurfaceWater")

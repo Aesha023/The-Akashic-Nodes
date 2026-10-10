@@ -71,9 +71,7 @@ class Delft3DRunner:
         elif mode_str == Delft3DFMMode.CPU.value:
             return self._run_cpu(case)
         else:
-            raise EngineError(
-                f"Unsupported Delft3DFM execution mode: {mode}", engine="delft3d_fm"
-            )
+            raise EngineError(f"Unsupported Delft3DFM execution mode: {mode}", engine="delft3d_fm")
 
     def _run_cpu(self, case: PreparedCase) -> RawResult:
         """Execute Delft3D FM locally on CPU."""
@@ -248,8 +246,7 @@ echo "=== Simulation Complete. Manifest Generated. ==="
                         shutil.copy2(item, dest)
             else:
                 logger.info(
-                    "Import source matches output directory %s; skipping redundant copy",
-                    output_dir
+                    "Import source matches output directory %s; skipping redundant copy", output_dir
                 )
         else:
             raise EngineError(f"Invalid import source type: {import_source}", engine="delft3d_fm")

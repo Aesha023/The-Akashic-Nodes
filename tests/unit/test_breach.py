@@ -258,5 +258,3 @@ def test_hydrograph_piping_requires_collapse_fraction() -> None:
             reservoir_exponent=2.0,
             progression_mode="piping_orifice_to_weir",
         )
-
-

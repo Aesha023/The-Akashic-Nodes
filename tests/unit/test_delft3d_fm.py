@@ -74,6 +74,7 @@ def test_delft3d_fm_prepare(tmp_path: Path) -> None:
     assert "flow2d3d.mdu" in prepared.input_file_hashes
     assert "hydrograph.bc" in prepared.input_file_hashes
 
+
 def test_delft3d_fm_mdu_writer(tmp_path: Path) -> None:
     """Test that Delft3D FM MDU writer sets the correct simulation time rules."""
     adapter = Delft3DFMAdapter()
@@ -136,6 +137,7 @@ def test_delft3d_fm_mdu_writer(tmp_path: Path) -> None:
     assert mapinterval_found
     assert obsfile_empty
 
+
 def test_delft3d_fm_mdu_writer_keeps_obsfile(tmp_path: Path) -> None:
     """Test that Delft3D FM MDU writer preserves ObsFile if the file actually exists."""
     adapter = Delft3DFMAdapter()
@@ -168,6 +170,7 @@ def test_delft3d_fm_mdu_writer_keeps_obsfile(tmp_path: Path) -> None:
     import pravahx.engines.delft3d_fm.builder as builder
 
     original_save = builder.FMModel.save
+
     def mock_save(self, filepath, *args, **kwargs):
         # Let it save normally
         original_save(self, filepath, *args, **kwargs)

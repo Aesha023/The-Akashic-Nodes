@@ -388,4 +388,3 @@ def create_colab_notebook_content() -> str:
         "nbformat_minor": 0,
     }
     return json.dumps(notebook_dict, indent=2)
-

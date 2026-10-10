@@ -44,9 +44,18 @@ OBSOLETE_MDU_KEYS = [
 
 @dataclass(frozen=True)
 class HypotheticalBreachScenario:
-    """Hypothetical dam breach scenario parameters using Froehlich (2008)."""
+    """Hypothetical dam breach scenario parameters using Froehlich (2008).
 
-    reservoir_volume_m3: float = 5807632.0  # 5.808 MCM
+    NOTE ON PEAK DISCHARGE AND RESERVOIR VOLUME:
+    Reservoir storage V_w = 5,807,632 m3 (5.808 MCM) was explicitly back-solved
+    using the Froehlich (2008) breach routing equations (h_b = 26.0 m, K_o = 1.3,
+    parabolic valley exponent m = 2.0, side slope z = 1.0) so that the routed breach
+    peak discharge Q_b,peak = 4,900.0 m3/s. Combined with base flow Q_base = 100.0 m3/s,
+    the total peak discharge is exactly Q_total = 5,000.0 m3/s, matching Tier-0's accepted
+    peak discharge for an exact apples-to-apples model intercomparison.
+    """
+
+    reservoir_volume_m3: float = 5807632.0  # 5.808 MCM (explicitly back-solved)
     breach_height_m: float = 26.0  # 26.0 m
     failure_mode: str = "overtopping"
     side_slope_z: float = 1.0  # 1.0 H:V for overtopping
@@ -97,10 +106,11 @@ def compute_hypothetical_breach_scenario(
 
 def generate_hypothetical_inflow_series(
     scenario: HypotheticalBreachScenario,
-    total_duration_s: float = 7200.0,
+    spinup_s: float = 5400.0,
+    breach_duration_s: float = 7200.0,
     dt_s: float = 10.0,
 ) -> list[tuple[float, float]]:
-    """Generate time series of (time_seconds, discharge_m3s)."""
+    """Generate time series of (time_seconds, discharge_m3s) with base-flow spin-up."""
     routed = route_hydrograph(
         initial_volume_m3=scenario.reservoir_volume_m3,
         dam_height_m=scenario.breach_height_m,
@@ -110,26 +120,36 @@ def generate_hypothetical_inflow_series(
         side_slope_z=scenario.side_slope_z,
         dt_hr=0.002,
     )
-    times_s = [p["time_hr"] * 3600.0 for p in routed.points]
-    flows = [p["discharge_m3s"] for p in routed.points]
+    times_breach_s = [p["time_hr"] * 3600.0 for p in routed.points]
+    flows_breach = [p["discharge_m3s"] for p in routed.points]
 
     res: list[tuple[float, float]] = []
+    total_duration_s = spinup_s + breach_duration_s
     n_steps = int(total_duration_s / dt_s) + 1
     for step in range(n_steps):
         t = step * dt_s
-        q_breach = float(np.interp(t, times_s, flows, left=0.0, right=0.0))
-        q_total = q_breach + scenario.base_flow_m3s
+        if t < spinup_s:
+            q_total = scenario.base_flow_m3s
+        else:
+            t_rel = t - spinup_s
+            q_breach = float(np.interp(t_rel, times_breach_s, flows_breach, left=0.0, right=0.0))
+            q_total = q_breach + scenario.base_flow_m3s
         res.append((t, round(q_total, 3)))
     return res
 
 
 def compute_manning_normal_depth(
     discharge_m3s: float,
-    channel_width_m: float = 150.0,
-    bed_slope: float = 0.005,
+    channel_width_m: float = 200.0,
+    bed_slope: float = 0.00054,
     mannings_n: float = 0.035,
 ) -> float:
-    """Solve normal flow depth y for given discharge using Manning's equation."""
+    """Solve normal flow depth y for given discharge using Manning's equation.
+
+    Parameters derived directly from DEM:
+    - Bed slope S_0 = 0.00054 (drop of 1.50 m over 2,788 m in lower Ganga profile)
+    - Channel width B = 200.0 m (DEM valley width at outlet cross-section)
+    """
     if discharge_m3s <= 0.0:
         return 0.0
 
@@ -142,6 +162,72 @@ def compute_manning_normal_depth(
 
     root_val: Any = brentq(residual, 0.001, 35.0)
     return float(root_val)
+
+
+def plot_inflow_hydrograph(
+    inflow_series: list[tuple[float, float]],
+    spinup_s: float = 5400.0,
+    out_path: Path | None = None,
+) -> Any:
+    """Plot and save publication-quality hydrograph with spin-up and breach periods."""
+    import matplotlib.pyplot as plt
+
+    times_s = np.array([p[0] for p in inflow_series])
+    flows = np.array([p[1] for p in inflow_series])
+    times_hr = times_s / 3600.0
+
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+    ax.plot(times_hr, flows, "b-", lw=2, label="Inflow Discharge Q(t)")
+    ax.axvline(
+        spinup_s / 3600.0,
+        color="gray",
+        linestyle="--",
+        label=f"Breach Initiation (t={spinup_s / 3600.0:.1f} h)",
+    )
+    ax.axhline(100.0, color="green", linestyle=":", label="Base Flow (100 m³/s)")
+    ax.axhline(5000.0, color="red", linestyle=":", label="Total Peak (5,000 m³/s)")
+
+    ax.fill_between(
+        times_hr[times_s <= spinup_s],
+        flows[times_s <= spinup_s],
+        color="lightgray",
+        alpha=0.5,
+        label="Base Flow Spin-up",
+    )
+    ax.fill_between(
+        times_hr[times_s >= spinup_s],
+        flows[times_s >= spinup_s],
+        color="lightblue",
+        alpha=0.5,
+        label="Breach Hydrograph",
+    )
+
+    peak_idx = int(np.argmax(flows))
+    t_peak_hr = times_hr[peak_idx]
+    q_peak = flows[peak_idx]
+    ax.annotate(
+        f"Peak: {q_peak:.1f} m³/s\n(t = {t_peak_hr:.2f} h)",
+        xy=(t_peak_hr, q_peak),
+        xytext=(t_peak_hr + 0.3, q_peak - 800),
+        arrowprops=dict(facecolor="black", shrink=0.05, width=1, headwidth=6),
+        fontsize=10,
+        weight="bold",
+    )
+
+    ax.set_xlabel("Simulation Time (hours)")
+    ax.set_ylabel("Discharge (m³/s)")
+    ax.set_title(
+        "Hypothetical Dam Breach Inflow Hydrograph (Froehlich 2008 Routing)\n"
+        "Spin-up: 1.5 h @ 100 m³/s | Breach Peak: 4,900 m³/s | Total Peak: 5,000 m³/s"
+    )
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc="upper right")
+    plt.tight_layout()
+
+    if out_path:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(out_path, dpi=180, bbox_inches="tight")
+    return fig
 
 
 def build_ganga_tier1_mesh(
@@ -250,7 +336,7 @@ def build_ganga_tier1_mesh(
     vnz[:] = np.array(node_z_list, dtype=np.float64)
 
     velem = ds.createVariable("NetElemNode", "i4", ("nNetElem", "nNetElemMaxNode"))
-    velem[:] = faces_array
+    velem[:, :] = faces_array
     vex = ds.createVariable("NetElem_x", "f8", ("nNetElem",))
     vey = ds.createVariable("NetElem_y", "f8", ("nNetElem",))
     vez = ds.createVariable("NetElem_z", "f8", ("nNetElem",))
@@ -259,7 +345,7 @@ def build_ganga_tier1_mesh(
     vez[:] = np.array(face_z_list, dtype=np.float64)
 
     vlink = ds.createVariable("NetLink", "i4", ("nNetLink", "nNetLinkPts"))
-    vlink[:] = links_array
+    vlink[:, :] = links_array
     vlt = ds.createVariable("NetLinkType", "i4", ("nNetLink",))
     vlt[:] = np.full(len(links_array), 2, dtype=np.int32)
 
@@ -291,13 +377,22 @@ def build_ganga_tier1_case(
     worldcover_path: Path | None = None,
     buffer_m: float = 300.0,
     dx: float = 50.0,
-    tstop_s: float = 7200.0,
+    spinup_s: float = 5400.0,
+    breach_duration_s: float = 7200.0,
+    tstop_s: float | None = None,
     dtuser_s: float = 10.0,
-    dtmax_s: float = 2.0,
+    dtmax_s: float | None = None,
     mapinterval_s: float = 60.0,
+    uniform_mannings_n: float | None = 0.035,
+    outlet_bed_elev: float = 337.00,
+    outlet_bed_slope: float = 0.00054,
+    outlet_channel_width: float = 200.0,
 ) -> dict[str, Any]:
     """Build the complete Delft3D FM real-terrain simulation case for Ganga reach."""
     case_dir.mkdir(parents=True, exist_ok=True)
+
+    if tstop_s is not None:
+        breach_duration_s = tstop_s - spinup_s if tstop_s > spinup_s else tstop_s
 
     if str(tier0_envelope_path).endswith(".shp"):
         gdf = gpd.read_file(tier0_envelope_path)
@@ -321,10 +416,15 @@ def build_ganga_tier1_case(
         dx=dx,
     )
 
+    total_tstop_s = spinup_s + breach_duration_s
+    if dtmax_s is None:
+        dtmax_s = 1.0 if dx <= 30.0 else 2.0
+
     scenario = compute_hypothetical_breach_scenario()
     inflow_series = generate_hypothetical_inflow_series(
         scenario=scenario,
-        total_duration_s=tstop_s,
+        spinup_s=spinup_s,
+        breach_duration_s=breach_duration_s,
         dt_s=dtuser_s,
     )
 
@@ -335,6 +435,7 @@ def build_ganga_tier1_case(
     inflow_bc = case_dir / "inflow.bc"
     inflow_lines = [
         "# written by PravahX for Ganga Tier-1 hypothetical scenario",
+        "# spin-up: 5,400 s at 100 m3/s base flow, followed by 7,200 s breach hydrograph",
         "[General]",
         "fileVersion = 1.01",
         "fileType    = boundConds",
@@ -352,15 +453,61 @@ def build_ganga_tier1_case(
         inflow_lines.append(f"{t_val:.1f}  {q_val:.3f}")
     inflow_bc.write_text("\n".join(inflow_lines) + "\n", encoding="utf-8")
 
-    outlet_pts = [(239700.0, 3333100.0), (240100.0, 3332800.0)]
+    outlet_pts = [(239850.0, 3333100.0), (240150.0, 3332850.0)]
     outlet_pli = case_dir / "downstream_bnd.pli"
     write_pli(outlet_pli, "downstream_bnd", outlet_pts)
 
+    fric_xyz_path = case_dir / "roughness.xyz"
+    if uniform_mannings_n is not None:
+        mean_manning = float(uniform_mannings_n)
+        fric_lines = [
+            f"{x_c:.2f} {y_c:.2f} {mean_manning:.4f}"
+            for x_c, y_c in zip(mesh_info["face_x"], mesh_info["face_y"], strict=False)
+        ]
+        fric_xyz_path.write_text("\n".join(fric_lines) + "\n", encoding="utf-8")
+    elif worldcover_path and worldcover_path.exists():
+        with rasterio.open(worldcover_path) as src_lc:
+            lc_data = src_lc.read(1)
+            lc_trans = src_lc.transform
+
+        fric_lines = []
+        n_vals: list[float] = []
+        for x_c, y_c in zip(mesh_info["face_x"], mesh_info["face_y"], strict=False):
+            r, c = rasterio.transform.rowcol(lc_trans, x_c, y_c)
+            n_val = 0.035
+            if 0 <= r < lc_data.shape[0] and 0 <= c < lc_data.shape[1]:
+                cls_id = int(lc_data[r, c])
+                n_val = WORLDCOVER_TO_MANNINGS.get(cls_id, 0.035)
+            n_vals.append(n_val)
+            fric_lines.append(f"{x_c:.2f} {y_c:.2f} {n_val:.4f}")
+        fric_xyz_path.write_text("\n".join(fric_lines) + "\n", encoding="utf-8")
+        mean_manning = float(np.mean(n_vals))
+    else:
+        mean_manning = 0.035
+        fric_lines = [
+            f"{x_c:.2f} {y_c:.2f} 0.0350"
+            for x_c, y_c in zip(mesh_info["face_x"], mesh_info["face_y"], strict=False)
+        ]
+        fric_xyz_path.write_text("\n".join(fric_lines) + "\n", encoding="utf-8")
+
     outlet_bc = case_dir / "downstream.bc"
-    discharges = [0.0, 50.0, 100.0, 500.0, 1000.0, 2000.0, 3000.0, 5000.0, 8000.0, 12000.0]
-    z_bed_outlet = 337.0
+    discharges = [
+        0.0,
+        50.0,
+        100.0,
+        200.0,
+        500.0,
+        1000.0,
+        2000.0,
+        3000.0,
+        5000.0,
+        8000.0,
+        12000.0,
+    ]
     outlet_lines = [
         "# written by PravahX: Q-h stage-discharge normal depth rating curve",
+        f"# DEM-derived parameters: bed elev = {outlet_bed_elev:.2f} m, "
+        f"bed slope S0 = {outlet_bed_slope:.5f}, width B = {outlet_channel_width:.1f} m",
         "[General]",
         "fileVersion = 1.01",
         "fileType    = boundConds",
@@ -374,8 +521,13 @@ def build_ganga_tier1_case(
         "unit     = m",
     ]
     for q_val in discharges:
-        depth_val = compute_manning_normal_depth(q_val)
-        wl_val = z_bed_outlet + depth_val
+        depth_val = compute_manning_normal_depth(
+            discharge_m3s=q_val,
+            channel_width_m=outlet_channel_width,
+            bed_slope=outlet_bed_slope,
+            mannings_n=mean_manning,
+        )
+        wl_val = outlet_bed_elev + depth_val
         outlet_lines.append(f"{q_val:.1f}  {wl_val:.3f}")
     outlet_bc.write_text("\n".join(outlet_lines) + "\n", encoding="utf-8")
 
@@ -394,32 +546,6 @@ def build_ganga_tier1_case(
         "",
     ]
     ext_path.write_text("\n".join(ext_lines), encoding="utf-8")
-
-    fric_xyz_path = case_dir / "roughness.xyz"
-    mean_manning = 0.035
-    if worldcover_path and worldcover_path.exists():
-        with rasterio.open(worldcover_path) as src_lc:
-            lc_data = src_lc.read(1)
-            lc_trans = src_lc.transform
-
-        fric_lines = []
-        n_vals: list[float] = []
-        for x_c, y_c in zip(mesh_info["face_x"], mesh_info["face_y"], strict=False):
-            r, c = rasterio.transform.rowcol(lc_trans, x_c, y_c)
-            n_val = 0.035
-            if 0 <= r < lc_data.shape[0] and 0 <= c < lc_data.shape[1]:
-                cls_id = int(lc_data[r, c])
-                n_val = WORLDCOVER_TO_MANNINGS.get(cls_id, 0.035)
-            n_vals.append(n_val)
-            fric_lines.append(f"{x_c:.2f} {y_c:.2f} {n_val:.4f}")
-        fric_xyz_path.write_text("\n".join(fric_lines) + "\n", encoding="utf-8")
-        mean_manning = float(np.mean(n_vals))
-    else:
-        fric_lines = [
-            f"{x_c:.2f} {y_c:.2f} 0.0350"
-            for x_c, y_c in zip(mesh_info["face_x"], mesh_info["face_y"], strict=False)
-        ]
-        fric_xyz_path.write_text("\n".join(fric_lines) + "\n", encoding="utf-8")
 
     ini_path = case_dir / "initialFields.ini"
     ini_lines = [
@@ -467,7 +593,7 @@ def build_ganga_tier1_case(
         "[Time]",
         "refDate               = 20260101",
         "tstart                = 0.0",
-        f"tstop                 = {tstop_s:.1f}",
+        f"tstop                 = {total_tstop_s:.1f}",
         f"dtmax                 = {dtmax_s:.1f}",
         f"dtuser                = {dtuser_s:.1f}",
         "",
@@ -508,6 +634,9 @@ def build_ganga_tier1_case(
         "mesh_info": mesh_info,
         "scenario": scenario,
         "mean_manning_n": mean_manning,
+        "spinup_s": spinup_s,
+        "breach_duration_s": breach_duration_s,
+        "tstop_s": total_tstop_s,
     }
 
 
@@ -515,6 +644,7 @@ def postprocess_ganga_tier1_run(
     case_dir: Path,
     dem_path: Path,
     out_dir: Path,
+    spinup_s: float = 5400.0,
     arr_thresholds: tuple[float, float] = (0.05, 0.30),
 ) -> dict[str, Any]:
     """Process Delft3D FM UGRID NetCDF output map and export GeoTIFFs & vectors."""
@@ -540,6 +670,18 @@ def postprocess_ganga_tier1_run(
     else:
         speeds = np.zeros_like(depths)
 
+    # Filter to breach period (post-spinup)
+    breach_mask = times >= spinup_s
+    if not np.any(breach_mask):
+        breach_mask = np.ones(len(times), dtype=bool)
+
+    breach_times = times[breach_mask] - spinup_s
+    breach_depths = depths[breach_mask, :]
+    breach_speeds = speeds[breach_mask, :] if has_vel else np.zeros_like(breach_depths)
+
+    base_idx = int(np.where(breach_mask)[0][0])
+    base_depths = depths[base_idx, :]
+
     n_faces = len(face_x)
     max_depth = np.zeros(n_faces, dtype=np.float32)
     max_velocity = np.zeros(n_faces, dtype=np.float32)
@@ -549,18 +691,22 @@ def postprocess_ganga_tier1_run(
     thr1, thr2 = arr_thresholds
 
     for i in range(n_faces):
-        d_series = depths[:, i]
+        d_series = breach_depths[:, i]
         max_depth[i] = float(np.max(d_series))
         if has_vel:
-            max_velocity[i] = float(np.max(speeds[:, i]))
+            max_velocity[i] = float(np.max(breach_speeds[:, i]))
 
-        wet_idx1 = np.where(d_series >= thr1)[0]
+        b_dep = float(base_depths[i])
+        eff_thr1 = max(thr1, b_dep + 0.1) if b_dep >= thr1 else thr1
+        eff_thr2 = max(thr2, b_dep + 0.2) if b_dep >= thr2 else thr2
+
+        wet_idx1 = np.where(d_series >= eff_thr1)[0]
         if len(wet_idx1) > 0:
-            arr_time_005[i] = float(times[wet_idx1[0]])
+            arr_time_005[i] = float(breach_times[wet_idx1[0]])
 
-        wet_idx2 = np.where(d_series >= thr2)[0]
+        wet_idx2 = np.where(d_series >= eff_thr2)[0]
         if len(wet_idx2) > 0:
-            arr_time_030[i] = float(times[wet_idx2[0]])
+            arr_time_030[i] = float(breach_times[wet_idx2[0]])
 
     ds.close()
 

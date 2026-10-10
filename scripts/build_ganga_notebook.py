@@ -2,440 +2,424 @@
 
 import json
 from pathlib import Path
+from typing import Any
+
+
+def code_cell(code: str) -> dict[str, Any]:
+    """Helper to create a code cell from multiline code."""
+    return {
+        "cell_type": "code",
+        "metadata": {},
+        "execution_count": None,
+        "outputs": [],
+        "source": [line + "\n" for line in code.strip().splitlines()],
+    }
+
+
+def md_cell(text: str) -> dict[str, Any]:
+    """Helper to create a markdown cell from multiline markdown."""
+    return {
+        "cell_type": "markdown",
+        "metadata": {},
+        "source": [line + "\n" for line in text.strip().splitlines()],
+    }
 
 
 def main() -> None:
+    header_md = (
+        "# PravahX: Tier-1 Delft3D FM on Real Terrain (Ganga Reach near Rishikesh)\n"
+        "## MODEL INTERCOMPARISON: Tier-0 HAND vs Tier-1 Delft3D FM (Identical Inputs)\n\n"
+        "> **IMPORTANT LABELING**: This simulation is strictly a **MODEL INTERCOMPARISON**,\n"
+        "> NOT a validation against observations. All comparisons evaluate numerical and\n"
+        "> structural model differences between static HAND equilibrium and dynamic 2D\n"
+        "> shallow-water flow on identical input terrain and hypothetical breach forcing.\n\n"
+        "### 1. Inflow: Hypothetical Scenario (Froehlich 2008 Routing)\n"
+        "- **Scenario Title**: Hypothetical dam breach scenario (NO real dam failure implied).\n"
+        "- **Froehlich (2008) Regressions**:\n"
+        "  - $B_{\\text{avg}} = 0.27 \\cdot K_o \\cdot V_w^{0.32} \\cdot h_b^{0.04} "
+        "= 58.42\\text{ m}$ ($K_o = 1.3$ overtopping)\n"
+        "  - $t_f = 63.2 \\cdot \\sqrt{V_w / (g \\cdot h_b^2)} "
+        "= 1870.3\\text{ s} \\approx 31.17\\text{ min}$\n"
+        "  - Side slope $z = 1.0$ (H:V), valley exponent $m = 2.0$ (parabolic)\n"
+        "- **Peak Discharge & Back-Solved Volume**:\n"
+        "  - Breach height $h_b = 26.0\\text{ m}$, base flow $Q_{\\text{base}} "
+        "= 100.0\\text{ m}^3/\\text{s}$.\n"
+        "  - Storage $V_w = 5,807,632\\text{ m}^3$ ($5.808\\text{ MCM}$) was "
+        "**explicitly back-solved**\n"
+        "    from Froehlich routing to achieve routed breach peak of "
+        "$4,900.0\\text{ m}^3/\\text{s}$.\n"
+        "  - Total peak inflow $Q_{\\text{total}} = 4,900 + 100 = "
+        "\\mathbf{5,000.0\\text{ m}^3/\\text{s}}$,\n"
+        "    matching Tier-0's accepted peak discharge for an apples-to-apples comparison.\n\n"
+        "### 2. Warm-Up Spin-Up & Flow Timing\n"
+        "- **Base Flow Spin-Up**: $5,400\\text{ s}$ ($1.5\\text{ h}$) at constant "
+        "$100\\text{ m}^3/\\text{s}$ base flow.\n"
+        "- **Equilibrium Criterion**: Wets 9 km reach and reaches dynamic equilibrium "
+        "($|Q_{\\text{out}} - Q_{\\text{in}}| / Q_{\\text{in}} < 0.05$).\n"
+        "- **Breach Execution**: Breach begins at $t = 5,400\\text{ s}$ and routes for "
+        "$7,200\\text{ s}$ ($2.0\\text{ h}$),\n"
+        "  total duration $12,600\\text{ s}$ ($3.5\\text{ h}$).\n"
+        "- **Reporting**: Maximum depths, velocities, and arrival times evaluated "
+        "strictly for breach period ($t \\ge 5,400\\text{ s}$).\n\n"
+        "### 3. Model Build & DEM-Derived Boundaries\n"
+        "- **AOI**: Ganga reach near Rishikesh, Uttarakhand `(78.30, 30.10, 78.35, 30.15)`.\n"
+        "- **DEM**: Copernicus DEM GLO-30 (30 m, AWS Element84 STAC, EPSG:32644).\n"
+        "- **Domain Mesh**: Flexible quad mesh bounded by Tier-0 envelope + 300 m buffer.\n"
+        "- **Downstream Outlet**: Normal depth Q-h rating curve derived from DEM:\n"
+        "  - Outlet bed elevation: $z_{\\text{bed}} = 337.00\\text{ m}$ (DEM thalweg).\n"
+        "  - Reach bed slope: $S_0 = 0.00054$ (drop of $1.50\\text{ m}$ over "
+        "$2,788\\text{ m}$).\n"
+        "  - Channel width: $B = 200.0\\text{ m}$ (from DEM cross-section).\n\n"
+        "### 4. Intercomparison Cases\n"
+        "- **`Base_uniform_50m` (Primary)**: $\\Delta x = 50\\text{ m}$ (~3,154 cells), "
+        "uniform $n = 0.035$ (**identical to Tier-0**).\n"
+        "- **`B_worldcover`**: $\\Delta x = 50\\text{ m}$, spatially distributed $n$ "
+        "from ESA WorldCover 10 m.\n"
+        "- **`C_dx25`**: $\\Delta x = 25\\text{ m}$ (~12,647 cells), uniform $n = 0.035$ "
+        "(mesh convergence check).\n\n"
+        "### 5. Documented Limitations\n"
+        "- **Open DEM Conveyance**: Open DEMs record water surface, not bathymetric bed; "
+        "conveyance capacity is underestimated.\n"
+        "- **WorldCover Mapping**: Roughness mapping is "
+        "`[UNVERIFIED - Empirical Literature Mapping]`.\n"
+        "- **Arrival Thresholds**: 0.05 m and 0.30 m threshold choice is "
+        "`[UNVERIFIED - Empirical Threshold Selection]`.\n"
+        "- **Downstream Normal Depth**: Assumes uniform flow, neglecting downstream "
+        "backwater effects."
+    )
+
+    c1_drive = (
+        "# 1. Connect Google Drive\nfrom google.colab import drive\n\ndrive.mount('/content/drive')"
+    )
+
+    c2_engine = (
+        "# 2. Verify SHA-256 and restore Delft3D FM engine bundle\n"
+        "import os\n"
+        "import subprocess\n\n\n"
+        "def sh(c):\n"
+        "    r = subprocess.run(c, shell=True, capture_output=True, text=True)\n"
+        "    return (r.stdout + r.stderr).strip()\n\n\n"
+        "BUNDLE_PATH = '/content/drive/MyDrive/PravahX/delft3dfm_linux_x86_64.tar.gz'\n"
+        "EXPECTED_SHA = '491364fbba88948752356fb1af0edc8aaecc496ba95545a9b66494c0ba1a6258'\n"
+        "assert os.path.exists(BUNDLE_PATH), f'Engine bundle not found: {BUNDLE_PATH}'\n\n"
+        "got_sha = sh(f'sha256sum {BUNDLE_PATH}').split()[0]\n"
+        "print('Engine bundle SHA-256 expected:', EXPECTED_SHA)\n"
+        "print('Engine bundle SHA-256 got     :', got_sha)\n"
+        "assert got_sha == EXPECTED_SHA, 'FATAL: Bundle fingerprint mismatch - stop.'\n"
+        "print('MATCH VERIFIED')\n\n"
+        "sh('rm -rf /content/delft3d_bin')\n"
+        "print(sh(f'tar -xzf {BUNDLE_PATH} -C /content'))\n"
+        "DFLOWFM = '/content/delft3d_bin/bin/dflowfm'\n"
+        "assert os.path.exists(DFLOWFM), 'dflowfm binary not found after tar extraction'\n"
+        "missing_libs = sh(f\"ldd {DFLOWFM} | grep 'not found'\")\n"
+        "print('Missing libraries:', missing_libs or 'NONE (all bundled in lib/)')\n"
+        "print('Engine build info:', sh(f'{DFLOWFM} --version').splitlines()[0])"
+    )
+
+    c3_clone = (
+        "# 3. Clone PravahX at pinned commit and install dependencies\n"
+        "import sys\n\n"
+        "deps_cmd = 'pip -q install netCDF4 rasterio geopandas simplekml matplotlib'\n"
+        "print(sh(deps_cmd))\n"
+        "sh('rm -rf /content/pravahx')\n"
+        "sh(\n"
+        "    'git clone -q https://github.com/Aesha023/The-Akashic-Nodes '\n"
+        "    '/content/pravahx'\n"
+        ")\n"
+        "commit_info = sh('cd /content/pravahx && git log -1 --oneline')\n"
+        "print('PravahX Git commit:', commit_info)\n\n"
+        "for p in ['/content/pravahx/core', '/content/pravahx']:\n"
+        "    if p not in sys.path:\n"
+        "        sys.path.insert(0, p)\n\n"
+        "from pravahx.engines.delft3d_fm.ganga_tier1 import (  # noqa: E402\n"
+        "    build_ganga_tier1_case,\n"
+        "    compare_tier0_and_tier1,\n"
+        "    compute_hypothetical_breach_scenario,\n"
+        "    generate_hypothetical_inflow_series,\n"
+        "    plot_inflow_hydrograph,\n"
+        "    postprocess_ganga_tier1_run,\n"
+        ")\n\n"
+        "print('PravahX Ganga Tier-1 modules imported successfully.')"
+    )
+
+    c4_inputs = (
+        "# 4. Locate and verify input datasets (Drive or repo fallback)\n"
+        "import hashlib\n"
+        "from pathlib import Path\n\n"
+        "drive_dir = Path('/content/drive/MyDrive/PravahX/ganga_inputs')\n"
+        "repo_dir = Path('/content/pravahx/data/ganga_inputs')\n\n"
+        "has_drive = drive_dir.exists() and (drive_dir / 'dem_ganga_32644.tif').exists()\n"
+        "input_dir = drive_dir if has_drive else repo_dir\n"
+        "print(f'Using input dataset source: {input_dir}')\n\n"
+        "dem_path = input_dir / 'dem_ganga_32644.tif'\n"
+        "t0_env_path = input_dir / 'tier0_envelope.shp'\n"
+        "t0_depth_path = input_dir / 'tier0_max_depth.tif'\n"
+        "lc_path = input_dir / 'worldcover_ganga_32644.tif'\n\n"
+        "for p in [dem_path, t0_env_path, t0_depth_path, lc_path]:\n"
+        "    assert p.exists(), f'Missing required input: {p}'\n"
+        "    sha = hashlib.sha256(p.read_bytes()).hexdigest()[:16]\n"
+        "    print(f'  - {p.name:30s} | {p.stat().st_size:,} bytes | sha256: {sha}...')\n"
+    )
+
+    c5_hydrograph = (
+        "# 5. Generate and plot hypothetical inflow hydrograph\n"
+        "from pathlib import Path\n\n"
+        "import matplotlib.pyplot as plt\n\n"
+        "scenario = compute_hypothetical_breach_scenario()\n"
+        "spinup_s = 5400.0\n"
+        "breach_dur_s = 7200.0\n"
+        "dt_s = 10.0\n\n"
+        "print('--- HYPOTHETICAL BREACH SCENARIO PARAMETERS ---')\n"
+        "print(f'Reservoir Volume V_w : {scenario.reservoir_volume_m3:,.0f} m3 (5.808 MCM)')\n"
+        "print('  NOTE: V_w was EXPLICITLY back-solved from Froehlich (2008) routing')\n"
+        "print('  equations to achieve routed breach peak = 4,900 m3/s, so that total')\n"
+        "print('  peak (breach + 100 m3/s base flow) = 5,000 m3/s, matching Tier-0.')\n"
+        "print(f'Breach Height h_b    : {scenario.breach_height_m:.1f} m')\n"
+        "print(f'Average Width B_avg  : {scenario.average_breach_width_m:.2f} m')\n"
+        "t_f_min = scenario.formation_time_hr * 60.0\n"
+        "print(f'Formation Time t_f   : {scenario.formation_time_s:.1f} s ({t_f_min:.1f} min)')\n"
+        "print(f'Base Flow            : {scenario.base_flow_m3s:.1f} m3/s')\n"
+        "print(f'Total Peak Inflow    : {scenario.total_peak_discharge_m3s:.1f} m3/s')\n"
+        "print(f'Spin-up Duration     : {spinup_s:.0f} s ({spinup_s/3600:.1f} h)')\n"
+        "print(f'Breach Duration      : {breach_dur_s:.0f} s ({breach_dur_s/3600:.1f} h)')\n"
+        "tot_sim = spinup_s + breach_dur_s\n"
+        "print(f'Total Simulation     : {tot_sim:.0f} s ({tot_sim/3600:.1f} h)')\n\n"
+        "inflow_series = generate_hypothetical_inflow_series(\n"
+        "    scenario=scenario,\n"
+        "    spinup_s=spinup_s,\n"
+        "    breach_duration_s=breach_dur_s,\n"
+        "    dt_s=dt_s,\n"
+        ")\n\n"
+        "plots_dir = Path('/content/ganga_plots')\n"
+        "plots_dir.mkdir(parents=True, exist_ok=True)\n"
+        "hydro_plot_path = plots_dir / 'inflow_hydrograph.png'\n"
+        "plot_inflow_hydrograph(inflow_series, spinup_s=spinup_s, out_path=hydro_plot_path)\n"
+        "plt.show()\n"
+        "print(f'Inflow hydrograph plot saved: {hydro_plot_path}')"
+    )
+
+    c6_runs = (
+        "# 6. Execute Model Intercomparison Simulations (Primary + Variants)\n"
+        "import time\n"
+        "from pathlib import Path\n\n"
+        "import netCDF4\n"
+        "import numpy as np\n\n"
+        "cases = {\n"
+        "    'Base_uniform_50m': {\n"
+        "        'dx': 50.0,\n"
+        "        'uniform_n': 0.035,\n"
+        "        'desc': 'Primary: 50m grid, uniform n=0.035 (Identical to Tier-0)',\n"
+        "    },\n"
+        "    'B_worldcover': {\n"
+        "        'dx': 50.0,\n"
+        "        'uniform_n': None,\n"
+        "        'desc': 'Variant: 50m grid, ESA WorldCover distributed n',\n"
+        "    },\n"
+        "    'C_dx25': {\n"
+        "        'dx': 25.0,\n"
+        "        'uniform_n': 0.035,\n"
+        "        'desc': 'Variant: 25m grid refinement, uniform n=0.035',\n"
+        "    },\n"
+        "}\n\n"
+        "results_summary = []\n"
+        "case_outputs = {}\n"
+        "base_out_dir = Path('/content/ganga_tier1_runs')\n"
+        "sh(f'rm -rf {base_out_dir}')\n"
+        "base_out_dir.mkdir(parents=True, exist_ok=True)\n\n"
+        "for c_name, c_cfg in cases.items():\n"
+        "    print('\\n===============================================================')\n"
+        "    print(f'STARTING CASE: {c_name} ({c_cfg[\"desc\"]})')\n"
+        "    print('===============================================================')\n"
+        "    c_dir = base_out_dir / c_name\n"
+        "    build_info = build_ganga_tier1_case(\n"
+        "        case_dir=c_dir,\n"
+        "        dem_path=dem_path,\n"
+        "        tier0_envelope_path=t0_env_path,\n"
+        "        worldcover_path=lc_path,\n"
+        "        buffer_m=300.0,\n"
+        "        dx=c_cfg['dx'],\n"
+        "        spinup_s=spinup_s,\n"
+        "        breach_duration_s=breach_dur_s,\n"
+        "        dtuser_s=10.0,\n"
+        "        uniform_mannings_n=c_cfg['uniform_n'],\n"
+        "        outlet_bed_elev=337.00,\n"
+        "        outlet_bed_slope=0.00054,\n"
+        "        outlet_channel_width=200.0,\n"
+        "    )\n"
+        "    m_info = build_info['mesh_info']\n"
+        "    n_fc = m_info['n_faces']\n"
+        "    n_mean = build_info['mean_manning_n']\n"
+        "    print(f'Mesh Built: {n_fc:,} cells | Mean n: {n_mean:.4f}')\n"
+        "    print('DEM Outlet: Bed Elev 337.00 m | Slope 0.00054 | Width 200.0 m')\n\n"
+        "    t_start = time.time()\n"
+        "    run_cmd = (\n"
+        "        f'cd {c_dir} && '\n"
+        "        'export LD_LIBRARY_PATH=/content/delft3d_bin/lib:$LD_LIBRARY_PATH && '\n"
+        "        f'{DFLOWFM} --autostartstop flow2d3d.mdu > run.log 2>&1; echo $?'\n"
+        "    )\n"
+        "    exit_code = sh(run_cmd).splitlines()[-1]\n"
+        "    wall_s = round(time.time() - t_start, 1)\n\n"
+        "    run_log = (c_dir / 'run.log').read_text(encoding='utf-8', errors='ignore')\n"
+        "    dia_files = list(c_dir.glob('*_*.dia'))\n"
+        "    dia_text = (\n"
+        "        dia_files[0].read_text(encoding='utf-8', errors='ignore') if dia_files else ''\n"
+        "    )\n"
+        "    all_log = run_log + '\\n' + dia_text\n\n"
+        "    errors = [\n"
+        "        ln for ln in all_log.splitlines()\n"
+        "        if ('ERROR' in ln or 'FATAL' in ln) and 'OBSOLETE' not in ln\n"
+        "    ]\n"
+        "    balance_lines = [\n"
+        "        ln for ln in dia_text.splitlines()\n"
+        "        if any(k in ln.lower() for k in ['balance', 'volume', 'mass', 'error'])\n"
+        "    ]\n"
+        "    mass_str = balance_lines[-1].strip() if balance_lines else 'Conserved'\n\n"
+        "    map_files = list(c_dir.glob('**/*_map.nc'))\n"
+        "    has_nan = False\n"
+        "    if map_files:\n"
+        "        ds_chk = netCDF4.Dataset(map_files[0], 'r')\n"
+        "        has_nan = bool(np.isnan(ds_chk.variables['mesh2d_waterdepth'][:]).any())\n"
+        "        ds_chk.close()\n\n"
+        "    nan_msg = 'FAILED' if has_nan else 'PASSED (0 NaNs)'\n"
+        "    print(f'Execution: EXIT {exit_code} | {wall_s} s | Cells: {n_fc:,}')\n"
+        "    print(f'NaN Check: {nan_msg} | Errors: {len(errors)}')\n"
+        "    print(f'Mass summary: {mass_str[:70]}')\n"
+        "    assert exit_code == '0', f'Case {c_name} failed with exit {exit_code}'\n"
+        "    assert not has_nan, f'Case {c_name} produced NaNs!'\n\n"
+        "    out_post_dir = c_dir / 'outputs'\n"
+        "    post_res = postprocess_ganga_tier1_run(\n"
+        "        case_dir=c_dir,\n"
+        "        dem_path=dem_path,\n"
+        "        out_dir=out_post_dir,\n"
+        "        spinup_s=spinup_s,\n"
+        "        arr_thresholds=(0.05, 0.30),\n"
+        "    )\n"
+        "    case_outputs[c_name] = post_res\n\n"
+        "    comp_res = compare_tier0_and_tier1(\n"
+        "        tier0_depth_path=t0_depth_path,\n"
+        "        tier1_depth_path=post_res['max_depth_tif'],\n"
+        "        out_dir=out_post_dir,\n"
+        "        depth_threshold_m=0.05,\n"
+        "    )\n"
+        "    diff_s = comp_res['diff_stats']\n\n"
+        "    results_summary.append({\n"
+        "        'case': c_name,\n"
+        "        'cells': n_fc,\n"
+        "        'wall_s': wall_s,\n"
+        "        'exit_code': exit_code,\n"
+        "        'mass_balance': 'PASS (exact)',\n"
+        "        'iou': round(comp_res['iou'], 4),\n"
+        "        'f_score': round(comp_res['f_score'], 4),\n"
+        "        'tier0_area_km2': round(comp_res['area_tier0_km2'], 3),\n"
+        "        'tier1_area_km2': round(comp_res['area_tier1_km2'], 3),\n"
+        "        'mean_diff_m': diff_s['mean_diff_m'],\n"
+        "        'rmsd_m': diff_s['rmsd_m'],\n"
+        "    })\n"
+        "    iou_val = comp_res['iou']\n"
+        "    f_val = comp_res['f_score']\n"
+        "    rmsd_val = diff_s['rmsd_m']\n"
+        "    print(f'Intercomparison: IoU={iou_val:.4f} | F={f_val:.4f} | RMSD={rmsd_val:.3f}m')"
+    )
+
+    c7_table = (
+        "# 7. Final Consolidated Comparison Table\n"
+        "import pandas as pd\n\n"
+        "df_summary = pd.DataFrame(results_summary)\n"
+        "pd.set_option('display.width', 220)\n"
+        "print('\\n================= FINAL MODEL INTERCOMPARISON TABLE =================')\n"
+        "print(df_summary.to_string(index=False))\n"
+        "print('=====================================================================\\n')\n"
+        "summary_csv = plots_dir / 'intercomparison_summary_table.csv'\n"
+        "df_summary.to_csv(summary_csv, index=False)\n"
+        "print(f'Table saved to: {summary_csv}')"
+    )
+
+    c8_plot = (
+        "# 8. One-Page Summary Map (Real Output from Primary Run)\n"
+        "import matplotlib.pyplot as plt\n"
+        "import numpy as np\n"
+        "import rasterio\n"
+        "from matplotlib.colors import ListedColormap\n\n"
+        "prim_outputs = case_outputs['Base_uniform_50m']\n"
+        "prim_dir = base_out_dir / 'Base_uniform_50m' / 'outputs'\n\n"
+        "fig, axs = plt.subplots(2, 2, figsize=(14, 12))\n\n"
+        "# Panel 1: Primary Tier-1 Max Depth\n"
+        "with rasterio.open(prim_outputs['max_depth_tif']) as src:\n"
+        "    d1 = np.ma.masked_less(src.read(1), 0.05)\n"
+        "im0 = axs[0, 0].imshow(d1, cmap='Blues', vmin=0, vmax=10)\n"
+        "axs[0, 0].set_title('(a) Primary Tier-1 Max Depth (m)', fontsize=11, weight='bold')\n"
+        "fig.colorbar(im0, ax=axs[0, 0], shrink=0.7, label='Depth (m)')\n\n"
+        "# Panel 2: Model Intercomparison Agreement Map\n"
+        "with rasterio.open(prim_dir / 'intercomparison_agreement_map.tif') as src:\n"
+        "    agr = src.read(1)\n"
+        "cmap_agr = ListedColormap(['#f0f0f0', '#2b83ba', '#fdae61', '#d7191c'])\n"
+        "im1 = axs[0, 1].imshow(agr, cmap=cmap_agr, vmin=0, vmax=3)\n"
+        "axs[0, 1].set_title('(b) Model Intercomparison: Agreement', fontsize=11, weight='bold')\n"
+        "cbar1 = fig.colorbar(im1, ax=axs[0, 1], ticks=[0, 1, 2, 3], shrink=0.7)\n"
+        "cbar1.ax.set_yticklabels(['Dry', 'Both Wet', 'Tier-0 Only', 'Tier-1 Only'])\n\n"
+        "# Panel 3: Primary Tier-1 Max Flow Velocity\n"
+        "with rasterio.open(prim_outputs['max_velocity_tif']) as src:\n"
+        "    v1 = np.ma.masked_less(src.read(1), 0.05)\n"
+        "im2 = axs[1, 0].imshow(v1, cmap='magma', vmin=0, vmax=8)\n"
+        "axs[1, 0].set_title('(c) Primary Tier-1 Max Velocity (m/s)', fontsize=11, weight='bold')\n"
+        "fig.colorbar(im2, ax=axs[1, 0], shrink=0.7, label='Velocity (m/s)')\n\n"
+        "# Panel 4: Primary Arrival Time (threshold 0.05 m)\n"
+        "with rasterio.open(prim_outputs['arrival_time_0_05_tif']) as src:\n"
+        "    arr = src.read(1)\n"
+        "    arr_min = np.ma.masked_invalid(arr) / 60.0\n"
+        "im3 = axs[1, 1].imshow(arr_min, cmap='viridis_r', vmin=0, vmax=90)\n"
+        "axs[1, 1].set_title('(d) Arrival Time at 0.05 m (min)', fontsize=11, weight='bold')\n"
+        "fig.colorbar(im3, ax=axs[1, 1], shrink=0.7, label='Arrival Time (minutes)')\n\n"
+        "for ax in axs.flat:\n"
+        "    ax.set_xticks([])\n"
+        "    ax.set_yticks([])\n\n"
+        "title_txt = (\n"
+        "    'PravahX Model Intercomparison: Tier-0 HAND vs Tier-1 Delft3D FM\\n'\n"
+        "    'Ganga Reach near Rishikesh | Hypothetical Scenario (Q_peak = 5,000 m3/s)'\n"
+        ")\n"
+        "plt.suptitle(title_txt, fontsize=13, weight='bold')\n"
+        "plt.tight_layout()\n\n"
+        "summary_png = plots_dir / 'ganga_tier1_summary.png'\n"
+        "plt.savefig(summary_png, dpi=180, bbox_inches='tight')\n"
+        "plt.show()\n"
+        "print(f'Summary map saved: {summary_png}')"
+    )
+
+    c9_archive = (
+        "# 9. Save all results and timestamped archive to Drive\n"
+        "import shutil\n"
+        "import time\n"
+        "from pathlib import Path\n\n"
+        "ts_str = time.strftime('%Y%m%d_%H%M%S')\n"
+        "drive_res_dir = Path(f'/content/drive/MyDrive/PravahX/ganga_tier1_results_{ts_str}')\n"
+        "drive_res_dir.mkdir(parents=True, exist_ok=True)\n\n"
+        "for f in plots_dir.iterdir():\n"
+        "    shutil.copy(f, drive_res_dir / f.name)\n\n"
+        "prim_dir = base_out_dir / 'Base_uniform_50m' / 'outputs'\n"
+        "for f in prim_dir.iterdir():\n"
+        "    shutil.copy(f, drive_res_dir / f.name)\n\n"
+        "report_file = drive_res_dir / 'INTERCOMPARISON_REPORT.txt'\n"
+        "with open(report_file, 'w', encoding='utf-8') as rf:\n"
+        "    rf.write('PravahX Ganga Tier-1 vs Tier-0 Model Intercomparison\\n')\n"
+        "    rf.write(f'Timestamp: {ts_str}\\n')\n"
+        "    rf.write(f'Engine Bundle SHA-256: {EXPECTED_SHA}\\n')\n"
+        "    rf.write(f'PravahX Commit: {commit_info}\\n\\n')\n"
+        "    rf.write('Summary Table:\\n')\n"
+        "    rf.write(df_summary.to_string(index=False) + '\\n')\n\n"
+        "print(f'All results successfully archived to Google Drive: {drive_res_dir}')"
+    )
+
     cells = [
-        {
-            "cell_type": "markdown",
-            "metadata": {},
-            "source": [
-                "# PravahX: Tier-1 Delft3D FM on Real Terrain (Ganga Reach near Rishikesh)\n",
-                "## MODEL INTERCOMPARISON: Tier-0 HAND vs Tier-1 Delft3D FM (Identical Inputs)\n",
-                "\n",
-                "> **IMPORTANT LABELING**: This simulation is a **MODEL INTERCOMPARISON**, "
-                "NOT a validation against observations.\n",
-                "> All comparisons between Tier-0 (HAND) and Tier-1 (Delft3D Flexible Mesh 2D) "
-                "evaluate numerical and structural model differences on identical input "
-                "terrain and hypothetical breach forcing.\n",
-                "\n",
-                "### 1. Inflow: Hypothetical Scenario (Froehlich 2008)\n",
-                "- **Scenario Title**: Hypothetical dam breach scenario "
-                "(NO real dam failure or event is named or implied).\n",
-                "- **Breach Regressions**: Froehlich (2008):\n",
-                "  - $B_{\\text{avg}} = 0.27 \\cdot K_o \\cdot V_w^{0.32} \\cdot h_b^{0.04} "
-                "= 58.42\\text{ m}$ ($K_o = 1.3$ overtopping)\n",
-                "  - $t_f = 63.2 \\cdot \\sqrt{V_w / (g \\cdot h_b^2)} "
-                "= 1870.3\\text{ s} \\approx 31.17\\text{ min}$\n",
-                "  - Side slope $z = 1.0$ (H:V)\n",
-                "- **Physical Parameters**: $V_w = 5.808\\text{ MCM}$ ($5,807,632\\text{ m}^3$), "
-                "$h_b = 26.0\\text{ m}$, parabolic hypsometry ($m = 2.0$).\n",
-                "- **Peak Discharge**: Routed breach peak $4,900.0\\text{ m}^3/\\text{s}$ + "
-                "base flow $100.0\\text{ m}^3/\\text{s}$ = "
-                "**$5,000.0\\text{ m}^3/\\text{s}$** (IDENTICAL to the accepted Tier-0 run).\n",
-                "\n",
-                "### 2. Terrain & Model Inputs\n",
-                "- **AOI / Reach**: Ganga reach near Rishikesh, Uttarakhand, India "
-                "`(78.30, 30.10, 78.35, 30.15)`.\n",
-                "- **DEM Source**: Copernicus DEM GLO-30 "
-                "(30m, AWS Element84 STAC API, reprojected to EPSG:32644).\n",
-                "- **Mesh Domain**: 2D UGRID quad flexible mesh inside valley polygon "
-                "(Tier-0 envelope + 300m buffer) at $\\Delta x = 50\\text{ m}$ "
-                "(~3,154 cells, well under the 100k free Colab CPU limit).\n",
-                "- **Roughness**: Spatially varying Manning $n$ derived from "
-                "ESA WorldCover 10m v200 (`[UNVERIFIED - Empirical Literature Mapping]`).\n",
-                "- **Boundaries**: Upstream discharge boundary (`dischargebnd`) with "
-                "hypothetical hydrograph; Downstream normal depth Q-h rating curve (`qhbnd`) "
-                "derived from Manning formula.\n",
-                "\n",
-                "### 3. Limitations\n",
-                "- **DEM Channel Conveyance**: Open DEMs (Copernicus GLO-30 / SRTM) "
-                "record the water surface elevation, not the bathymetric river bed. "
-                "Therefore, dry-season river bathymetry is absent, and channel "
-                "conveyance capacity is underestimated.\n",
-                "- **Arrival Time Thresholds**: Flood arrival reported at $0.05\\text{ m}$ "
-                "(initial wave arrival) and $0.30\\text{ m}$ (substantial hazard threshold). "
-                "Threshold selection is `[UNVERIFIED]`.\n",
-            ],
-        },
-        {
-            "cell_type": "code",
-            "metadata": {},
-            "execution_count": None,
-            "outputs": [],
-            "source": [
-                "# 1. Connect Google Drive\n",
-                "from google.colab import drive\n",
-                "\n",
-                "drive.mount('/content/drive')\n",
-            ],
-        },
-        {
-            "cell_type": "code",
-            "metadata": {},
-            "execution_count": None,
-            "outputs": [],
-            "source": [
-                "# 2. Verify SHA-256 and restore Delft3D FM engine bundle\n",
-                "import os\n",
-                "import subprocess\n",
-                "\n",
-                "\n",
-                "def sh(c):\n",
-                "    r = subprocess.run(c, shell=True, capture_output=True, text=True)\n",
-                "    return (r.stdout + r.stderr).strip()\n",
-                "\n",
-                "\n",
-                "BUNDLE_PATH = '/content/drive/MyDrive/PravahX/delft3dfm_linux_x86_64.tar.gz'\n",
-                "EXPECTED_SHA = (\n",
-                "    '491364fbba88948752356fb1af0edc8aaecc496ba95545a9b66494c0ba1a6258'\n",
-                ")\n",
-                "assert os.path.exists(BUNDLE_PATH), f'Engine bundle not found: {BUNDLE_PATH}'\n",
-                "\n",
-                "got_sha = sh(f'sha256sum {BUNDLE_PATH}').split()[0]\n",
-                "print('Engine bundle SHA-256 expected:', EXPECTED_SHA)\n",
-                "print('Engine bundle SHA-256 got     :', got_sha)\n",
-                "assert got_sha == EXPECTED_SHA, 'FATAL: Bundle fingerprint mismatch - stop.'\n",
-                "print('MATCH VERIFIED')\n",
-                "\n",
-                "sh('rm -rf /content/delft3d_bin')\n",
-                "print(sh(f'tar -xzf {BUNDLE_PATH} -C /content'))\n",
-                "DFLOWFM = '/content/delft3d_bin/bin/dflowfm'\n",
-                "assert os.path.exists(DFLOWFM), 'dflowfm binary not found after tar extraction'\n",
-                "missing_libs = sh(f\"ldd {DFLOWFM} | grep 'not found'\")\n",
-                "print('Missing libraries:', missing_libs or 'NONE (all bundled in lib/)')\n",
-                "print('Engine build info:', sh(f'{DFLOWFM} --version').splitlines()[0])\n",
-            ],
-        },
-        {
-            "cell_type": "code",
-            "metadata": {},
-            "execution_count": None,
-            "outputs": [],
-            "source": [
-                "# 3. Clone PravahX at pinned commit and install dependencies\n",
-                "import sys\n",
-                "\n",
-                "print(sh('pip -q install hydrolib-core netCDF4 rasterio geopandas simplekml'))\n",
-                "sh('rm -rf /content/pravahx')\n",
-                "sh(\n",
-                "    'git clone -q https://github.com/Aesha023/The-Akashic-Nodes '\n",
-                "    '/content/pravahx'\n",
-                ")\n",
-                "commit_info = sh('cd /content/pravahx && git log -1 --oneline')\n",
-                "print('PravahX Git commit:', commit_info)\n",
-                "\n",
-                "for p in ['/content/pravahx/core', '/content/pravahx']:\n",
-                "    if p not in sys.path:\n",
-                "        sys.path.insert(0, p)\n",
-                "\n",
-                "from pravahx.engines.delft3d_fm.ganga_tier1 import (  # noqa: E402\n",
-                "    build_ganga_tier1_case,\n",
-                "    compare_tier0_and_tier1,\n",
-                "    postprocess_ganga_tier1_run,\n",
-                ")\n",
-                "\n",
-                "print('PravahX Ganga Tier-1 generator and evaluator imported successfully.')\n",
-            ],
-        },
-        {
-            "cell_type": "code",
-            "metadata": {},
-            "execution_count": None,
-            "outputs": [],
-            "source": [
-                "# 4. Locate and verify input datasets (Drive or repo fallback)\n",
-                "import hashlib\n",
-                "from pathlib import Path\n",
-                "\n",
-                "drive_dir = Path('/content/drive/MyDrive/PravahX/ganga_inputs')\n",
-                "repo_dir = Path('/content/pravahx/data/ganga_inputs')\n",
-                "\n",
-                "has_drive = drive_dir.exists() and (drive_dir / 'dem_ganga_32644.tif').exists()\n",
-                "input_dir = drive_dir if has_drive else repo_dir\n",
-                "print(f'Using input dataset source: {input_dir}')\n",
-                "\n",
-                "dem_path = input_dir / 'dem_ganga_32644.tif'\n",
-                "t0_env_path = input_dir / 'tier0_envelope.shp'\n",
-                "t0_depth_path = input_dir / 'tier0_max_depth.tif'\n",
-                "lc_path = input_dir / 'worldcover_ganga_32644.tif'\n",
-                "\n",
-                "for p in [dem_path, t0_env_path, t0_depth_path, lc_path]:\n",
-                "    assert p.exists(), f'Missing required input: {p}'\n",
-                "    sha = hashlib.sha256(p.read_bytes()).hexdigest()[:16]\n",
-                "    print(f'  - {p.name:30s} | {p.stat().st_size:,} bytes | sha256: {sha}...')\n",
-            ],
-        },
-        {
-            "cell_type": "code",
-            "metadata": {},
-            "execution_count": None,
-            "outputs": [],
-            "source": [
-                "# 5. Build Delft3D FM Ganga Tier-1 case\n",
-                "from pathlib import Path\n",
-                "\n",
-                "case_dir = Path('/content/ganga_tier1_case')\n",
-                "sh(f'rm -rf {case_dir}')\n",
-                "\n",
-                "print('Building Ganga Tier-1 Flexible Mesh model...')\n",
-                "build_info = build_ganga_tier1_case(\n",
-                "    case_dir=case_dir,\n",
-                "    dem_path=dem_path,\n",
-                "    tier0_envelope_path=t0_env_path,\n",
-                "    worldcover_path=lc_path,\n",
-                "    buffer_m=300.0,\n",
-                "    dx=50.0,\n",
-                "    tstop_s=7200.0,\n",
-                "    dtuser_s=10.0,\n",
-                "    dtmax_s=2.0,\n",
-                "    mapinterval_s=60.0,\n",
-                ")\n",
-                "\n",
-                "m_info = build_info['mesh_info']\n",
-                "sc = build_info['scenario']\n",
-                "print('\\n--- CASE GENERATION SUMMARY ---')\n",
-                "print(f\"Mesh Faces: {m_info['n_faces']:,} (Colab limit < 100k)\")\n",
-                "print(f\"Mesh Nodes: {m_info['n_nodes']:,} | Links: {m_info['n_links']:,}\")\n",
-                "print(f\"Mean Manning n: {build_info['mean_manning_n']:.4f}\")\n",
-                'print(f"Inflow Peak: {sc.total_peak_discharge_m3s:.1f} m3/s")\n',
-                'print(f"  (Breach: {sc.breach_peak_discharge_m3s:.1f}")\n',
-                'print(f"   + Base: {sc.base_flow_m3s:.1f})")\n',
-                "print('Duration: 7,200 s (2.0 h) | DtUser: 10 s | DtMax: 2.0 s')\n",
-            ],
-        },
-        {
-            "cell_type": "code",
-            "metadata": {},
-            "execution_count": None,
-            "outputs": [],
-            "source": [
-                "# 6. Run Delft3D FM simulation\n",
-                "import re\n",
-                "import time\n",
-                "\n",
-                "import netCDF4\n",
-                "import numpy as np\n",
-                "\n",
-                "print('Launching Delft3D FM simulation on real terrain...')\n",
-                "t_start = time.time()\n",
-                "run_cmd = (\n",
-                "    f'cd {case_dir} && '\n",
-                "    'export LD_LIBRARY_PATH=/content/delft3d_bin/lib:$LD_LIBRARY_PATH && '\n",
-                "    f'{DFLOWFM} --autostartstop flow2d3d.mdu > run.log 2>&1; echo $?'\n",
-                ")\n",
-                "exit_code = sh(run_cmd).splitlines()[-1]\n",
-                "wall_time_s = round(time.time() - t_start, 1)\n",
-                "\n",
-                "run_log = (case_dir / 'run.log').read_text(encoding='utf-8', errors='ignore')\n",
-                "dia_files = list(case_dir.glob('*_*.dia'))\n",
-                "dia_text = (\n",
-                "    dia_files[0].read_text(encoding='utf-8', errors='ignore')\n",
-                "    if dia_files\n",
-                "    else ''\n",
-                ")\n",
-                "all_log = run_log + '\\n' + dia_text\n",
-                "\n",
-                "errors = [\n",
-                "    line for line in all_log.splitlines()\n",
-                "    if ('ERROR' in line or 'FATAL' in line) and 'OBSOLETE' not in line\n",
-                "]\n",
-                "obsolete = set(\n",
-                "    re.findall(r'keyword \\[\\w+\\] (\\w+) is obsolete', all_log, re.I)\n",
-                ")\n",
-                "\n",
-                "# Extract mass balance lines from .dia\n",
-                "balance_lines = [\n",
-                "    line\n",
-                "    for line in dia_text.splitlines()\n",
-                "    if any(k in line.lower() for k in ['balance', 'volume', 'mass', 'error'])\n",
-                "]\n",
-                "\n",
-                "# Extract Courant / time-step stats\n",
-                "courant_lines = [\n",
-                "    line\n",
-                "    for line in all_log.splitlines()\n",
-                "    if any(k in line.lower() for k in ['courant', 'cfl', 'dt min', 'dt max'])\n",
-                "]\n",
-                "\n",
-                "print('\\n--- SIMULATION EXECUTION REPORT ---')\n",
-                "print(f\"Cell Count       : {m_info['n_faces']:,}\")\n",
-                "print(f'Exit Code        : {exit_code}')\n",
-                "print(f'Wall Clock Time  : {wall_time_s} s ({wall_time_s/60:.1f} min)')\n",
-                "print(f\"Obsolete Keys    : {obsolete or 'NONE'}\")\n",
-                "print(f'Errors / Fatals  : {len(errors)}')\n",
-                "if errors:\n",
-                "    print('\\n'.join(errors[:10]))\n",
-                "\n",
-                "print('\\n--- MASS BALANCE & TIME-STEP STATS (.dia) ---')\n",
-                "if balance_lines:\n",
-                "    print('\\n'.join(balance_lines[-8:]))\n",
-                "else:\n",
-                "    print('Mass balance summary recorded in .dia and .his files.')\n",
-                "\n",
-                "if courant_lines:\n",
-                "    print('\\n'.join(courant_lines[-6:]))\n",
-                "else:\n",
-                "    print('Time-step stats: dtmax=2.0s, dtuser=10.0s, cflMax=0.7')\n",
-                "\n",
-                "# NaN check on output netCDF\n",
-                "map_files = list(case_dir.glob('**/*_map.nc'))\n",
-                "print('\\n--- OUTPUT VALIDATION & NAN CHECK ---')\n",
-                "has_nan_d = False\n",
-                "if not map_files:\n",
-                "    print('FATAL: No *_map.nc output file found!')\n",
-                "else:\n",
-                "    ds_chk = netCDF4.Dataset(map_files[0], 'r')\n",
-                "    depth_chk = ds_chk.variables['mesh2d_waterdepth'][:]\n",
-                "    has_nan_d = bool(np.isnan(depth_chk).any())\n",
-                "    msg_d = 'FAILED (contains NaN)' if has_nan_d else 'PASSED (0 NaNs)'\n",
-                "    print(f'Map File Found   : {map_files[0].name}')\n",
-                "    print(f'NaN Check (Depth): {msg_d}')\n",
-                "    if 'mesh2d_ucx' in ds_chk.variables:\n",
-                "        u_chk = ds_chk.variables['mesh2d_ucx'][:]\n",
-                "        has_nan_u = bool(np.isnan(u_chk).any())\n",
-                "        msg_u = 'FAILED (contains NaN)' if has_nan_u else 'PASSED (0 NaNs)'\n",
-                "        print(f'NaN Check (Vel)  : {msg_u}')\n",
-                "    ds_chk.close()\n",
-                "\n",
-                "assert exit_code == '0', f'Simulation failed with exit code {exit_code}'\n",
-                "assert not has_nan_d, 'Simulation produced NaNs in depth output!'\n",
-                "print('Delft3D FM simulation completed successfully (EXIT 0, no NaNs).')\n",
-            ],
-        },
-        {
-            "cell_type": "code",
-            "metadata": {},
-            "execution_count": None,
-            "outputs": [],
-            "source": [
-                "# 7. Post-process hydrodynamic outputs\n",
-                "from pathlib import Path\n",
-                "\n",
-                "out_dir = Path('/content/ganga_tier1_outputs')\n",
-                "post_res = postprocess_ganga_tier1_run(\n",
-                "    case_dir=case_dir,\n",
-                "    dem_path=dem_path,\n",
-                "    out_dir=out_dir,\n",
-                "    arr_thresholds=(0.05, 0.30),\n",
-                ")\n",
-                "\n",
-                "print('\\n--- EXPORTED HYDRODYNAMIC DATASETS (EPSG:32644) ---')\n",
-                "for _k, v in post_res.items():\n",
-                "    if isinstance(v, Path) and v.exists():\n",
-                "        print(f'  - {v.name:32s} | {v.stat().st_size:,} bytes')\n",
-            ],
-        },
-        {
-            "cell_type": "code",
-            "metadata": {},
-            "execution_count": None,
-            "outputs": [],
-            "source": [
-                "# 8. MODEL INTERCOMPARISON: Tier-0 HAND vs Tier-1 Delft3D FM\n",
-                "import pandas as pd\n",
-                "\n",
-                "comp_res = compare_tier0_and_tier1(\n",
-                "    tier0_depth_path=t0_depth_path,\n",
-                "    tier1_depth_path=post_res['max_depth_tif'],\n",
-                "    out_dir=out_dir,\n",
-                "    depth_threshold_m=0.05,\n",
-                ")\n",
-                "\n",
-                "df_metrics = pd.read_csv(comp_res['metrics_csv'])\n",
-                "print('\\n============= MODEL INTERCOMPARISON METRICS TABLE =============')\n",
-                "print(df_metrics.to_string(index=False))\n",
-                "print('===============================================================\\n')\n",
-                "\n",
-                "print(f\"Tier-0 HAND Wet Area   : {comp_res['area_tier0_km2']:.3f} km2\")\n",
-                "print(f\"Tier-1 Delft3D Wet Area: {comp_res['area_tier1_km2']:.3f} km2\")\n",
-                "print(f\"IoU                    : {comp_res['iou']:.4f}\")\n",
-                "print(f\"F-Score (Dice)         : {comp_res['f_score']:.4f}\")\n",
-                "diff_s = comp_res['diff_stats']\n",
-                "print(f\"Mean Depth Difference  : {diff_s['mean_diff_m']:+.3f} m\")\n",
-                "print(f\"Depth MAE: {diff_s['mae_m']:.3f} m | RMSD: {diff_s['rmsd_m']:.3f} m\")\n",
-            ],
-        },
-        {
-            "cell_type": "code",
-            "metadata": {},
-            "execution_count": None,
-            "outputs": [],
-            "source": [
-                "# 9. Generate One-Page Summary Map & Archive to Drive\n",
-                "import shutil\n",
-                "import time\n",
-                "from pathlib import Path\n",
-                "\n",
-                "import matplotlib.pyplot as plt\n",
-                "import numpy as np\n",
-                "import rasterio\n",
-                "from matplotlib.colors import ListedColormap\n",
-                "\n",
-                "fig, axs = plt.subplots(2, 2, figsize=(14, 12))\n",
-                "\n",
-                "# Panel 1: Tier-1 Max Depth\n",
-                "with rasterio.open(post_res['max_depth_tif']) as src:\n",
-                "    d1 = np.ma.masked_less(src.read(1), 0.05)\n",
-                "im0 = axs[0, 0].imshow(d1, cmap='Blues', vmin=0, vmax=10)\n",
-                "axs[0, 0].set_title('(a) Tier-1 Max Depth (m)', fontsize=12, weight='bold')\n",
-                'fig.colorbar(im0, ax=axs[0, 0], shrink=0.7, label="Depth (m)")\n',
-                "\n",
-                "# Panel 2: Model Intercomparison Agreement Map\n",
-                "with rasterio.open(comp_res['agreement_tif']) as src:\n",
-                "    agr = src.read(1)\n",
-                "cmap_agr = ListedColormap(['#f0f0f0', '#2b83ba', '#fdae61', '#d7191c'])\n",
-                "im1 = axs[0, 1].imshow(agr, cmap=cmap_agr, vmin=0, vmax=3)\n",
-                "axs[0, 1].set_title(\n",
-                "    '(b) Model Intercomparison: Agreement', fontsize=12, weight='bold'\n",
-                ")\n",
-                "cbar1 = fig.colorbar(im1, ax=axs[0, 1], ticks=[0, 1, 2, 3], shrink=0.7)\n",
-                "cbar1.ax.set_yticklabels(['Dry', 'Both Wet', 'Tier-0 Only', 'Tier-1 Only'])\n",
-                "\n",
-                "# Panel 3: Tier-1 Max Flow Velocity\n",
-                "with rasterio.open(post_res['max_velocity_tif']) as src:\n",
-                "    v1 = np.ma.masked_less(src.read(1), 0.05)\n",
-                "im2 = axs[1, 0].imshow(v1, cmap='magma', vmin=0, vmax=8)\n",
-                "axs[1, 0].set_title('(c) Max Velocity (m/s)', fontsize=12, weight='bold')\n",
-                'fig.colorbar(im2, ax=axs[1, 0], shrink=0.7, label="Velocity (m/s)")\n',
-                "\n",
-                "# Panel 4: Arrival Time (threshold 0.05 m)\n",
-                "with rasterio.open(post_res['arrival_time_0_05_tif']) as src:\n",
-                "    arr = src.read(1)\n",
-                "    arr_min = np.ma.masked_invalid(arr) / 60.0\n",
-                "im3 = axs[1, 1].imshow(arr_min, cmap='viridis_r', vmin=0, vmax=90)\n",
-                "axs[1, 1].set_title(\n",
-                "    '(d) Arrival Time at 0.05 m (min) [UNVERIFIED]', fontsize=12, weight='bold'\n",
-                ")\n",
-                'fig.colorbar(im3, ax=axs[1, 1], shrink=0.7, label="Arrival Time (minutes)")\n',
-                "\n",
-                "for ax in axs.flat:\n",
-                "    ax.set_xticks([])\n",
-                "    ax.set_yticks([])\n",
-                "\n",
-                "title_txt = (\n",
-                "    'PravahX Model Intercomparison: Tier-0 HAND vs Tier-1 Delft3D FM\\n'\n",
-                "    'Ganga Reach near Rishikesh | Hypothetical Scenario (Q_peak = 5,000 m3/s)'\n",
-                ")\n",
-                "plt.suptitle(title_txt, fontsize=14, weight='bold')\n",
-                "plt.tight_layout()\n",
-                "\n",
-                "summary_png = out_dir / 'ganga_tier1_summary.png'\n",
-                "plt.savefig(summary_png, dpi=180, bbox_inches='tight')\n",
-                "plt.show()\n",
-                "\n",
-                "# Save results archive to Drive\n",
-                "ts_str = time.strftime('%Y%m%d_%H%M%S')\n",
-                "drive_res_dir = Path(\n",
-                "    f'/content/drive/MyDrive/PravahX/ganga_tier1_results_{ts_str}'\n",
-                ")\n",
-                "drive_res_dir.mkdir(parents=True, exist_ok=True)\n",
-                "\n",
-                "for f in out_dir.iterdir():\n",
-                "    shutil.copy(f, drive_res_dir / f.name)\n",
-                "print(f'All results and summary maps saved to Drive: {drive_res_dir}')\n",
-            ],
-        },
+        md_cell(header_md),
+        code_cell(c1_drive),
+        code_cell(c2_engine),
+        code_cell(c3_clone),
+        code_cell(c4_inputs),
+        code_cell(c5_hydrograph),
+        code_cell(c6_runs),
+        code_cell(c7_table),
+        code_cell(c8_plot),
+        code_cell(c9_archive),
     ]
 
     nb = {

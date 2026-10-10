@@ -13,6 +13,7 @@ from pravahx.engines.delft3d_fm.ganga_tier1 import (
     compute_hypothetical_breach_scenario,
     compute_manning_normal_depth,
     generate_hypothetical_inflow_series,
+    plot_inflow_hydrograph,
 )
 
 
@@ -29,31 +30,51 @@ def test_hypothetical_breach_scenario() -> None:
 
 
 def test_inflow_series_generation() -> None:
-    """Verify generated hydrograph has proper start, peak, and duration."""
+    """Verify generated hydrograph has spin-up, breach peak, and total duration."""
     scenario = compute_hypothetical_breach_scenario()
     series = generate_hypothetical_inflow_series(
         scenario=scenario,
-        total_duration_s=7200.0,
+        spinup_s=5400.0,
+        breach_duration_s=7200.0,
         dt_s=30.0,
     )
     assert len(series) > 100
     times = [p[0] for p in series]
     flows = [p[1] for p in series]
     assert times[0] == 0.0
-    assert flows[0] == 100.0  # Base flow
+    assert flows[0] == 100.0  # Base flow during spin-up
+    # At t = 5400 s (spin-up end), flow is still base flow
+    idx_spin = int(5400.0 / 30.0)
+    assert flows[idx_spin] == 100.0
     assert max(flows) > 4950.0  # Peaks near 5000 m3/s
-    assert times[-1] == 7200.0
+    assert times[-1] == 12600.0
+
+
+def test_plot_inflow_hydrograph(tmp_path: Path) -> None:
+    """Verify inflow hydrograph plot generation and export."""
+    scenario = compute_hypothetical_breach_scenario()
+    series = generate_hypothetical_inflow_series(
+        scenario=scenario,
+        spinup_s=5400.0,
+        breach_duration_s=7200.0,
+        dt_s=60.0,
+    )
+    plot_path = tmp_path / "inflow_hydrograph.png"
+    fig = plot_inflow_hydrograph(series, spinup_s=5400.0, out_path=plot_path)
+    assert fig is not None
+    assert plot_path.exists()
+    assert plot_path.stat().st_size > 10000
 
 
 def test_manning_normal_depth() -> None:
-    """Verify normal flow depth calculation from Manning's equation."""
+    """Verify normal flow depth calculation from Manning's equation using DEM params."""
     d0 = compute_manning_normal_depth(0.0)
     assert d0 == 0.0
 
     d100 = compute_manning_normal_depth(100.0)
     d5000 = compute_manning_normal_depth(5000.0)
-    assert 0.3 < d100 < 1.0
-    assert 4.0 < d5000 < 7.0
+    assert 0.5 < d100 < 1.5
+    assert 7.0 < d5000 < 11.0
     assert d5000 > d100
 
 

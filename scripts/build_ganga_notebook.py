@@ -61,9 +61,7 @@ def main() -> None:
     )
 
     c1_drive = (
-        "# 1. Connect Google Drive\n"
-        "from google.colab import drive\n\n"
-        "drive.mount('/content/drive')"
+        "# 1. Connect Google Drive\nfrom google.colab import drive\n\ndrive.mount('/content/drive')"
     )
 
     c2_engine = (

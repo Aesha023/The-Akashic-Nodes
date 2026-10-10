@@ -470,14 +470,10 @@ def evaluate_validity_gates(
     """Evaluate pre-registered validity gates (a through e) for Ganga Tier-1 run."""
     run_log_path = case_dir / "run.log"
     run_log = (
-        run_log_path.read_text(encoding="utf-8", errors="ignore")
-        if run_log_path.exists()
-        else ""
+        run_log_path.read_text(encoding="utf-8", errors="ignore") if run_log_path.exists() else ""
     )
     dia_files = list(case_dir.glob("*_*.dia"))
-    dia_text = (
-        dia_files[0].read_text(encoding="utf-8", errors="ignore") if dia_files else ""
-    )
+    dia_text = dia_files[0].read_text(encoding="utf-8", errors="ignore") if dia_files else ""
     all_log = run_log + "\n" + dia_text
 
     # Gate a: both boundaries open > 0 cells

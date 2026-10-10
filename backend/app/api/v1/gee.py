@@ -51,21 +51,23 @@ async def evaluate_lake_watch(
     """Analyze glacial/high-altitude lake area expansion time series and alert flags."""
     obs_list = [
         LakeObservation(
-            date=str(o["date"]),
-            area_km2=float(o["area_km2"]),
-            sensor=str(o.get("sensor", "Sentinel-2")),
+            observed_at=parse(str(o["date"])),
+            water_area_km2=float(o["area_km2"]),
+            water_area_m2=float(o["area_km2"]) * 1e6,
+            sensor_platform=str(o.get("sensor", "Sentinel-2")),
             cloud_cover_percent=float(o.get("cloud_cover_percent", 0.0)),
         )
         for o in req.observations
     ]
 
-    summary = analyze_lake_time_series(obs_list, baseline_window=req.baseline_window)
+    summary = analyze_lake_time_series(
+        lake_id="unknown", lake_name="Unknown", lake_type="glacial", observations=obs_list
+    )
     return {
         "lake_id": summary.lake_id,
-        "latest_area_km2": summary.latest_area_km2,
+        "latest_area_km2": summary.current_area_km2,
         "baseline_area_km2": summary.baseline_area_km2,
-        "expansion_rate_percent": summary.expansion_rate_percent,
-        "growth_status": summary.growth_status,
-        "alert_level": summary.alert_level,
-        "requires_detailed_survey": summary.requires_detailed_survey,
+        "expansion_rate_percent": summary.area_change_percent,
+        "growth_status": summary.status,
+        "expansion_rate_m2_per_day": summary.expansion_rate_m2_per_day,
     }

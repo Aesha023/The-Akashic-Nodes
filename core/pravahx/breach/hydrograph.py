@@ -161,7 +161,15 @@ def route_hydrograph(
                 if piping_centerline_height_m is None
                 else piping_centerline_height_m
             )
-            collapse_factor = max(0.1, min(0.9, float(piping_collapse_fraction)))
+            collapse_factor = max(
+                0.1,
+                min(
+                    0.9,
+                    float(
+                        piping_collapse_fraction if piping_collapse_fraction is not None else 0.5
+                    ),
+                ),
+            )
             if expansion_factor < collapse_factor:
                 # Submerged expanding orifice
                 rel_expansion = expansion_factor / collapse_factor

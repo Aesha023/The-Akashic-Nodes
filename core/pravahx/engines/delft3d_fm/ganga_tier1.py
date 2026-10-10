@@ -408,7 +408,8 @@ def extract_boundary_polylines(net_path: Path) -> dict[str, Any]:
     for e in elem:
         nodes = [int(e[0]), int(e[1]), int(e[2]), int(e[3])]
         for i in range(4):
-            edge = tuple(sorted((nodes[i], nodes[(i + 1) % 4])))
+            na, nb = nodes[i], nodes[(i + 1) % 4]
+            edge = (na, nb) if na < nb else (nb, na)
             link_counts[edge] = link_counts.get(edge, 0) + 1
 
     bnd_edges = [edge for edge, count in link_counts.items() if count == 1]

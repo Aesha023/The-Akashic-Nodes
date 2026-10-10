@@ -141,13 +141,23 @@ Before running the benchmark, a basic engine smoke test was performed using the 
 * **Bundle:** `MyDrive/PravahX/delft3dfm_linux_x86_64.tar.gz` (147 MB)
 * **Bundle SHA-256:** `491364fbba88948752356fb1af0edc8aaecc496ba95545a9b66494c0ba1a6258`
 * **Modifications:** 7 obsolete keys commented, ObsFile blanked, MapInterval 600, MapFormat 4.
-* **Hardware & Runtime:** Google Colab (CPU)
-* **Results:** EXIT 0, ~11 s wall time for 2 h simulation, 13 time steps x 780 faces.
-* **Validation:** $s1$ min -0.0154 m / max 0.0056 m, no NaN values, max $|\Delta s1|$ 0.0107 m.
-* **Operational Status:** **RUN AND PASSED**.
+* **Hardware & Runtime:** Google Colab (CPU) - Fresh Session (10 Oct 2026)
+* **Results:** EXIT 0, 5.6 s wall time for 2 h simulation, 13 time steps x 780 faces.
+* **Validation:** Fresh session bundle SHA-256 MATCH (`491364fb...6258`). `ldd` confirmed nothing missing (Intel runtime bundled in `lib/`, no apt install needed). `dflowfm --version` EXIT 0 (OpenMP, MPI, PETSc, METIS, PROJ, GDAL: yes). Smoke case results: $s1$ min -0.0154 m / max 0.0056 m, no NaN values, max $|\Delta s1|$ 0.0107 m: IDENTICAL to the build machine.
+* **Operational Status:** **RUN AND PASSED** (including fresh-session reproducibility).
 
-### 8.2 Benchmark Verification Status: NOT VERIFIED
+### 8.2 Idealized Dam Break (Ritter 1892)
+
+To verify the Delft3D FM solver against analytical dam-break hydrodynamics over a dry bed, the formulation will be tested against the classical Ritter (1892) solution.
+
+* **Domain:** Straight rectangular channel, 2000 m long $\times$ 50 m wide, flat bed, closed side walls. Dam at $x = 1000$ m.
+* **Initial Conditions:** Upstream water depth $h_0 = 10$ m, dry downstream bed.
+* **Friction:** Frictionless (Manning's $n = 0.0$).
+* **Mesh & Time:** $\sim 5$ m resolution. $T_{\text{stop}} = 40$ s, Output map interval = 5 s.
+* **Pass Tolerances (defined pre-run):**
+  * **Front position error:** $\le 5\%$ relative error vs theoretical wave front $x_f(t)$.
+  * **Water depth RMSE (along centerline):** $\le 0.5$ m (expecting some smearing at the front due to numerical diffusion and wet/dry thresholds).
 
 > [!WARNING]
 > **Status: NOT VERIFIED**
-> No validation runs against a fetched physical reference dataset have been performed for Delft3D FM yet. (The above c019 run is purely a software engine test, not a physical benchmark).
+> The Ritter (1892) reference formulas will be fetched from Delestre et al. (2013, arXiv:1110.0288). Until this reference is fetched and values compared, the benchmark is NOT VERIFIED.

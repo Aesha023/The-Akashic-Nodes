@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -12,7 +12,7 @@ from pravahx.impact.brief import generate_impact_brief_markdown
 from pravahx.impact.damage import estimate_flood_damage
 from pravahx.impact.evacuation import EvacuationShelter, plan_evacuation_routes
 from pravahx.impact.exposure import compute_asset_exposure, compute_village_exposure
-from pravahx.impact.hazard import calculate_hazard_rating, classify_hazard
+from pravahx.impact.hazard import HazardClass, calculate_hazard_rating, classify_hazard
 
 if TYPE_CHECKING:
     from backend.app.models.user import User

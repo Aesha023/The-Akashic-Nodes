@@ -107,8 +107,6 @@ class DualSPHysicsBenchmark:
         l2_ref = float(np.sqrt(np.mean(ref_arr**2)))
         rel_l2 = rmse / l2_ref if l2_ref > 0 else 0.0
 
-        passes = rel_l2 <= tolerance_l2
-
         notes = (
             f"Evaluated on Martin & Moyce (1952) / SPHERIC Benchmark 2 idealized dam break. "
             f"Relative L2 error = {rel_l2 * 100:.2f}%, "

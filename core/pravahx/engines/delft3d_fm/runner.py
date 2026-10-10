@@ -10,7 +10,6 @@ import subprocess
 import tarfile
 import time
 from pathlib import Path
-from typing import Any
 
 from pravahx.config.schema import Delft3DFMMode
 from pravahx.engines.base import (
@@ -146,7 +145,7 @@ class Delft3DRunner:
 
         # Create shell script for remote execution
         script_path = output_dir / "run_linux.sh"
-        script_content = fr"""#!/bin/bash
+        script_content = r"""#!/bin/bash
 set -e
 echo "=== Running Delft3D FM Simulation ==="
 
@@ -154,7 +153,9 @@ echo "=== Running Delft3D FM Simulation ==="
 INTEL_LIBS_DIR=""
 if [ -d "/opt/intel" ]; then
     echo "Finding Intel libraries..."
-    DIRS=$(find /opt/intel -type f \( -name "libifcore.so*" -o -name "libimf.so*" -o -name "libiomp5.so*" -o -name "libmpi.so.12*" \) -exec dirname {{}} \; | sort -u | tr '\n' ':' | sed 's/:$//')
+    DIRS=$(find /opt/intel -type f \\( -name "libifcore.so*" -o -name "libimf.so*" \\
+        -o -name "libiomp5.so*" -o -name "libmpi.so.12*" \\) \\
+        -exec dirname {{}} \\; | sort -u | tr '\\n' ':' | sed 's/:$//')
     if [ -n "$DIRS" ]; then
         INTEL_LIBS_DIR=":$DIRS"
     fi
@@ -190,7 +191,8 @@ echo "=== Simulation Complete. Manifest Generated. ==="
         with open(script_path, "w", encoding="utf-8", newline="\n") as f:
             f.write(script_content)
 
-        # Create package tar.gz containing the entire case directory (since D-Flow FM needs mdu, ext, bc, etc.)
+        # Create package tar.gz containing the entire case directory
+        # (since D-Flow FM needs mdu, ext, bc, etc.)
         archive_path = output_dir / f"{case_base}_linux_package.tar.gz"
         with tarfile.open(archive_path, "w:gz") as tar:
             # Add all files in case_dir except remote_package
@@ -245,7 +247,10 @@ echo "=== Simulation Complete. Manifest Generated. ==="
                     else:
                         shutil.copy2(item, dest)
             else:
-                logger.info("Import source matches output directory %s; skipping redundant copy", output_dir)
+                logger.info(
+                    "Import source matches output directory %s; skipping redundant copy",
+                    output_dir
+                )
         else:
             raise EngineError(f"Invalid import source type: {import_source}", engine="delft3d_fm")
 

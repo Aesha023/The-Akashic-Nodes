@@ -97,12 +97,22 @@ def test_delft3d_fm_mdu_writer(tmp_path: Path) -> None:
     assert "14400" in mdu_text
 
     # Verify MDU writer rules
-    obsolete_keys = ["TransportMethod", "Qhrelax", "Jaorgsethu", "EffectSpiral", "Gapres", "WaveNikuradse", "Writebalancefile"]
+    obsolete_keys = [
+        "TransportMethod",
+        "Qhrelax",
+        "Jaorgsethu",
+        "EffectSpiral",
+        "Gapres",
+        "WaveNikuradse",
+        "Writebalancefile",
+    ]
     lines = [line.strip() for line in mdu_text.splitlines() if line.strip()]
     for key in obsolete_keys:
         for line in lines:
-            if line.lower().startswith(key.lower() + "=") or line.lower().startswith(key.lower() + " "):
-                assert False, f"Obsolete key {key} found active in MDU"
+            if line.lower().startswith(key.lower() + "=") or line.lower().startswith(
+                key.lower() + " "
+            ):
+                raise AssertionError(f"Obsolete key {key} found active in MDU")
 
     mapformat_found = False
     mapinterval_found = False

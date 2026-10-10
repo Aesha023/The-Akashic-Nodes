@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 from pravahx.engines.base import (
     EngineAdapter,
@@ -60,7 +61,7 @@ class Delft3DFMAdapter(EngineAdapter):
 
         mode = prepared.metadata.get("mode", "cpu")
         import_source = None
-        if "precomputed_dir" in prepared.metadata and prepared.metadata["precomputed_dir"]:
+        if prepared.metadata.get("precomputed_dir"):
             import_source = Path(prepared.metadata["precomputed_dir"])
 
         try:

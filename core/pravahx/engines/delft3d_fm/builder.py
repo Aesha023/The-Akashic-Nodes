@@ -130,11 +130,17 @@ def build_delft3d_case(context: RunContext) -> PreparedCase:
     # Apply MDU writer rules directly on the written text
     mdu_text = mdu_path.read_text(encoding="utf-8")
     lines = mdu_text.splitlines()
-    obsolete_keys = ["TransportMethod", "Qhrelax", "Jaorgsethu", "EffectSpiral", "Gapres", "WaveNikuradse", "Writebalancefile"]
+    obsolete_keys = [
+        "TransportMethod", "Qhrelax", "Jaorgsethu", "EffectSpiral",
+        "Gapres", "WaveNikuradse", "Writebalancefile",
+    ]
     new_lines = []
     for line in lines:
         lower_line = line.lower().strip()
-        is_obsolete = any(lower_line.startswith(k.lower() + "=") or lower_line.startswith(k.lower() + " ") for k in obsolete_keys)
+        is_obsolete = any(
+            lower_line.startswith(k.lower() + "=") or
+            lower_line.startswith(k.lower() + " ") for k in obsolete_keys
+        )
         if is_obsolete:
             new_lines.append(f"# {line}")
             continue
@@ -150,7 +156,7 @@ def build_delft3d_case(context: RunContext) -> PreparedCase:
             new_lines.append("MapFormat = 4")
             continue
         new_lines.append(line)
-        
+
     mdu_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
 
     # 5. Compute File Hashes for Provenance

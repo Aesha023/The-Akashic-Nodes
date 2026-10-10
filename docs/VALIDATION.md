@@ -136,6 +136,10 @@ To verify the Delft3D FM formulation before applying it to complex 2D topography
 
 ### 8.1 Engine Smoke Test (Deltares c019)
 Before running the benchmark, a basic engine smoke test was performed using the Deltares c019 case (`test/tests/FMtests/f05_boundary_conditions/c019_waterlevel_bc_cmp_varying`).
+
+* **Deltares Commit:** `761dc502e7fe3fac61ecece8c93b94b635f3643b`
+* **Bundle:** `MyDrive/PravahX/delft3dfm_linux_x86_64.tar.gz` (147 MB)
+* **Bundle SHA-256:** `491364fbba88948752356fb1af0edc8aaecc496ba95545a9b66494c0ba1a6258`
 * **Modifications:** 7 obsolete keys commented, ObsFile blanked, MapInterval 600, MapFormat 4.
 * **Hardware & Runtime:** Google Colab (CPU)
 * **Results:** EXIT 0, ~11 s wall time for 2 h simulation, 13 time steps x 780 faces.

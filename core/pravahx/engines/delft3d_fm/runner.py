@@ -146,7 +146,7 @@ class Delft3DRunner:
 
         # Create shell script for remote execution
         script_path = output_dir / "run_linux.sh"
-        script_content = f"""#!/bin/bash
+        script_content = fr"""#!/bin/bash
 set -e
 echo "=== Running Delft3D FM Simulation ==="
 

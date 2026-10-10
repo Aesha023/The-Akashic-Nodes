@@ -25,7 +25,14 @@ This document outlines the exact verified recipe to compile the open-source **De
 
 ## 3. Verified Build Recipe (Colab Sequence)
 
-The build is executed in `notebooks/delft3d_colab_builder.ipynb` via a strict sequence.
+> [!WARNING]
+> **Builder Notebook Status: NOT RUN**
+> The build recipe below was executed manually in Colab on 10 Oct 2026 and is **RUN AND PASSED**. The corresponding `notebooks/delft3d_colab_builder.ipynb` is a generated artifact and remains **NOT RUN**.
+
+### 3.1 Build Metadata
+*   **Deltares Commit:** `761dc502e7fe3fac61ecece8c93b94b635f3643b` (2026-10-09 10:40:19 +0200, "UNST-10187: Replaced fp and hp by dp in nearfield (#1354)")
+*   **Bundle Name:** `MyDrive/PravahX/delft3dfm_linux_x86_64.tar.gz` (147 MB)
+*   **Bundle SHA-256:** `491364fbba88948752356fb1af0edc8aaecc496ba95545a9b66494c0ba1a6258`
 
 ### Step 1: Toolchain Installation
 Install Intel oneAPI compilers, MPI, Conan, Ninja, and Patchelf.
@@ -37,19 +44,22 @@ apt-get install -y -qq intel-oneapi-compiler-fortran intel-oneapi-compiler-dpcpp
 python3 -m pip install -q "conan>=2.0"
 ```
 
-### Step 2: Source Clone & Conan Initialization
+### Step 2: Source Clone, Checkout & Conan Initialization
 ```bash
-git clone --depth 1 https://github.com/Deltares/Delft3D.git /content/delft3d_src
+git clone https://github.com/Deltares/Delft3D.git /content/delft3d_src
 cd /content/delft3d_src
+git checkout 761dc502e7fe3fac61ecece8c93b94b635f3643b
 conan config install https://github.com/Deltares/conan-config.git
 conan install . -pr:b delft3d_alma8_intel_2024_v3 -pr:h delft3d_alma8_intel_2024_v3 --build=missing
 ```
 
 ### Step 3: Source Code Patches (UNIX Shared Library Fixes)
-Apply patches to `dflowfm-cli` and `dflowfm_dll` CMakeLists to ensure proper linking on UNIX.
-```bash
-# Patch src/tools_gpl/dfmoutput/CMakeLists.txt or relevant targets requiring if(UNIX)
-sed -i 's/some_broken_link_logic/patched_logic/g' src/cmake/CMakeLists.txt # (Example patch applied via python in notebook)
+Apply patches to `dflowfm-cli` and `dflowfm_dll` CMakeLists to ensure proper linking on UNIX. The exact patch appended to these targets is:
+```cmake
+if(UNIX)
+    target_include_directories(<target> PRIVATE ${mpi_module_path})
+    target_link_options(<target> PRIVATE ${openmp_flag})
+endif()
 ```
 
 ### Step 4: CMake Configuration (Ninja)

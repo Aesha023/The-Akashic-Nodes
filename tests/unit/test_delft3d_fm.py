@@ -126,6 +126,63 @@ def test_delft3d_fm_mdu_writer(tmp_path: Path) -> None:
     assert mapinterval_found
     assert obsfile_empty
 
+def test_delft3d_fm_mdu_writer_keeps_obsfile(tmp_path: Path) -> None:
+    """Test that Delft3D FM MDU writer preserves ObsFile if the file actually exists."""
+    adapter = Delft3DFMAdapter()
+    ctx = RunContext(
+        run_id="delft3d_test_mdu_obs",
+        config=None,  # type: ignore[arg-type]
+        work_dir=tmp_path,
+        terrain_dir=tmp_path,
+        breach_hydrograph_path=None,
+    )
+    
+    # Create the case dir early and touch the dummy obsfile
+    case_dir = tmp_path / "delft3d_fm"
+    case_dir.mkdir(parents=True, exist_ok=True)
+    obs_file = case_dir / "my_obs_file.obs"
+    obs_file.touch()
+    
+    # We must patch the hydrolib mdu model saving to insert this obsfile
+    # Wait, the easiest way is to mock builder.build_delft3d_case or let the real adapter run
+    # and we modify the mdu file before the post-processing? Actually, the builder code creates
+    # the mdu from scratch and does not set ObsFile. Wait!
+    # Hydrolib-core by default writes `ObsFile =` (empty) or doesn't write it. 
+    # Let's just create a dummy mdu, pass it to the post-processing logic directly, or 
+    # inject it. Since builder.py rewrites the MDU from Hydrolib-core, and Hydrolib-core 
+    # doesn't write an ObsFile by default in our current setup (as verified), 
+    # let's just test the post-processing logic directly or patch the FMModel.
+    
+    # But wait, to make it simple, let's just write the mdu text and run the post-processing code
+    # directly as it's written in builder.py. Or I can monkeypatch FMModel.save to write an ObsFile.
+    import pravahx.engines.delft3d_fm.builder as builder
+    
+    original_save = builder.FMModel.save
+    def mock_save(self, filepath, *args, **kwargs):
+        # Let it save normally
+        original_save(self, filepath, *args, **kwargs)
+        # Then inject an ObsFile line
+        text = filepath.read_text(encoding="utf-8")
+        text += "\nObsFile = my_obs_file.obs\n"
+        filepath.write_text(text, encoding="utf-8")
+        
+    builder.FMModel.save = mock_save
+    try:
+        prepared = adapter.prepare(ctx)
+    finally:
+        builder.FMModel.save = original_save
+        
+    mdu_path = prepared.case_dir / "flow2d3d.mdu"
+    mdu_text = mdu_path.read_text(encoding="utf-8")
+    
+    obsfile_kept = False
+    for line in mdu_text.splitlines():
+        if line.lower().startswith("obsfile"):
+            val = line.split("=", 1)[1].strip()
+            if val == "my_obs_file.obs":
+                obsfile_kept = True
+    assert obsfile_kept
+
 
 def test_delft3d_fm_run_missing_binary(tmp_path: Path) -> None:
     """Test that Delft3D FM run() raises EngineError when CPU binary is missing."""

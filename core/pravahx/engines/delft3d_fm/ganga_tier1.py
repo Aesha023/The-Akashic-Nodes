@@ -7,8 +7,10 @@ Tier-0 HAND inundation envelope.
 
 from __future__ import annotations
 
+import contextlib
 import csv
 import logging
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -354,7 +356,7 @@ def build_ganga_tier1_mesh(
     vnz[:] = np.array(node_z_list, dtype=np.float64)
 
     velem = ds.createVariable("NetElemNode", "i4", ("nNetElem", "nNetElemMaxNode"))
-    velem[:, :] = faces_array
+    velem[:] = faces_array
     vex = ds.createVariable("NetElem_x", "f8", ("nNetElem",))
     vey = ds.createVariable("NetElem_y", "f8", ("nNetElem",))
     vez = ds.createVariable("NetElem_z", "f8", ("nNetElem",))
@@ -363,7 +365,7 @@ def build_ganga_tier1_mesh(
     vez[:] = np.array(face_z_list, dtype=np.float64)
 
     vlink = ds.createVariable("NetLink", "i4", ("nNetLink", "nNetLinkPts"))
-    vlink[:, :] = links_array
+    vlink[:] = links_array
     vlt = ds.createVariable("NetLinkType", "i4", ("nNetLink",))
     vlt[:] = np.full(len(links_array), 2, dtype=np.int32)
 
@@ -485,6 +487,7 @@ def evaluate_validity_gates(
     spinup_s: float = 5400.0,
     nominal_baseflow_m3s: float = 100.0,
     total_inflow_volume_m3: float = 7061783.0,
+    warmup_case_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Evaluate pre-registered validity gates (a through f) for Ganga Tier-1 run.
 
@@ -493,11 +496,24 @@ def evaluate_validity_gates(
     - Gate b: No errors / missing signals in log.
     - Gate c (Inflow): Measured inflow across inflow_obs within 2% of specified bc.
     - Gate d (Warm-up): Measured outlet discharge reaches >= 90% of base flow (equilibrium).
+      Evaluated strictly on the warm-up pre-run (Run 1) or within times <= spinup_s.
     - Gate e (Drainage): >= 70% of breach volume exited domain OR outlet discharge < 2x baseflow.
+      Evaluated strictly over the breach simulation time window.
     - Gate f (Mass Conservation): Dynamic mass balance error < 1.0% evaluated using
       MEASURED inflow (inflow cross-section), MEASURED outflow (outlet cross-section),
       and domain storage change. NEVER uses the bc file as inflow.
     """
+    case_dir = Path(case_dir).resolve()
+    if warmup_case_dir is None:
+        if (case_dir / "01_warmup").exists() and (case_dir / "02_breach").exists():
+            warmup_case_dir = case_dir / "01_warmup"
+            case_dir = case_dir / "02_breach"
+        elif (case_dir / "warmup").exists() and (case_dir / "breach").exists():
+            warmup_case_dir = case_dir / "warmup"
+            case_dir = case_dir / "breach"
+    elif warmup_case_dir is not None:
+        warmup_case_dir = Path(warmup_case_dir).resolve()
+
     # 1. Parse specified inflow volume from inflow.bc
     inflow_bc = case_dir / "inflow.bc"
     specified_inflow_m3 = total_inflow_volume_m3
@@ -570,6 +586,8 @@ def evaluate_validity_gates(
     breach_drain_pct = 0.0
     warmup_q_out = 0.0
     t_warmup_eq = float("nan")
+    drainage_time_s = 0.0
+    t_end = 0.0
 
     gate_c = False
     gate_c_msg = "FAIL: his.nc missing or inflow unmeasured"
@@ -586,6 +604,61 @@ def evaluate_validity_gates(
     balance_error_m3 = 0.0
     balance_error_pct = 100.0
     inflow_diff_pct = 100.0
+
+    # Evaluate Gate d from warmup_case_dir if separate warm-up run exists
+    if warmup_case_dir and warmup_case_dir.exists():
+        wu_his_files = list(warmup_case_dir.glob("**/*_his.nc"))
+        if wu_his_files:
+            try:
+                wu_hds = netCDF4.Dataset(wu_his_files[0], "r")
+                wu_times = np.array(wu_hds.variables["time"][:], dtype=float)
+                wu_n_crs = (
+                    wu_hds.dimensions["cross_section"].size
+                    if "cross_section" in wu_hds.dimensions
+                    else 1
+                )
+                wu_out_idx = 1 if wu_n_crs >= 2 else 0
+                if "cross_section_name" in wu_hds.variables:
+                    try:
+                        cnames_var = wu_hds.variables["cross_section_name"][:]
+                        for idx, row in enumerate(cnames_var):
+                            name_str = (
+                                row.tobytes().decode("ascii", errors="ignore").strip()
+                                if hasattr(row, "tobytes")
+                                else str(row).strip()
+                            )
+                            if "outlet" in name_str.lower() or "downstream" in name_str.lower():
+                                wu_out_idx = idx
+                    except Exception:
+                        pass
+                if "cross_section_discharge" in wu_hds.variables:
+                    wu_q_arr = np.array(wu_hds.variables["cross_section_discharge"][:], dtype=float)
+                    wu_q_out = (
+                        np.abs(wu_q_arr[:, wu_out_idx]) if wu_q_arr.ndim > 1 else np.abs(wu_q_arr)
+                    )
+                    wu_eq_indices = np.where(wu_q_out >= 0.90 * nominal_baseflow_m3s)[0]
+                    if len(wu_eq_indices) > 0:
+                        t_warmup_eq = float(wu_times[wu_eq_indices[0]])
+                        warmup_q_out = float(wu_q_out[wu_eq_indices[0]])
+                        gate_d = True
+                        gate_d_msg = (
+                            f"PASS: Warm-up equilibrium (Q_out >= 90 m3/s) reached at t = "
+                            f"{t_warmup_eq:.0f} s ({t_warmup_eq / 3600.0:.2f} h)"
+                        )
+                    else:
+                        max_wu_q = float(np.max(wu_q_out)) if len(wu_q_out) > 0 else 0.0
+                        gate_d = False
+                        gate_d_msg = (
+                            f"FAIL: Warm-up did not reach equilibrium (max outlet Q = "
+                            f"{max_wu_q:.1f} m3/s < 90 m3/s)"
+                        )
+                wu_hds.close()
+            except Exception as e:
+                gate_d = False
+                gate_d_msg = f"FAIL (warm-up his read error): {e}"
+        else:
+            gate_d = False
+            gate_d_msg = "FAIL: Warm-up his.nc missing"
 
     if his_files:
         try:
@@ -658,52 +731,83 @@ def evaluate_validity_gates(
                     f"{inflow_diff_pct:.2f}% (> 2% tolerance; coarse grid boundary choking)"
                 )
 
-                # Gate d (Warm-up Gate): Measured outlet discharge >= 90% of baseflow (90 m3/s)
-                warmup_indices = np.where(q_out >= 0.90 * nominal_baseflow_m3s)[0]
-                if len(warmup_indices) > 0:
-                    t_warmup_eq = float(times[warmup_indices[0]])
-                    warmup_q_out = float(q_out[warmup_indices[0]])
-                    gate_d = True
-                    gate_d_msg = (
-                        f"PASS: Warm-up equilibrium (Q_out >= 90 m3/s) reached at t = "
-                        f"{t_warmup_eq:.0f} s ({t_warmup_eq / 3600.0:.2f} h)"
-                    )
-                else:
-                    max_q_out = float(np.max(q_out)) if len(q_out) > 0 else 0.0
-                    gate_d = False
-                    gate_d_msg = (
-                        f"FAIL: Warm-up did not reach equilibrium (max outlet Q = "
-                        f"{max_q_out:.1f} m3/s < 90 m3/s)"
-                    )
+                # Gate d (Warm-up Gate): If not already evaluated from warmup_case_dir,
+                # evaluate STRICTLY within times <= spinup_s (never during the breach!)
+                if not (warmup_case_dir and warmup_case_dir.exists()):
+                    spin_mask = times <= spinup_s
+                    spin_indices = np.where(spin_mask & (q_out >= 0.90 * nominal_baseflow_m3s))[0]
+                    if len(spin_indices) > 0:
+                        t_warmup_eq = float(times[spin_indices[0]])
+                        warmup_q_out = float(q_out[spin_indices[0]])
+                        gate_d = True
+                        gate_d_msg = (
+                            f"PASS: Warm-up equilibrium (Q_out >= 90 m3/s) reached at t = "
+                            f"{t_warmup_eq:.0f} s ({t_warmup_eq / 3600.0:.2f} h)"
+                        )
+                    else:
+                        q_in_spin = q_out[spin_mask] if np.any(spin_mask) else q_out
+                        max_spin_q = float(np.max(q_in_spin)) if len(q_in_spin) > 0 else 0.0
+                        gate_d = False
+                        gate_d_msg = (
+                            f"FAIL: Warm-up did not reach equilibrium within t <= {spinup_s:.0f} s "
+                            f"(max outlet Q = {max_spin_q:.1f} m3/s < 90 m3/s)"
+                        )
 
                 # Gate e (Drainage / Run Length Gate):
-                # >= 70% of breach volume left domain OR outlet discharge < 2x baseflow
+                # Isolate the breach time window:
                 v_breach_target = 5807632.0
-                q_breach_out = np.maximum(0.0, q_out - nominal_baseflow_m3s)
-                if len(times) > 1:
+                if warmup_case_dir is not None or spinup_s == 0.0:
+                    breach_times = times
+                    breach_q_out = q_out
+                else:
+                    b_mask = times >= spinup_s
+                    breach_times = times[b_mask] if np.any(b_mask) else times
+                    breach_q_out = q_out[b_mask] if np.any(b_mask) else q_out
+
+                q_breach_out = np.maximum(0.0, breach_q_out - nominal_baseflow_m3s)
+                t_drain_70: float | None = None
+                if len(breach_times) > 1 and v_breach_target > 0:
+                    dt_br = np.diff(breach_times)
+                    cum_br_series = np.cumsum(0.5 * (q_breach_out[1:] + q_breach_out[:-1]) * dt_br)
+                    cum_breach_out_m3 = float(cum_br_series[-1]) if len(cum_br_series) > 0 else 0.0
+                    idx_70 = np.where(cum_br_series >= 0.70 * v_breach_target)[0]
+                    if len(idx_70) > 0:
+                        t_drain_70 = float(breach_times[idx_70[0] + 1])
+                elif len(breach_times) > 1:
+                    dt_br = np.diff(breach_times)
                     cum_breach_out_m3 = float(
-                        np.sum(0.5 * (q_breach_out[1:] + q_breach_out[:-1]) * dt)
+                        np.sum(0.5 * (q_breach_out[1:] + q_breach_out[:-1]) * dt_br)
                     )
+
                 breach_drain_pct = (
                     float(cum_breach_out_m3 / v_breach_target * 100.0)
                     if v_breach_target > 0
                     else 0.0
                 )
-                q_peak_out = float(np.max(q_out)) if len(q_out) > 0 else 0.0
-                q_final_out = float(q_out[-1]) if len(q_out) > 0 else 0.0
-                t_end = float(times[-1]) if len(times) > 0 else 0.0
+                q_peak_out = float(np.max(breach_q_out)) if len(breach_q_out) > 0 else 0.0
+                q_final_out = float(breach_q_out[-1]) if len(breach_q_out) > 0 else 0.0
+                t_end = float(breach_times[-1]) if len(breach_times) > 0 else 0.0
 
                 receded_below_2x = (q_peak_out > 2.0 * nominal_baseflow_m3s) and (
                     q_final_out < 2.0 * nominal_baseflow_m3s
                 )
                 exited_70_pct = breach_drain_pct >= 70.0
                 gate_e = exited_70_pct or receded_below_2x
+                drainage_time_s = t_drain_70 if t_drain_70 is not None else t_end
 
                 if exited_70_pct:
-                    gate_e_msg = (
-                        f"PASS: {breach_drain_pct:.1f}% of breach volume exited domain (>= 70%) "
-                        f"by t = {t_end:.0f} s ({t_end / 3600.0:.2f} h)"
-                    )
+                    if t_drain_70 is not None:
+                        t_hr = t_drain_70 / 3600.0
+                        gate_e_msg = (
+                            f"PASS: >= 70% breach volume ({breach_drain_pct:.1f}%) drained by t = "
+                            f"{t_drain_70:.0f} s ({t_hr:.2f} h); Q_out = {q_final_out:.1f} m3/s"
+                        )
+                    else:
+                        t_end_hr = t_end / 3600.0
+                        gate_e_msg = (
+                            f"PASS: {breach_drain_pct:.1f}% of breach volume exited domain "
+                            f"(>= 70%) by t = {t_end:.0f} s ({t_end_hr:.2f} h)"
+                        )
                 elif receded_below_2x:
                     gate_e_msg = (
                         f"PASS: Outlet discharge receded to {q_final_out:.1f} m3/s (< 2x baseflow "
@@ -721,16 +825,20 @@ def evaluate_validity_gates(
                 cum_outflow_m3 = float(abs(last_cum))
                 gate_c = True
                 gate_c_msg = "PASS: Cumulative discharge recorded in his.nc"
-                gate_d = True
-                gate_d_msg = "PASS: History recorded"
+                if not (warmup_case_dir and warmup_case_dir.exists()):
+                    gate_d = True
+                    gate_d_msg = "PASS: History recorded"
                 gate_e = True
                 gate_e_msg = "PASS: Drainage recorded"
+                drainage_time_s = float(times[-1]) if len(times) > 0 else 0.0
 
             hds.close()
         except Exception as e:
             gate_c_msg = f"FAIL (his read error): {e}"
-            gate_d_msg = f"FAIL (his read error): {e}"
+            if not (warmup_case_dir and warmup_case_dir.exists()):
+                gate_d_msg = f"FAIL (his read error): {e}"
             gate_e_msg = f"FAIL (his read error): {e}"
+            drainage_time_s = 0.0
 
     # 4. Read map.nc for storage change and dead storage
     if map_files:
@@ -741,15 +849,41 @@ def evaluate_validity_gates(
             if "mesh2d_face_area" in mds.variables:
                 cell_areas = np.array(mds.variables["mesh2d_face_area"][:], dtype=float)
             else:
-                dx_est = 50.0
-                if len(fx) > 1:
-                    diffs = np.diff(np.sort(np.unique(fx)))
-                    if len(diffs) > 0 and 10.0 <= diffs[0] <= 100.0:
-                        dx_est = float(diffs[0])
+                dx_est = None
+                net_files = [case_dir / "grid_net.nc", case_dir.parent / "grid_net.nc"]
+                for nf in net_files:
+                    if nf.exists():
+                        try:
+                            nds = netCDF4.Dataset(nf, "r")
+                            if "NetNode_x" in nds.variables and len(nds.variables["NetNode_x"]) > 1:
+                                nx_vals = np.sort(np.unique(nds.variables["NetNode_x"][:]))
+                                dx_vals = np.diff(nx_vals)
+                                valid_dx = dx_vals[(dx_vals >= 5.0) & (dx_vals <= 150.0)]
+                                if len(valid_dx) > 0:
+                                    dx_est = float(np.min(valid_dx))
+                            nds.close()
+                            if dx_est is not None:
+                                break
+                        except Exception:
+                            pass
+                if dx_est is None:
+                    dx_est = 25.0
+                    if len(fx) > 1:
+                        diffs = np.diff(np.sort(np.unique(fx)))
+                        valid_diffs = diffs[(diffs >= 5.0) & (diffs <= 150.0)]
+                        if len(valid_diffs) > 0:
+                            dx_est = float(np.min(valid_diffs))
                 cell_areas = np.full(depths.shape[1], dx_est**2, dtype=float)
 
-            v_init = float(np.sum(depths[0, :] * cell_areas))
-            v_final = float(np.sum(depths[-1, :] * cell_areas))
+            # In restart breach run, depths[0, :] is the pre-filled wet channel from restart
+            d0 = np.nan_to_num(
+                np.where((depths[0, :] > 0.0) & (depths[0, :] < 100.0), depths[0, :], 0.0)
+            )
+            df = np.nan_to_num(
+                np.where((depths[-1, :] > 0.0) & (depths[-1, :] < 100.0), depths[-1, :], 0.0)
+            )
+            v_init = float(np.sum(d0 * cell_areas))
+            v_final = float(np.sum(df * cell_areas))
             storage_change_m3 = float(v_final - v_init)
 
             # Dead storage: water retained in disconnected depressions at end of run
@@ -809,6 +943,7 @@ def evaluate_validity_gates(
         "balance_error_m3": balance_error_m3,
         "balance_error_pct": balance_error_pct,
         "warmup_time_s": t_warmup_eq,
+        "drainage_time_s": drainage_time_s,
         "warmup_q_out": warmup_q_out,
         "warmup_diff_pct": abs(warmup_q_out - nominal_baseflow_m3s) / nominal_baseflow_m3s * 100.0,
     }
@@ -1051,6 +1186,18 @@ def build_ganga_tier1_case(
         rst_interval_s if rst_interval_s is not None else (total_tstop_s if is_warmup_only else 0.0)
     )
 
+    rst_name = ""
+    if restart_file is not None:
+        rst_p = Path(restart_file)
+        rst_name = rst_p.name
+        if rst_p.exists():
+            dest_rst = case_dir / rst_name
+            if dest_rst.resolve() != rst_p.resolve() and not dest_rst.exists():
+                try:
+                    shutil.copy(rst_p, dest_rst)
+                except Exception as e:
+                    logger.warning(f"Could not copy restart file {rst_p} to {dest_rst}: {e}")
+
     mdu_path = case_dir / "flow2d3d.mdu"
     mdu_lines = [
         "# written by PravahX for Ganga Tier-1 FM Model Intercomparison",
@@ -1072,7 +1219,7 @@ def build_ganga_tier1_case(
         "useCaching            = 1",
         "",
         "[Restart]",
-        f"restartFile           = {restart_file.name if restart_file else ''}",
+        f"restartFile           = {rst_name}",
         "restartDateTime       = ",
         "",
         "[Time]",
@@ -1140,13 +1287,22 @@ def postprocess_ganga_tier1_run(
     out_dir: Path,
     spinup_s: float = 5400.0,
     arr_thresholds: tuple[float, float] = (0.05, 0.30),
+    warmup_case_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Process Delft3D FM UGRID NetCDF output map and export GeoTIFFs & vectors."""
+    case_dir = Path(case_dir).resolve()
+    target_case_dir = case_dir
+    target_warmup = warmup_case_dir
+    if (case_dir / "02_breach").exists():
+        target_case_dir = case_dir / "02_breach"
+        if target_warmup is None and (case_dir / "01_warmup").exists():
+            target_warmup = case_dir / "01_warmup"
+
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    map_files = list(case_dir.glob("**/*_map.nc"))
+    map_files = list(target_case_dir.glob("**/*_map.nc"))
     if not map_files:
-        raise FileNotFoundError(f"No *_map.nc output found in {case_dir}")
+        raise FileNotFoundError(f"No *_map.nc output found in {target_case_dir}")
 
     map_nc = map_files[0]
     ds = netCDF4.Dataset(map_nc, "r")
@@ -1277,7 +1433,9 @@ def postprocess_ganga_tier1_run(
         except Exception as exc:
             logger.warning(f"Could not write KML: {exc}")
 
-    gates = evaluate_validity_gates(case_dir, spinup_s=spinup_s)
+    gates = evaluate_validity_gates(
+        target_case_dir, spinup_s=spinup_s, warmup_case_dir=target_warmup
+    )
 
     return {
         "max_depth_tif": depth_tif,
@@ -1407,13 +1565,30 @@ def stub_ganga_tier1_output(
     case_dir: Path,
     spinup_s: float = 5400.0,
     outflow_ratio: float = 0.75,
+    is_warmup_only: bool = False,
+    restart_file: Path | None = None,
 ) -> None:
     """Generate synthetic reference D-Flow FM output files in case_dir for headless/CI testing.
 
-    Produces run.log, flow2d3d_his.nc (with inflow_obs and outlet_obs), flow2d3d_map.nc,
-    and flow2d3d_rst.nc that strictly satisfy validity gates a through f.
+    Simulates either:
+    1. Two-run sequence (if 01_warmup and 02_breach subdirectories exist).
+    2. Warm-up pre-run (is_warmup_only=True): base flow 100 m3/s reaches 95 m3/s at outlet,
+       writes flow2d3d_rst.nc restart state.
+    3. Breach run from restart (restart_file or spinup_s == 0.0): initializes from restart
+       depths (0.5 m), routes breach hydrograph, drains >= 70%, conserves mass strictly.
+    4. Combined single run.
     """
     case_dir = Path(case_dir).resolve()
+    wu_sub = case_dir / "01_warmup"
+    br_sub = case_dir / "02_breach"
+    if wu_sub.exists() and br_sub.exists():
+        stub_ganga_tier1_output(wu_sub, is_warmup_only=True, spinup_s=10800.0)
+        rst_p = wu_sub / "DFM_OUTPUT_flow2d3d" / "flow2d3d_rst.nc"
+        if not rst_p.exists():
+            rst_p = wu_sub / "flow2d3d_rst.nc"
+        stub_ganga_tier1_output(br_sub, restart_file=rst_p, spinup_s=0.0)
+        return
+
     out_dir = case_dir / "DFM_OUTPUT_flow2d3d"
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1448,9 +1623,7 @@ def stub_ganga_tier1_output(
         t_in = np.array([0.0, total_sim_s])
         q_in = np.array([100.0, 100.0])
 
-    target_outflow_vol = outflow_ratio * total_inflow_volume
-    spinup_vol = 100.0 * spinup_s
-    rem_vol = max(target_outflow_vol - spinup_vol, 1.0)
+    times_his = np.arange(0, total_sim_s + 1, 60.0)
 
     # 3. Write flow2d3d_his.nc with 2 observation cross-sections
     his_path = out_dir / "flow2d3d_his.nc"
@@ -1466,40 +1639,55 @@ def stub_ganga_tier1_output(
     )
 
     names_to_write = ["inflow_obs", "outlet_obs"]
-    for i, nm in enumerate(names_to_write):
-        chars = list(nm.ljust(16))[:16]
-        for j, c in enumerate(chars):
-            name_var[i, j] = c.encode("ascii")
+    name_var[:] = np.array(
+        [[c.encode("ascii") for c in nm.ljust(16)[:16]] for nm in names_to_write], dtype="S1"
+    )
 
-    times_his = np.arange(0, total_sim_s + 1, 60.0)
     t_var[:] = times_his
 
     # Cross section 0 (inflow_obs): exact match to prescribed inflow.bc
     q_in_vals = np.array([float(np.interp(t, t_in, q_in)) for t in times_his])
 
-    # Cross section 1 (outlet_obs): warm-up reaches 95 m3/s, breach peaks and drains past 70%
-    q_out_vals = np.full(len(times_his), 100.0)
-    for idx_t, t_val in enumerate(times_his):
-        if t_val <= spinup_s:
-            frac = min(1.0, t_val / max(1.0, spinup_s * 0.7))
-            q_out_vals[idx_t] = frac * 95.0
+    # Cross section 1 (outlet_obs):
+    if is_warmup_only:
+        # Base-flow pre-run: depression filling until t=5400s, rises to 95 m3/s by t=9600s
+        q_out_vals = np.zeros(len(times_his))
+        for idx_t, t_val in enumerate(times_his):
+            if t_val < 5400.0:
+                q_out_vals[idx_t] = 0.0
+            elif t_val <= 9600.0:
+                frac = (t_val - 5400.0) / (9600.0 - 5400.0)
+                q_out_vals[idx_t] = frac * 95.0
+            else:
+                q_out_vals[idx_t] = 95.0
+    elif restart_file is not None or spinup_s == 0.0:
+        # Breach run from restart: begins at steady base flow (100 m3/s), peaks, drains > 70%
+        v_breach_in = max(1.0, total_inflow_volume - 100.0 * total_sim_s)
+        target_breach_out = outflow_ratio * v_breach_in
+        t_peak = 3600.0
+        peak_shape = (times_his / t_peak) * np.exp(1.0 - (times_his / t_peak))
+        norm_factor = np.sum(0.5 * (peak_shape[1:] + peak_shape[:-1]) * 60.0)
+        q_flood = (target_breach_out / norm_factor) * peak_shape
+        q_out_vals = 100.0 + q_flood
+    else:
+        # Combined single run
+        target_outflow_vol = outflow_ratio * total_inflow_volume
+        spinup_vol = 100.0 * spinup_s
+        rem_vol = max(target_outflow_vol - spinup_vol, 1.0)
+        q_out_vals = np.full(len(times_his), 100.0)
+        for idx_t, t_val in enumerate(times_his):
+            if t_val <= spinup_s:
+                frac = min(1.0, t_val / max(1.0, spinup_s * 0.7))
+                q_out_vals[idx_t] = frac * 95.0
+        breach_mask = times_his > spinup_s
+        t_rel = times_his[breach_mask] - spinup_s
+        t_peak = 1800.0
+        peak_shape = (t_rel / t_peak) * np.exp(1.0 - (t_rel / t_peak))
+        norm_factor = np.sum(0.5 * (peak_shape[1:] + peak_shape[:-1]) * 60.0)
+        q_flood = (rem_vol / norm_factor) * peak_shape
+        q_out_vals[breach_mask] = 100.0 + q_flood
 
-    breach_mask = times_his > spinup_s
-    t_rel = times_his[breach_mask] - spinup_s
-    t_peak = 1800.0
-    peak_shape = (t_rel / t_peak) * np.exp(1.0 - (t_rel / t_peak))
-    norm_factor = np.sum(0.5 * (peak_shape[1:] + peak_shape[:-1]) * 60.0)
-    q_flood = (rem_vol / norm_factor) * peak_shape
-    q_out_vals[breach_mask] = 100.0 + q_flood
-
-    curr_out = float(np.sum(0.5 * (q_out_vals[1:] + q_out_vals[:-1]) * 60.0))
-    if curr_out > spinup_vol:
-        q_out_vals[breach_mask] = 100.0 + (q_out_vals[breach_mask] - 100.0) * (
-            (target_outflow_vol - spinup_vol) / (curr_out - spinup_vol)
-        )
-
-    q_var[:, 0] = q_in_vals
-    q_var[:, 1] = q_out_vals
+    q_var[:] = np.column_stack([q_in_vals, q_out_vals])
     hds.close()
 
     # 4. Write flow2d3d_map.nc
@@ -1526,7 +1714,6 @@ def stub_ganga_tier1_output(
     cum_in_exact = float(np.sum(0.5 * (q_in_vals[1:] + q_in_vals[:-1]) * 60.0))
     cum_out_exact = float(np.sum(0.5 * (q_out_vals[1:] + q_out_vals[:-1]) * 60.0))
     target_storage_change = cum_in_exact - cum_out_exact
-    final_depth = max(target_storage_change / total_mesh_area, 0.01)
 
     map_path = out_dir / "flow2d3d_map.nc"
     mds = netCDF4.Dataset(map_path, "w", format="NETCDF4")
@@ -1544,21 +1731,48 @@ def stub_ganga_tier1_output(
     x_var[:] = fx
     y_var[:] = fy
     fa_var[:] = np.full(n_faces, cell_area, dtype=float)
-    map_times = np.array([0.0, spinup_s, spinup_s + 1800.0, total_sim_s])
-    mt_var[:] = map_times
 
-    depths_arr = np.zeros((len(map_times), n_faces))
-    depths_arr[0, :] = 0.0
-    depths_arr[1, :] = 0.5
-    depths_arr[2, :] = 3.5
-    depths_arr[3, :] = final_depth
-    d_var[:, :] = depths_arr
-    ucx_var[:, :] = depths_arr * 0.4
-    ucy_var[:, :] = depths_arr * 0.4
+    if is_warmup_only:
+        map_times = np.array([0.0, total_sim_s * 0.5, total_sim_s])
+        mt_var[:] = map_times
+        depths_arr = np.zeros((len(map_times), n_faces))
+        depths_arr[0, :] = 0.0
+        depths_arr[1, :] = 0.25
+        depths_arr[2, :] = 0.50
+    elif restart_file is not None or spinup_s == 0.0:
+        map_times = np.array([0.0, 1800.0, 3600.0, total_sim_s])
+        mt_var[:] = map_times
+        depths_arr = np.zeros((len(map_times), n_faces))
+        depths_arr[0, :] = 0.50  # Wet channel from restart file
+        depths_arr[1, :] = 2.50
+        depths_arr[2, :] = 4.50
+        final_depth = max(0.50 + target_storage_change / total_mesh_area, 0.01)
+        depths_arr[3, :] = final_depth
+    else:
+        map_times = np.array([0.0, spinup_s, spinup_s + 1800.0, total_sim_s])
+        mt_var[:] = map_times
+        final_depth = max(target_storage_change / total_mesh_area, 0.01)
+        depths_arr = np.zeros((len(map_times), n_faces))
+        depths_arr[0, :] = 0.0
+        depths_arr[1, :] = 0.50
+        depths_arr[2, :] = 3.50
+        depths_arr[3, :] = final_depth
+
+    d_var[:] = depths_arr
+    ucx_var[:] = depths_arr * 0.4
+    ucy_var[:] = depths_arr * 0.4
     mds.close()
 
-    # 5. Write flow2d3d_rst.nc restart state file
+    # 5. Write flow2d3d_rst.nc restart state file (if warm-up or standalone)
     rst_path = out_dir / "flow2d3d_rst.nc"
     rds = netCDF4.Dataset(rst_path, "w", format="NETCDF4")
     rds.createDimension("mesh2d_nFaces", n_faces)
+    rds_d = rds.createVariable("mesh2d_waterdepth", "f8", ("mesh2d_nFaces",))
+    rds_d[:] = np.full(n_faces, 0.50, dtype=float)
     rds.close()
+
+    # Also copy restart file to case_dir for immediate accessibility
+    case_rst = case_dir / "flow2d3d_rst.nc"
+    if not case_rst.exists():
+        with contextlib.suppress(Exception):
+            shutil.copy(rst_path, case_rst)

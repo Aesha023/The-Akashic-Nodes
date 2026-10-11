@@ -254,3 +254,167 @@ def test_stub_and_postprocess_ganga_tier1(tmp_path: Path) -> None:
     assert post["arrival_time_0_30_tif"].exists()
     assert post["extent_shp"].exists()
     assert post["extent_kml"].exists()
+
+
+def test_two_runs_warmup_and_restart_breach(tmp_path: Path) -> None:
+    """Verify that two-run sequence evaluates gates d/e/f from isolated time windows."""
+    from pravahx.engines.delft3d_fm.ganga_tier1 import (
+        build_ganga_tier1_case,
+        evaluate_validity_gates,
+        postprocess_ganga_tier1_run,
+        stub_ganga_tier1_output,
+    )
+
+    data_dir = Path("data/ganga_inputs")
+    dem_path = data_dir / "dem_ganga_32644.tif"
+    tier0_env = data_dir / "tier0_envelope.shp"
+    if not dem_path.exists() or not tier0_env.exists():
+        return
+
+    case_base = tmp_path / "two_runs_case"
+    wu_dir = case_base / "01_warmup"
+    br_dir = case_base / "02_breach"
+
+    # 1. Build Warm-up Pre-run (Run 1): 10,800 s base-flow spin-up, writes restart
+    build_ganga_tier1_case(
+        case_dir=wu_dir,
+        dem_path=dem_path,
+        tier0_envelope_path=tier0_env,
+        buffer_m=300.0,
+        dx=50.0,
+        spinup_s=10800.0,
+        breach_duration_s=0.0,
+        tstop_s=10800.0,
+        dtuser_s=10.0,
+        rst_interval_s=600.0,
+        is_warmup_only=True,
+    )
+
+    # 2. Stub Warm-up Pre-run: base flow 100 m3/s reaches 95 m3/s at outlet at t=9600s
+    stub_ganga_tier1_output(wu_dir, is_warmup_only=True, spinup_s=10800.0)
+    rst_file = wu_dir / "flow2d3d_rst.nc"
+    assert rst_file.exists(), "Warm-up must generate flow2d3d_rst.nc restart file"
+
+    # 3. Build Breach Run from Restart (Run 2): 14,400 s breach run, starts from restart
+    build_ganga_tier1_case(
+        case_dir=br_dir,
+        dem_path=dem_path,
+        tier0_envelope_path=tier0_env,
+        buffer_m=300.0,
+        dx=50.0,
+        spinup_s=0.0,
+        breach_duration_s=14400.0,
+        tstop_s=14400.0,
+        dtuser_s=10.0,
+        is_warmup_only=False,
+        restart_file=rst_file,
+    )
+    assert (br_dir / "flow2d3d_rst.nc").exists(), "Restart file must be copied to breach directory"
+
+    # 4. Stub Breach Run from Restart: starts from wet restart state, flood peaks, drains 75%
+    stub_ganga_tier1_output(br_dir, restart_file=rst_file, spinup_s=0.0)
+
+    # 5. Evaluate validity gates across both runs
+    gates = evaluate_validity_gates(br_dir, warmup_case_dir=wu_dir)
+    assert gates["all_passed"] is True, f"Gates failed: {gates}"
+
+    # Confirm Gate d is evaluated strictly from warm-up time window (0 <= t <= 10800 s)
+    assert gates["gate_d"] is True
+    assert gates["warmup_time_s"] == 9420.0, f"Expected T_eq = 9420 s, got {gates['warmup_time_s']}"
+    assert "9420 s" in gates["gate_d_msg"]
+
+    # Confirm Gate e is evaluated strictly over the breach time window (0 <= t <= 14400 s)
+    assert gates["gate_e"] is True
+    assert gates["breach_drainage_pct"] >= 70.0, (
+        f"Breach drainage {gates['breach_drainage_pct']}% < 70%"
+    )
+    assert gates["drainage_time_s"] > 0.0
+
+    # Confirm Gate f evaluates mass balance on breach run accounting for restart storage at t=0
+    assert gates["gate_f"] is True
+    assert gates["balance_error_pct"] < 1.0, (
+        f"Mass balance error {gates['balance_error_pct']}% >= 1.0%"
+    )
+    assert gates["dead_storage_m3"] >= 0.0
+
+    # Confirm Gate c evaluates inflow on the breach run
+    assert gates["gate_c"] is True
+    assert gates["inflow_diff_pct"] <= 2.0
+
+    # Confirm parent directory auto-detection finds 01_warmup and 02_breach
+    gates_auto = evaluate_validity_gates(case_base)
+    assert gates_auto["all_passed"] is True
+    assert gates_auto["warmup_time_s"] == 9420.0
+
+    # --- NEGATIVE TEST 1: Window Contamination Isolation for Gate d ---
+    # If warm-up outlet flow never reached 90 m3/s, Gate d MUST FAIL even though
+    # the breach run in 02_breach has Q_peak > 1000 m3/s!
+    fake_wu = tmp_path / "fake_wu_failed"
+    fake_wu.mkdir(parents=True)
+    fake_wu_out = fake_wu / "DFM_OUTPUT_flow2d3d"
+    fake_wu_out.mkdir()
+    # Write a his.nc where outlet flow stays at 30 m3/s forever (failed warm-up)
+    import netCDF4
+
+    hds = netCDF4.Dataset(fake_wu_out / "flow2d3d_his.nc", "w")
+    hds.createDimension("time", None)
+    hds.createDimension("cross_section", 2)
+    hds.createDimension("cross_section_name_len", 16)
+    t_v = hds.createVariable("time", "f8", ("time",))
+    q_v = hds.createVariable("cross_section_discharge", "f8", ("time", "cross_section"))
+    n_v = hds.createVariable(
+        "cross_section_name", "S1", ("cross_section", "cross_section_name_len")
+    )
+    n_v[:] = np.array(
+        [[c.encode("ascii") for c in nm.ljust(16)[:16]] for nm in ["inflow_obs", "outlet_obs"]],
+        dtype="S1",
+    )
+    t_v[:] = [0.0, 3600.0, 7200.0, 10800.0]
+    q_v[:] = np.column_stack([[100.0, 100.0, 100.0, 100.0], [0.0, 10.0, 25.0, 30.0]])
+    hds.close()
+
+    gates_failed_wu = evaluate_validity_gates(br_dir, warmup_case_dir=fake_wu)
+    assert gates_failed_wu["gate_d"] is False, "Gate d must FAIL if warm-up did not reach steady!"
+    assert gates_failed_wu["all_passed"] is False
+    assert "FAIL" in gates_failed_wu["gate_d_msg"]
+
+    # --- NEGATIVE TEST 2: Gate e Failure when Breach Wave Does Not Drain ---
+    fake_br = tmp_path / "fake_br_undrained"
+    fake_br.mkdir(parents=True)
+    fake_br_out = fake_br / "DFM_OUTPUT_flow2d3d"
+    fake_br_out.mkdir()
+    (fake_br / "inflow.bc").write_text("0.0 5000.0\n14400.0 100.0\n", encoding="utf-8")
+    (fake_br / "run.log").write_text("Boundary inflow_bnd opened 8 cells\n", encoding="utf-8")
+    hds2 = netCDF4.Dataset(fake_br_out / "flow2d3d_his.nc", "w")
+    hds2.createDimension("time", None)
+    hds2.createDimension("cross_section", 2)
+    hds2.createDimension("cross_section_name_len", 16)
+    t_v2 = hds2.createVariable("time", "f8", ("time",))
+    q_v2 = hds2.createVariable("cross_section_discharge", "f8", ("time", "cross_section"))
+    n_v2 = hds2.createVariable(
+        "cross_section_name", "S1", ("cross_section", "cross_section_name_len")
+    )
+    n_v2[:] = np.array(
+        [[c.encode("ascii") for c in nm.ljust(16)[:16]] for nm in ["inflow_obs", "outlet_obs"]],
+        dtype="S1",
+    )
+    t_v2[:] = [0.0, 7200.0, 14400.0]
+    # Outlet flow stayed at base flow 100 m3/s, 0% breach volume exited
+    q_v2[:] = np.column_stack([[5000.0, 2000.0, 100.0], [100.0, 100.0, 100.0]])
+    hds2.close()
+
+    gates_failed_drain = evaluate_validity_gates(fake_br, warmup_case_dir=wu_dir)
+    assert gates_failed_drain["gate_e"] is False, "Gate e must FAIL if breach volume did not drain!"
+    assert "FAIL" in gates_failed_drain["gate_e_msg"]
+
+    # Verify postprocessing on two-run case_base
+    out_dir = tmp_path / "two_runs_post_out"
+    post = postprocess_ganga_tier1_run(
+        case_dir=case_base,
+        dem_path=dem_path,
+        out_dir=out_dir,
+        spinup_s=0.0,
+    )
+    assert post["max_depth_tif"].exists()
+    assert post["arrival_time_0_05_tif"].exists()
+    assert post["gates"]["all_passed"] is True

@@ -199,3 +199,54 @@ def test_compare_tier0_and_tier1(tmp_path: Path) -> None:
     assert abs(res["diff_stats"]["mean_diff_m"] - 0.25) < 0.01
     assert (out_dir / "intercomparison_agreement_map.tif").exists()
     assert (out_dir / "intercomparison_metrics.csv").exists()
+
+
+def test_stub_and_postprocess_ganga_tier1(tmp_path: Path) -> None:
+    """Verify stub output generation and post-processing into GeoTIFF, SHP, and KML."""
+    from pravahx.engines.delft3d_fm.ganga_tier1 import (
+        evaluate_validity_gates,
+        postprocess_ganga_tier1_run,
+        stub_ganga_tier1_output,
+    )
+
+    data_dir = Path("data/ganga_inputs")
+    dem_path = data_dir / "dem_ganga_32644.tif"
+    tier0_env = data_dir / "tier0_envelope.shp"
+    if not dem_path.exists() or not tier0_env.exists():
+        return
+
+    case_dir = tmp_path / "stub_case"
+    build_ganga_tier1_case(
+        case_dir=case_dir,
+        dem_path=dem_path,
+        tier0_envelope_path=tier0_env,
+        buffer_m=300.0,
+        dx=50.0,
+        spinup_s=5400.0,
+        breach_duration_s=10800.0,
+    )
+
+    stub_ganga_tier1_output(case_dir, spinup_s=5400.0)
+
+    gates = evaluate_validity_gates(case_dir, spinup_s=5400.0)
+    assert gates["all_passed"] is True
+    assert gates["gate_a"] is True
+    assert gates["gate_b"] is True
+    assert gates["gate_c"] is True
+    assert gates["gate_d"] is True
+    assert gates["gate_e"] is True
+
+    out_dir = tmp_path / "stub_outputs"
+    post = postprocess_ganga_tier1_run(
+        case_dir=case_dir,
+        dem_path=dem_path,
+        out_dir=out_dir,
+        spinup_s=5400.0,
+    )
+
+    assert post["max_depth_tif"].exists()
+    assert post["max_velocity_tif"].exists()
+    assert post["arrival_time_0_05_tif"].exists()
+    assert post["arrival_time_0_30_tif"].exists()
+    assert post["extent_shp"].exists()
+    assert post["extent_kml"].exists()

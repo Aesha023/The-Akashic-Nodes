@@ -35,9 +35,56 @@ def test_ganga_tier1_notebook_headless(tmp_path: Path) -> None:
     ganga_in_dir.mkdir(parents=True, exist_ok=True)
 
     repo_inputs = Path("data/ganga_inputs").resolve()
-    for f in repo_inputs.iterdir():
-        if f.is_file():
-            shutil.copy(f, ganga_in_dir / f.name)
+    if repo_inputs.exists():
+        for f in repo_inputs.iterdir():
+            if f.is_file():
+                shutil.copy(f, ganga_in_dir / f.name)
+    else:
+        import geopandas as gpd
+        import numpy as np
+        import rasterio
+        from rasterio.transform import from_origin
+        from shapely.geometry import Polygon
+
+        transform = from_origin(239800.0, 3338500.0, 30.0, 30.0)
+        meta = {
+            "driver": "GTiff",
+            "height": 190,
+            "width": 166,
+            "count": 1,
+            "dtype": "float32",
+            "crs": "EPSG:32644",
+            "transform": transform,
+            "nodata": -9999.0,
+        }
+        # DEM: monotonic gradient along reach
+        dem_arr = np.linspace(337.0, 450.0, 190 * 166, dtype=np.float32).reshape((190, 166))
+        with rasterio.open(ganga_in_dir / "dem_ganga_32644.tif", "w", **meta) as dst:
+            dst.write(dem_arr, 1)
+
+        # Depth raster
+        d_arr = np.full((190, 166), 1.5, dtype=np.float32)
+        with rasterio.open(ganga_in_dir / "tier0_max_depth.tif", "w", **meta) as dst:
+            dst.write(d_arr, 1)
+
+        # WorldCover raster
+        wc_meta = meta.copy()
+        wc_meta.update(dtype="uint8", nodata=0)
+        wc_arr = np.full((190, 166), 40, dtype=np.uint8)
+        with rasterio.open(ganga_in_dir / "worldcover_ganga_32644.tif", "w", **wc_meta) as dst:
+            dst.write(wc_arr, 1)
+
+        # Valley envelope polygon
+        poly = Polygon(
+            [
+                (239900.0, 3332900.0),
+                (244600.0, 3332900.0),
+                (244600.0, 3337800.0),
+                (239900.0, 3337800.0),
+            ]
+        )
+        gdf = gpd.GeoDataFrame({"geometry": [poly]}, crs="EPSG:32644")
+        gdf.to_file(ganga_in_dir / "tier0_envelope.shp")
 
     # Engine stub directory
     bin_dir = content_dir / "delft3d_bin" / "bin"

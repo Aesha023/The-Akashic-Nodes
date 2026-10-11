@@ -109,13 +109,14 @@ def test_build_ganga_tier1_case(tmp_path: Path) -> None:
     assert (case_dir_uni / "boundary_conditions.ext").exists()
     assert (case_dir_uni / "inflow.bc").exists()
     assert (case_dir_uni / "downstream.bc").exists()
+    assert (case_dir_uni / "cross_sections.pli").exists()
     assert (case_dir_uni / "outlet_obs.pli").exists()
     # Uniform case must not have initialFields.ini
     assert not (case_dir_uni / "initialFields.ini").exists()
 
     mdu_uni = (case_dir_uni / "flow2d3d.mdu").read_text(encoding="utf-8")
     assert "mapFormat" in mdu_uni and "4" in mdu_uni
-    assert "crsFile               = outlet_obs.pli" in mdu_uni
+    assert "crsFile               = cross_sections.pli" in mdu_uni
     assert "unifFrictCoef         = 0.0350" in mdu_uni
     assert "TransportMethod" not in mdu_uni or "# OBSOLETE" in mdu_uni
 
@@ -235,6 +236,9 @@ def test_stub_and_postprocess_ganga_tier1(tmp_path: Path) -> None:
     assert gates["gate_c"] is True
     assert gates["gate_d"] is True
     assert gates["gate_e"] is True
+    assert gates["gate_f"] is True
+    assert "dead_storage_m3" in gates
+    assert (case_dir / "DFM_OUTPUT_flow2d3d" / "flow2d3d_rst.nc").exists()
 
     out_dir = tmp_path / "stub_outputs"
     post = postprocess_ganga_tier1_run(

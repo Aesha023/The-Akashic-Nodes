@@ -188,8 +188,14 @@ def run_delft3d_fm_tier1_job(
 
     mass_balance = {
         "cum_inflow_m3": gates["cum_inflow_m3"],
+        "specified_inflow_m3": gates.get("specified_inflow_m3", gates["cum_inflow_m3"]),
+        "inflow_diff_pct": gates.get("inflow_diff_pct", 0.0),
         "cum_outflow_m3": gates["cum_outflow_m3"],
+        "breach_outflow_m3": gates.get("breach_outflow_m3", 0.0),
+        "breach_drainage_pct": gates.get("breach_drainage_pct", 0.0),
         "storage_change_m3": gates["storage_change_m3"],
+        "dead_storage_m3": gates.get("dead_storage_m3", 0.0),
+        "dead_storage_mcm": gates.get("dead_storage_mcm", 0.0),
         "balance_error_m3": gates["balance_error_m3"],
         "balance_error_pct": gates["balance_error_pct"],
     }

@@ -16,7 +16,7 @@ import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import geopandas as gpd
 import netCDF4
@@ -497,8 +497,8 @@ def parse_engine_water_balance(case_dir: Path) -> dict[str, Any] | None:
         if jp.exists():
             try:
                 data = json.loads(jp.read_text(encoding="utf-8"))
-                if "inflow_m3" in data and "outflow_m3" in data:
-                    return data
+                if isinstance(data, dict) and "inflow_m3" in data and "outflow_m3" in data:
+                    return cast("dict[str, Any]", data)
             except Exception:
                 pass
 

@@ -1,52 +1,158 @@
-# PravahX Backend Status
+# PravahX Honest Backend Status Audit (Step 0)
 
-This document defines the verified operational status of the PravahX hydrodynamic and computational modeling backend as of October 2026.
+This document provides a comprehensive, rigorous, and honest audit of the PravahX computational and hydrodynamic backend as of October 2026.
 
----
-
-## 1. Proven Capabilities
-
-The following components and characteristics have been physically executed and empirically proven:
-
-1. **Engine Build & Portability:**
-   * Automated compilation, packaging, and headless distribution of Deltares D-Flow FM (Delft3D Flexible Mesh 2D hydrodynamic solver).
-   * Portable Linux binary execution bundle verified via cryptographic SHA-256 integrity hash (`491364fb...6258`).
-   * Automated container-free deployment on standard cloud CPU environments (Google Colab 2 vCPUs).
-
-2. **Analytical Ritter (1892) Benchmark:**
-   * Tested against the classical Ritter (1892) analytical dam-break solution over a dry bed via SWASHES formulation (Delestre et al., 2013).
-   * Water depth RMSE along channel centerline at $t = 30\text{ s}$ measured $0.059\text{ m}$ ($\le 0.5\text{ m}$ tolerance PASS).
-   * Numerical convergence proven: mesh refinement from $\Delta x = 5\text{ m}$ to $\Delta x = 2.5\text{ m}$ reduced depth RMSE by ~45% to $0.042\text{ m}$.
-   * Complete physical mass conservation: 500,000 $\to$ 500,000 $\text{m}^3$ exact in all test configurations.
-
-3. **Real-Terrain Execution with Exact Engine Mass Balance:**
-   * End-to-end execution on real-world steep topography (Ganga River reach near Rishikesh, Copernicus GLO-30 DEM, ESA WorldCover roughness).
-   * Verified numerical mass conservation to $0\text{ m}^3$ using Delft3D FM's OWN internal finite-volume water balance:
-     * Warm-up run: in 1,080,000 | out 0 | storage +1,080,000 | residual 0 $\text{m}^3$ | engine `volume_error` 0.0.
-     * Breach run: in 7,241,809 | out 4,166,187 | storage +3,075,622 | residual 0 $\text{m}^3$ | engine `volume_error` 0.0.
-   * Confirms that Delft3D FM is mathematically and numerically mass conservative to $0\text{ m}^3$. Discrepancies observed earlier (34–44%) were identified and resolved as external discrete post-processing accounting artifacts.
-
-4. **50 m Mesh Boundary Rejection by Measurement:**
-   * Inflow boundary choking on the 50 m mesh was diagnosed and rejected through empirical gate measurement: coarse cell averaging across steep canyon walls ($150\text{ m}$ valley floor flanked by $400+\text{ m}$ slopes) produced artificial sills up to $365\text{ m}$, blocking the $100\text{ m}^3/\text{s}$ base flow.
-   * Formal modeling decision: **25 m mesh is PRIMARY** (resolves channel thalweg and admits 100% of inflow); 50 m mesh rejected for steep gorges.
+## 0. Operating Rules for Labels
+* **RUN AND PASSED**: Claimed **only** if there is a **real run** (not a stub, mock, or synthetic fixture) recorded in [`VALIDATION.md`](file:///c:/Users/Krishna/Desktop/Pravahx/docs/VALIDATION.md).
+* **RUN AND FAILED**: Sourced from a real run on actual data where pre-registered physical or hydrodynamic validity gates failed.
+* **NOT RUN**: Code exists with or without unit tests, but no real-data run is recorded in [`VALIDATION.md`](file:///c:/Users/Krishna/Desktop/Pravahx/docs/VALIDATION.md); or features implemented with stubs, mocks, or placeholders.
+* **Scope Boundary**: Frontend is **NOT started**. Zero application code changes in Step 0.
 
 ---
 
-## 2. Pending Items
+## 1. Feature & Subsystem Status Matrix (33 Rows)
 
-1. **Ganga Tier-1 vs Tier-0 Model Intercomparison:**
-   * **Status:** `RUNS; mass balance exact; INTERCOMPARISON PENDING (warm-up + run length)`.
-   * **Remaining Halts:**
-     * *Gate d (Warm-up Gate):* Base flow ($100\text{ m}^3/\text{s}$) over 3 h was entirely absorbed by terrain depression storage in the gorge (open DEM water-surface pit effect) without outflow reaching the downstream boundary.
-     * *Gate e (Drainage Gate):* Breach run duration (4 h) was insufficient for the flood wave tail to drain; 53% of breach volume remained in gorge storage and end discharge remained at $211.5\text{ m}^3/\text{s} > 200\text{ m}^3/\text{s}$.
-   * **Planned Next-Step Fix (NOT executed now):**
-     * Pre-wet/initialise the reach at base-flow water level (e.g. from Tier-0 water surface) or warm up for ~10–12 h until base flow reaches the downstream boundary and passes Gate d.
-     * Extend breach simulation duration beyond 4 h until $\ge 70\%$ of breach excess volume drains and discharge recedes below $2\times$ base flow ($< 200\text{ m}^3/\text{s}$), allowing Gate e to pass.
-   * **Intercomparison Integrity:** Model comparison metrics (IoU, F-score, depth difference statistics) remain withheld until both Gate d and Gate e pass. No IoU/F metrics are reported.
+| Feature / Subsystem | Code Exists (Y/N + Main File) | Unit Tests (Y/N + Count) | Real-Data Run Evidence (Link to VALIDATION.md or NONE) | Label | What is Missing (One Line) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **F01: Mission Control** | Partial ([system.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/api/v1/system.py), [runs.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/api/v1/runs.py)) | Y (4 in [test_api.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_api.py)) | NONE | **NOT RUN** | No dam registry endpoint, no lake detection aggregator, and frontend dashboard is not started. |
+| **F02: Scenario wizard** | Y ([schema.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/config/schema.py), [scenarios.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/api/v1/scenarios.py)) | Y (20 in [test_config_schema.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_config_schema.py), 4 in [test_api.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_api.py)) | NONE | **NOT RUN** | Multi-step interactive wizard UI, draft autosave state machine, and live map preview. |
+| **F03: Satellite-only mode** | Y ([volume_satellite.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/reservoir/volume_satellite.py), [froehlich.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/breach/froehlich.py)) | Y (5 in [test_reservoir.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_reservoir.py), 8 in [test_breach.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_breach.py)) | NONE | **NOT RUN** | End-to-end execution on real satellite-derived lake polygon with validated error bounds recorded in VALIDATION.md. |
+| **F04: Run monitor** | Partial ([workflow.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/pipeline/workflow.py), [runs.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/api/v1/runs.py)) | Y (5 in [test_workflow.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_workflow.py), 4 in [test_api.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_api.py)) | NONE | **NOT RUN** | Pause/cancel/retry mechanisms, live log streaming (WebSocket/SSE), and Celery worker integration. |
+| **F05: Results explorer** | Partial ([vector.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/export/vector.py), [tiles.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/api/v1/tiles.py)) | Y (3 in [test_tier0.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_tier0.py), 4 in [test_api.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_api.py)) | NONE | **NOT RUN** | Interactive time-slider UI, dynamic cross-section extraction, point query API, and TiTiler COG server. |
+| **F06: Engine comparison** | Y ([agreement.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/compare/agreement.py), [metrics.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/compare/metrics.py)) | Y (7 in [test_compare.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_compare.py)) | [VALIDATION.md#L167-L233](file:///c:/Users/Krishna/Desktop/Pravahx/docs/VALIDATION.md#L167-L233) (Section 9) | **RUN AND FAILED** | Resolving gorge depression pre-wetting (Gate d) and extending breach simulation time (Gate e) so comparison metrics can be computed. |
+| **F07: Satellite validation** | Y ([scoring.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/gee/scoring.py), [flood_mapping.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/gee/flood_mapping.py)) | Y (8 in [test_gee.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_gee.py)) | NONE | **NOT RUN** | Execution of simulated vs observed SAR flood extent hindcast benchmark recorded in VALIDATION.md. |
+| **F08: Live flood monitor** | Y ([flood_mapping.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/gee/flood_mapping.py), [gee.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/api/v1/gee.py)) | Y (8 in [test_gee.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_gee.py)) | NONE | **NOT RUN** | Real-time operational GEE polling ingestion pipeline with live execution evidence in VALIDATION.md. |
+| **F09: Impact and loss** | Y ([exposure.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/impact/exposure.py), [damage.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/impact/damage.py), [impact.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/api/v1/impact.py)) | Y (6 in [test_impact.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_impact.py), 4 in [test_api.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_api.py)) | NONE | **NOT RUN** | Integration with authentic Census/OpenStreetMap asset database and real-event loss validation in VALIDATION.md. |
+| **F10: Evacuation planner** | Y ([evacuation.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/impact/evacuation.py), [impact.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/api/v1/impact.py)) | Y (6 in [test_impact.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_impact.py)) | NONE | **NOT RUN** | NetworkX routing on real road graph (OSM) avoiding dynamic flood arrival contours. |
+| **F11: Cascade analysis** | Y ([downstream.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/cascade/downstream.py)) | Y (4 in [test_cascade.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_cascade.py)) | NONE | **NOT RUN** | Multi-reservoir routing simulation with actual dam crest survey data in VALIDATION.md. |
+| **F12: Exports and brief** | Y ([vector.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/export/vector.py), [brief.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/impact/brief.py), [runs.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/api/v1/runs.py)) | Y (3 in [test_tier0.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_tier0.py), 6 in [test_impact.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_impact.py)) | NONE | **NOT RUN** | Automated PDF rendering pipeline and verified export download tests from real engine outputs. |
+| **F13: Map service publishing** | Partial ([tiles.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/api/v1/tiles.py)) | Y (4 in [test_api.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_api.py)) | NONE | **NOT RUN** | OGC-compliant WMS/WFS server implementation (GetCapabilities/GetMap/GetFeature). |
+| **F14: Scenario library** | Partial ([scenarios.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/api/v1/scenarios.py), [scenario.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/models/scenario.py)) | Y (4 in [test_api.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_api.py)) | NONE | **NOT RUN** | Scenario versioning, cloning API endpoint, and side-by-side visual/spatial diffing UI. |
+| **F15: Batch mode** | N (Single-scenario only in [workflow.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/pipeline/workflow.py)) | N (0) | NONE | **NOT RUN** | Batch dispatcher, CSV/JSON dam list parser, and batch queue management API. |
+| **F16: Lake watch** | Y ([lake_watch.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/gee/lake_watch.py)) | Y (8 in [test_gee.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_gee.py)) | NONE | **NOT RUN** | Periodic cron/Celery scheduler triggering automated GEE image difference detection. |
+| **F17: Alerts and notifications** | N (No alert model or dispatcher) | N (0) | NONE | **NOT RUN** | Notification models, alert trigger rule evaluation engine, and webhook/email dispatchers. |
+| **F18: Data catalogue** | N (Direct downloads only in [dem.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/data/dem.py)) | N (0) | NONE | **NOT RUN** | Dataset inventory model, cache manager, and validated user-upload processing pipeline. |
+| **F19: Validation and benchmarks** | Y ([VALIDATION.md](file:///c:/Users/Krishna/Desktop/Pravahx/docs/VALIDATION.md), [benchmark.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/engines/delft3d_fm/benchmark.py)) | Y (1 in [test_delft3d_fm_benchmark.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_delft3d_fm_benchmark.py), 8 in [test_dualsphysics.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_dualsphysics.py)) | [VALIDATION.md#L41-L100](file:///c:/Users/Krishna/Desktop/Pravahx/docs/VALIDATION.md#L41-L100) (Sec 4), [L137-L148](file:///c:/Users/Krishna/Desktop/Pravahx/docs/VALIDATION.md#L137-L148) (Sec 8.1) | **RUN AND PASSED** | Dedicated interactive frontend benchmark dashboard page to browse hindcast scores and compare runs. |
+| **F20: System health and recovery** | Partial ([system.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/api/v1/system.py)) | Y (4 in [test_api.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_api.py)) | NONE | **NOT RUN** | Celery queue depth monitoring, dead-letter queue, automated backup and database restore routines. |
+| **F21: Audit and provenance** | Y ([provenance.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/pipeline/provenance.py), [checkpoint.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/pipeline/checkpoint.py)) | Y (10 in [test_provenance.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_provenance.py)) | NONE | **NOT RUN** | Tamper-evident immutable audit log append-only store and UI verification action. |
+| **F22: Administration** | Partial ([auth.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/api/v1/auth.py), [user.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/models/user.py)) | Y (5 in [test_auth.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_auth.py), 4 in [test_api.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_api.py)) | NONE | **NOT RUN** | MFA (TOTP), user management CRUD endpoints, and API key generation/revocation. |
+| **F23: Share links** | N (No share model or endpoint) | N (0) | NONE | **NOT RUN** | Signed token URL generator and read-only guest session authorization. |
+| **F24: Bilingual interface** | N (Frontend not started) | N (0) | NONE | **NOT RUN** | i18next translation dictionary (English/Hindi) and frontend localization switcher. |
+| **F25: Display modes** | N (Frontend not started) | N (0) | NONE | **NOT RUN** | Responsive CSS breakpoints and layout toggles for wall display and field mobile views. |
+| **F26: Help and method notes** | Partial ([SCIENCE.md](file:///c:/Users/Krishna/Desktop/Pravahx/docs/SCIENCE.md), [VALIDATION.md](file:///c:/Users/Krishna/Desktop/Pravahx/docs/VALIDATION.md)) | N (0) | NONE | **NOT RUN** | In-context interactive UI tooltips and method modal drawers linked to science documentation. |
+| **API Endpoints** | Y ([main.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/main.py), [api/v1/](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/api/v1/)) | Y (4 in [test_api.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_api.py), 5 in [test_auth.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_auth.py)) | NONE | **NOT RUN** | Integration with live Celery tasks, WebSocket real-time progress, and complete CRUD endpoints. |
+| **Job Queue (Celery)** | Partial ([tasks.py](file:///c:/Users/Krishna/Desktop/Pravahx/core/pravahx/pipeline/tasks.py), [docker-compose.yml](file:///c:/Users/Krishna/Desktop/Pravahx/docker-compose.yml)) | N (0 for Celery workers) | NONE | **NOT RUN** | Celery app configuration module (`celery_app.py`), worker entrypoints, and broker integration tests. |
+| **Database (PostGIS)** | Partial ([session.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/db/session.py), [docker-compose.yml](file:///c:/Users/Krishna/Desktop/Pravahx/docker-compose.yml)) | Y (Tested via SQLite adapter in unit tests) | NONE | **NOT RUN** | GeoAlchemy2 spatial geometry columns, spatial indices, and PostGIS spatial query functions. |
+| **Object Storage** | Partial ([config.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/core/config.py), [docker-compose.yml](file:///c:/Users/Krishna/Desktop/Pravahx/docker-compose.yml)) | N (0) | NONE | **NOT RUN** | S3/MinIO client adapter (`boto3`) for uploading/downloading rasters and model artifacts. |
+| **Auth / Security** | Y ([security.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/core/security.py), [auth.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/core/auth.py), [api/v1/auth.py](file:///c:/Users/Krishna/Desktop/Pravahx/backend/app/api/v1/auth.py)) | Y (5 in [test_auth.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_auth.py), 4 in [test_api.py](file:///c:/Users/Krishna/Desktop/Pravahx/tests/unit/test_api.py)) | NONE | **NOT RUN** | Role-based permissions across all API endpoints, token refresh rotation, and MFA. |
+| **Docker / Deploy** | Y ([docker-compose.yml](file:///c:/Users/Krishna/Desktop/Pravahx/docker-compose.yml), [docker-compose.offline.yml](file:///c:/Users/Krishna/Desktop/Pravahx/docker-compose.offline.yml)) | N (0 container integration tests) | NONE | **NOT RUN** | Verified multi-container deployment smoke test on production Linux VM. |
+| **CI** | Y ([ci.yml](file:///c:/Users/Krishna/Desktop/Pravahx/.github/workflows/ci.yml)) | Y (Executes 149 unit tests + 1 integration test) | NONE | **NOT RUN** | End-to-end integration test step running on real benchmark data in GitHub Actions. |
 
 ---
 
-## 3. Scope Boundary
+## 2. Audit of "PASS", "OK", "conserved", "verified", "VERIFIED" Strings
 
-* **Ganga Tier-1 Delft3D FM Work:** Frozen per project milestone.
-* **Frontend:** NOT started.
+Every string occurrence across code, notebooks, and docs is audited below for file, line, and backing basis:
+
+| String Term | File : Line | Context / Snippet | Backing Basis (Real Computation / Fetched Source / Test Stub / Label) |
+| :--- | :--- | :--- | :--- |
+| **PASS** | `tests/unit/test_ganga_tier1.py:169` | `assert "PASS" in gates["gate_a_msg"]` | **Real Computation**: Pytest assertion verifying gate logic correctly evaluates open mesh boundary links. |
+| **PASS** | `tests/unit/test_ganga_tier1.py:431` | `-> gate f PASS. Breach excess out 2,726,187 of 5,801,809 m3...` | **Real Computation**: Comment documenting real Google Colab execution record (`a38a382`) of Delft3D FM internal water balance. |
+| **PASS** | `tests/unit/test_ganga_tier1.py:452` | `# Gate f: Mass balance PASS (exact to 0 m3)` | **Real Computation**: Test fixture comment documenting exact finite-volume engine mass conservation. |
+| **PASS** | `tests/unit/test_ganga_tier1.py:469` | `# Gate c: Inflow PASS` | **Real Computation**: Test fixture comment documenting specified vs measured inflow match. |
+| **PASS** | `tests/unit/test_ganga_tier1.py:472` | `# Gate a and b: PASS` | **Real Computation**: Test fixture comment documenting open boundaries and clean log diagnostics. |
+| **PASS** | `README.md:20` | `depth RMSE 0.059 m PASS and converging to 0.042 m...` | **Real Computation**: Measured depth error against Ritter (1892) analytical solution in Delft3D FM. |
+| **PASS** | `notebooks/PravahX_Ritter_Benchmark.ipynb:303` | `"PASS" if (df[...].rmse_m <= 0.5).all() else "FAIL"` | **Real Computation**: Dynamic conditional evaluating depth RMSE against pre-registered 0.5 m pass tolerance. |
+| **PASS** | `notebooks/PravahX_Ritter_Benchmark.ipynb:305` | `"PASS" if (df[...].err_5cm_pct.abs() <= 5).all() else "FAIL"` | **Real Computation**: Dynamic conditional evaluating wave front error against pre-registered 5% tolerance (evaluates to FAIL). |
+| **PASS** | `notebooks/PravahX_Ganga_Tier1.ipynb:16` | `-> **gate f PASS**...` | **Real Computation**: Markdown summary of real Colab execution run (`a38a382`). |
+| **PASS** | `notebooks/PravahX_Ganga_Tier1.ipynb:472` | `print(f"Gate Summary: ALL PASSED = {gates['all_passed']}")` | **Real Computation**: Dynamic print statement displaying boolean gate status. |
+| **PASS** | `notebooks/PravahX_Ganga_Tier1.ipynb:491` | `# --- STEP 5: MODEL INTERCOMPARISON IF ALL GATES PASSED ---` | **Structural Header**: Comment guarding downstream intercomparison execution behind all-pass condition. |
+| **PASS** | `notebooks/PravahX_Ganga_Tier1.ipynb:525` | `"inflow_gate": "PASS" if gates["gate_c"] else "FAIL"` | **Real Computation**: Formats Gate c boolean outcome. |
+| **PASS** | `notebooks/PravahX_Ganga_Tier1.ipynb:526` | `"warmup_gate": "PASS" if gates["gate_d"] else "FAIL"` | **Real Computation**: Formats Gate d boolean outcome. |
+| **PASS** | `notebooks/PravahX_Ganga_Tier1.ipynb:527` | `"drainage_gate": "PASS" if gates["gate_e"] else "FAIL"` | **Real Computation**: Formats Gate e boolean outcome. |
+| **PASS** | `scripts/build_ganga_notebook.py:41` | `-> **gate f PASS**...` | **Real Computation**: Generator template documenting real Colab execution record (`a38a382`). |
+| **PASS** | `scripts/build_ganga_notebook.py:430` | `print(f'Gate Summary: ALL PASSED = {gates["all_passed"]}')` | **Real Computation**: Generator code template for dynamic print. |
+| **PASS** | `scripts/build_ganga_notebook.py:446` | `# --- STEP 5: MODEL INTERCOMPARISON IF ALL GATES PASSED ---` | **Structural Header**: Generator template comment. |
+| **PASS** | `scripts/build_ganga_notebook.py:478-480` | `'inflow_gate': 'PASS' if gates['gate_c'] else 'FAIL'` | **Real Computation**: Generator code template formatting gate booleans. |
+| **PASS** | `docs/BACKEND_STATUS.md:18` | `Water depth RMSE along channel centerline at t = 30 s measured 0.059 m (<= 0.5 m tolerance PASS)` | **Real Computation**: Analytical Ritter (1892) benchmark measured result. |
+| **PASS** | `docs/DELFT3D_LINUX_BUILD_PLAN.md:30` | `The build recipe below was executed manually in Colab on 10 Oct 2026 and is **RUN AND PASSED**` | **Real Execution**: Real manual execution of compiler pipeline and bundle validation. |
+| **PASS** | `docs/VALIDATION.md:147` | `Operational Status: **RUN AND PASSED**` | **Real Computation**: Deltares c019 engine smoke test executed in Google Colab CPU environment with matching SHA-256 bundle hash. |
+| **PASS** | `docs/VALIDATION.md:163` | `Depth RMSE (m) t=10/20/30: ... -> PASS (tol 0.5)` | **Real Computation**: Centreline water depth RMSE in Ritter dam-break benchmark. |
+| **PASS** | `docs/VALIDATION.md:165` | `Verdict: depth PASS + converging; front FAIL, understood.` | **Real Computation**: Pre-registered benchmark evaluation verdict. |
+| **PASS** | `docs/VALIDATION.md:185` | `Breach run: ... -> gate f PASS.` | **Real Computation**: Delft3D FM internal water balance showing 0 m3 residual error. |
+| **PASS** | `core/pravahx/engines/delft3d_fm/benchmark.py:330` | `status_note = "RUN AND PASSED" if passes else "FAILED"` | **Real Computation**: Dynamic assignment based on physical threshold checks. |
+| **PASS** | `core/pravahx/engines/delft3d_fm/ganga_tier1.py:685` | `else "PASS: Both boundaries opened > 0 cells"` | **Real Computation**: String emitted dynamically when boundary cells count $> 0$. |
+| **PASS** | `core/pravahx/engines/delft3d_fm/ganga_tier1.py:697` | `"PASS: No errors or missing signals in log"` | **Real Computation**: String emitted dynamically after regex inspection of solver diagnostics. |
+| **PASS** | `core/pravahx/engines/delft3d_fm/ganga_tier1.py:757` | `f"PASS: Engine inflow {cum_inflow_m3:,.0f} m3 matches specified bc within 2% "` | **Real Computation**: String emitted dynamically when $|V_{\text{in}} - V_{bc}| / V_{bc} \le 0.02$. |
+| **PASS** | `core/pravahx/engines/delft3d_fm/ganga_tier1.py:782, 800, 832, 940, 1006` | `f"PASS: Warm-up equilibrium reached at t = {t_warmup_eq:.0f} s"` | **Real Computation**: String emitted dynamically when downstream discharge reaches $\ge 90\%$ of base flow. |
+| **PASS** | `core/pravahx/engines/delft3d_fm/ganga_tier1.py:889, 893, 1055` | `f"PASS: Breach excess out ... = {breach_drain_pct:.1f}% "` / `f"PASS: Outlet discharge receded to ... (< 200 m3/s)"` | **Real Computation**: String emitted dynamically when drainage volume $\ge 70\%$ or flow recedes below $2\times$ baseflow. |
+| **PASS** | `core/pravahx/engines/delft3d_fm/ganga_tier1.py:899` | `f"PASS: Delft3D engine water balance exact..."` | **Real Computation**: String emitted dynamically when engine internal volume error $< 0.01$. |
+| **PASS** | `core/pravahx/engines/delft3d_fm/ganga_tier1.py:1094` | `f"PASS: Fallback mass balance error {balance_error_pct:.2f}% "` | **Real Computation**: String emitted dynamically if discrete spatial integration mass error $< 2\%$. |
+| **PASS** | `core/pravahx/engines/delft3d_fm/ganga_tier1.py:1770, 1864, 1865, 1882` | Docstrings & test simulation templates containing `gate f PASS` | **Test Fixture Stub**: Hardcoded strings reproducing verbatim Colab log output for offline headless unit testing. |
+| **PASS** | `core/pravahx/engines/delft3d_fm/ganga_tier1.py:1832` | `"engine volume_error 0.0 → gate d PASS (outflow 95% of 100 m3/s after 3 h).\n"` | **Test Fixture Stub**: Hardcoded synthetic string used only when `PRAVAHX_STUB_SIMULATE_PASS=1` is activated in unit tests. |
+| **PASS** | `core/pravahx/cli.py:113` | `f"Verification PASSED — {len(manifest.artifacts)} artefact(s) intact."` | **Real Computation**: CLI message emitted after SHA-256 integrity verification across manifest artifacts. |
+| **OK** | `notebooks/PravahX_Ritter_Benchmark.ipynb:117` | `print("Generator imported OK")` | **Runtime Print**: Status print confirming python import succeeded. |
+| **OK** | `notebooks/delft3d_smoke_package_generator.ipynb:104` | `ldd /content/delft3d_bin/bin/dflowfm \| grep "not found" \|\| echo "All OK."` | **Real Execution**: Shell command confirming shared libraries are resolved without missing dependencies. |
+| **OK** | `core/pravahx/engines/delft3d_fm/runner.py:166` | `ldd /content/delft3d_bin/bin/dflowfm \| grep "not found" \|\| echo "All OK."` | **Real Execution**: Shared library diagnostic command string. |
+| **OK** | `core/pravahx/engines/delft3d_fm/runner.py:307` | `verification_logs.append(f"[OK] {rel_path}: {actual_hash[:16]}...")` | **Real Computation**: Dynamic log emitted upon SHA-256 file verification match. |
+| **OK** | `core/pravahx/engines/dualsphysics/runner.py:331` | `verification_logs.append(f"[OK] {rel_path}: {actual_hash[:16]}...")` | **Real Computation**: Dynamic log emitted upon SHA-256 file verification match. |
+| **conserved** | `tests/unit/test_coupling.py:86` | `Verify SPH-to-Delft3D coupling succeeds when volume is conserved.` | **Test Docstring**: States test purpose. |
+| **conserved** | `tests/unit/test_coupling.py:92, 142` | `assert result.is_conserved is True` | **Real Computation**: Pytest assertion evaluating numerical boundary flux vs particle volume continuity. |
+| **conserved** | `core/pravahx/coupling/sph_to_fm.py:56` | `is_conserved: bool` | **Dataclass Field**: Schema definition for coupling volume conservation flag. |
+| **conserved** | `core/pravahx/coupling/sph_to_fm.py:256` | `is_conserved = rel_error <= self.tolerance` | **Real Computation**: Numerical evaluation comparing coupled volumetric discharge to total initial fluid volume. |
+| **conserved** | `core/pravahx/coupling/sph_to_fm.py:267, 303` | `if not is_conserved:` / `is_conserved=is_conserved` | **Real Computation**: Conditional branch and return assignment based on evaluated volume conservation. |
+| **verified** | `scripts/build_ganga_notebook.py:60` | `- Gate a (Open Cells): Both boundaries open > 0 cells (verified from run log).` | **Real Computation**: Markdown string referencing solver diagnostics verification. |
+| **verified** | `scripts/build_ganga_notebook.py:106` | `print('MATCH VERIFIED')` | **Real Computation**: Print emitted upon engine bundle SHA-256 hash match. |
+| **verified** | `notebooks/PravahX_Ritter_Benchmark.ipynb:12` | `Restores the verified Delft3D FM engine from Drive (sha256 checked).` | **Real Computation**: Cryptographic SHA-256 check of Delft3D FM bundle archive. |
+| **verified** | `notebooks/PravahX_Ganga_Tier1.ipynb:26` | `- Gate a (Open Cells): Both boundaries open > 0 cells (verified from run log).` | **Real Computation**: Verified against boundary face count in solver log. |
+| **verified** | `notebooks/PravahX_Ganga_Tier1.ipynb:86` | `print("MATCH VERIFIED")` | **Real Computation**: Cryptographic SHA-256 verification of portable engine bundle. |
+| **verified** | `notebooks/delft3d_colab_runner.ipynb:9, 54` | `cryptographically verified results... echo "Checksum verified."` | **Real Computation**: Sourced from SHA-256 hash evaluation of generated simulation NetCDF artifacts. |
+| **VERIFIED** | `README.md:16` | `Breach Routing & Ensembles \| VERIFIED AGAINST A FETCHED REFERENCE` | **Fetched Source**: USGS OFR 77-765 ($65,129\text{ m}^3/\text{s}$), USBR historical records, and USACE HEC-RAS Ch. 14. |
+| **VERIFIED** | `README.md:17` | `Flood Hazard Rating (HR) \| VERIFIED AGAINST A FETCHED REFERENCE` | **Fetched Source**: Defra / Environment Agency FD2321/TR1 Table 3.1 ($HR = d \cdot (v + 0.5) + DF$). |
+| **VERIFIED** | `docs/VALIDATION.md:10` | `## 1. Verified Primary Sources & Fetched URLs` | **Fetched Source**: Section heading introducing the 4 primary fetched documents with active URLs. |
+| **VERIFIED** | `docs/VALIDATION.md:37` | `Verified Equations: Embankment breach parameter regressions...` | **Fetched Source**: Regression formulas fetched from USACE HEC-RAS Reference Manual Chapter 14. |
+| **VERIFIED** | `docs/VALIDATION.md:66` | `## 4. Benchmark Comparison Table (Re-run with Verified Inputs)` | **Fetched Source & Real Computation**: Inputs derived from fetched USBR/USGS documents; outputs re-run through level-pool routing. |
+| **VERIFIED** | `docs/VALIDATION.md:211` | `[VERIFIED - Deltares D-Flow FM User Manual (2023), Section 4.3.4 'Restart files']` | **Literature Citation**: Manual section cited; **no live fetched HTTP URL** recorded. |
+| **VERIFIED** | `docs/VALIDATION.md:248` | `VERIFIED RESTART` | **Real Computation**: D-Flow FM restart state persistence capability tested. |
+| **VERIFIED** | `docs/VALIDATION.md:270` | `Froehlich (2008), J. Hydraul. Eng., 134(12): 1708–1721 [VERIFIED]` | **Literature Citation**: Journal citation; **no live fetched HTTP URL** recorded. |
+| **VERIFIED** | `docs/VALIDATION.md:270` | `Inflow volume back-solved via dynamic broad-crested weir routing to match Tier-0 peak discharge [VERIFIED]` | **Real Computation**: Numerical root-finding / bisection back-solve matching $5,000.0\text{ m}^3/\text{s}$ peak discharge. |
+| **VERIFIED** | `docs/VALIDATION.md:316` | `[VERIFIED - Deltares D-Flow FM User Manual Section 4.3.4]` | **Literature Citation**: User manual section cited; **no live fetched HTTP URL** recorded. |
+| **VERIFIED** | `docs/SCIENCE.md:79, 124, 138` | `Verified Source: USACE HEC-RAS Hydraulic Reference Manual Chapter 14` | **Fetched Source**: Verified against USACE HEC-RAS reference manual with URL in Section 11. |
+| **VERIFIED** | `docs/SCIENCE.md:237` | `verified Froehlich (2008) formulation` | **Fetched Source**: Sourced from USACE HEC-RAS manual Chapter 14. |
+| **VERIFIED** | `docs/SCIENCE.md:275` | `## 11. Verified Project Sources` | **Fetched Source**: Section heading listing 8 primary sources with active URLs. |
+
+---
+
+## 3. Placeholder Figures, Images, and Data Files
+
+| Item Path | Type | Current Status | Description / Reason |
+| :--- | :--- | :--- | :--- |
+| `docs/img/ganga_tier1_summary.png` | Image (Figure) | **Pending / Uncommitted** | Explicitly noted in [VALIDATION.md#L343](file:///c:/Users/Krishna/Desktop/Pravahx/docs/VALIDATION.md#L343) (`[Figure pending: Summary map docs/img/ganga_tier1_summary.png will be copied from Drive upon Colab execution; no placeholder figures are committed.]`). Not present on disk. |
+| `needs_human_check/martin_moyce_benchmark.png` | Image (Figure) | **Unverified Reference Data** (309.6 KB) | Simulation result plot of DualSPHysics dam-break on Tesla T4 compared against literature points from Martin & Moyce (1952). Placed in `needs_human_check/` because the 1952 reference paper is behind a publisher paywall. |
+| `test_phase1_output/` | Data Directory (Rasters/Vectors) | **Synthetic Test Artifacts** (42 files) | Temporary directory containing synthetic rasters (`test_tilted.tif`, `test_tilted_hand.tif`, etc.) produced during Phase 1 pipeline development and testing on artificial tilted plane geometry. |
+| `scratch_test.nc` | Data File (NetCDF) | **Scratch Test File** (6.1 KB) | Temporary NetCDF grid file generated during local development/debugging of UGRID mesh writers. |
+| `test.mdu` | Data File (MDU) | **Scratch Test File** (37.7 KB) | Temporary master definition file from local testing of Delft3D FM configuration builders. |
+| `core/pravahx/engines/tier0_hand/adapter.py:70-72` | Code Constants | **Fallback Placeholders** | `peak_discharge = 5000.0`, `reach_slope = 0.001`, `mannings_n = 0.035` hardcoded as fallback defaults if missing from context/config. |
+| `core/pravahx/config/defaults.yaml:41` | Config Comment | **Design Placeholder** | `# before coding. Placeholder until user supplies equations.` for parameter `ensemble_sigma_multiplier`. |
+| `docker-compose.yml:162-170` | Docker Service | **Service Placeholder** | TiTiler COG tile service block commented out: `# Placeholder: TiTiler or equivalent, to be configured in Phase 8.`. |
+
+---
+
+## 4. Citation Audit: Sources Marked VERIFIED vs Fetched URLs
+
+Every citation marked `VERIFIED` or `[VERIFIED]` in the codebase and documentation is audited below to verify whether an active fetched URL is recorded:
+
+| Citation Identifier | Published Title / Document Name | Citation Location | Fetched URL Recorded? (Yes / No) | Recorded URL |
+| :--- | :--- | :--- | :--- | :--- |
+| **USGS OFR 77-765** | *The flood in southeastern Idaho from the Teton Dam failure of June 5, 1976* (Ray et al., 1977) | [VALIDATION.md:12](file:///c:/Users/Krishna/Desktop/Pravahx/docs/VALIDATION.md#L12), [SCIENCE.md:279](file:///c:/Users/Krishna/Desktop/Pravahx/docs/SCIENCE.md#L279), [README.md:16](file:///c:/Users/Krishna/Desktop/Pravahx/README.md#L16) | **YES** | `https://pubs.er.usgs.gov/publication/ofr77765` |
+| **ASDSO Case Study** | *Teton Dam (Idaho, 1976)* (ASDSO, 2022) | [VALIDATION.md:19](file:///c:/Users/Krishna/Desktop/Pravahx/docs/VALIDATION.md#L19), [SCIENCE.md:281](file:///c:/Users/Krishna/Desktop/Pravahx/docs/SCIENCE.md#L281) | **YES** | `https://damfailures.org/case-study/teton-dam-idaho-1976/` |
+| **USBR Teton History** | *Teton Dam Failure - Pacific Northwest Region* (USBR) | [VALIDATION.md:28](file:///c:/Users/Krishna/Desktop/Pravahx/docs/VALIDATION.md#L28), [SCIENCE.md:283](file:///c:/Users/Krishna/Desktop/Pravahx/docs/SCIENCE.md#L283), [README.md:16](file:///c:/Users/Krishna/Desktop/Pravahx/README.md#L16) | **YES** | `https://www.usbr.gov/pn/snakeriver/dams/uppersnake/teton/index.html` |
+| **USACE HEC-RAS Ch. 14** | *Performing a Dam Break Study with HEC-RAS* (USACE HEC-RAS Hydraulic Reference Manual) | [VALIDATION.md:35](file:///c:/Users/Krishna/Desktop/Pravahx/docs/VALIDATION.md#L35), [SCIENCE.md:277](file:///c:/Users/Krishna/Desktop/Pravahx/docs/SCIENCE.md#L277), [README.md:16](file:///c:/Users/Krishna/Desktop/Pravahx/README.md#L16) | **YES** | `https://www.hec.usace.army.mil/confluence/rasdocs/ras1dtechref/latest/performing-a-dam-break-study-with-hec-ras/` |
+| **UN-SPIDER Flood Practice** | *Recommended Practice: Flood Mapping (Google Earth Engine)* (UN-SPIDER, 2020) | [SCIENCE.md:285](file:///c:/Users/Krishna/Desktop/Pravahx/docs/SCIENCE.md#L285) | **YES** | `https://un-spider.org/advisory-support/recommended-practices/recommended-practice-flood-mapping/step-by-step` |
+| **Tiwari et al. (2020)** | *Kerala 2018 Flood Inundation Mapping with SAR & GEE* (PLOS ONE) | [SCIENCE.md:287](file:///c:/Users/Krishna/Desktop/Pravahx/docs/SCIENCE.md#L287) | **YES** | `https://doi.org/10.1371/journal.pone.0237324` |
+| **Charter Activation 582** | *Flood in India - Activation 582* (International Charter Space and Major Disasters, 2018) | [SCIENCE.md:289](file:///c:/Users/Krishna/Desktop/Pravahx/docs/SCIENCE.md#L289) | **YES** | `https://disasterscharter.org/web/guest/activations/-/article/flood-in-india-activation-582-` |
+| **ReliefWeb / NRSC (2018)** | *India: Flood Inundated Areas in Part of Kerala State (18 Aug 2018)* (NRSC / Govt. of India) | [SCIENCE.md:291](file:///c:/Users/Krishna/Desktop/Pravahx/docs/SCIENCE.md#L291) | **YES** | `https://reliefweb.int/map/india/india-flood-inundated-areas-part-kerala-state-18-august-2018-0400-hrs` |
+| **Deltares D-Flow FM Manual** | *Deltares D-Flow FM User Manual, Section 4.3.4 'Restart files'* (Deltares, 2023) | [VALIDATION.md:211, 316](file:///c:/Users/Krishna/Desktop/Pravahx/docs/VALIDATION.md#L211) | **NO** | *None recorded in document (cited by manual section).* |
+| **Froehlich (2008)** | *Embankment Dam Breach Parameters and Their Uncertainties* (ASCE J. Hydraul. Eng., 134(12): 1708–1721) | [VALIDATION.md:270](file:///c:/Users/Krishna/Desktop/Pravahx/docs/VALIDATION.md#L270) | **NO** | *None recorded in document (cited by journal reference).* |
+| **Delestre et al. (2013) / SWASHES** | *SWASHES: a compilation of shallow water analytic solutions for hydraulic and environmental studies* | [VALIDATION.md:165](file:///c:/Users/Krishna/Desktop/Pravahx/docs/VALIDATION.md#L165) | **NO** | *arXiv ID `arXiv:1110.0288v7` recorded; no HTTP/HTTPS URL.* |
+| **Defra / EA FD2321/TR1** | *Flood Risks to People, Phase 2, The Flood Risks to People Methodology* (FD2321/TR1 & FD2320/TR2) | [README.md:17](file:///c:/Users/Krishna/Desktop/Pravahx/README.md#L17) | **NO** | *None recorded in document (cited by technical report number).* |

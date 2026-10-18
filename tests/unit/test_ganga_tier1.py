@@ -227,7 +227,7 @@ def test_stub_and_postprocess_ganga_tier1(tmp_path: Path) -> None:
         breach_duration_s=10800.0,
     )
 
-    stub_ganga_tier1_output(case_dir, spinup_s=5400.0)
+    stub_ganga_tier1_output(case_dir, spinup_s=5400.0, simulate_pass=True)
 
     gates = evaluate_validity_gates(case_dir, spinup_s=5400.0)
     assert gates["all_passed"] is True
@@ -291,7 +291,7 @@ def test_two_runs_warmup_and_restart_breach(tmp_path: Path) -> None:
     )
 
     # 2. Stub Warm-up Pre-run: base flow 100 m3/s reaches 95 m3/s at outlet at t=9600s
-    stub_ganga_tier1_output(wu_dir, is_warmup_only=True, spinup_s=10800.0)
+    stub_ganga_tier1_output(wu_dir, is_warmup_only=True, spinup_s=10800.0, simulate_pass=True)
     rst_file = wu_dir / "flow2d3d_rst.nc"
     assert rst_file.exists(), "Warm-up must generate flow2d3d_rst.nc restart file"
 
@@ -312,7 +312,7 @@ def test_two_runs_warmup_and_restart_breach(tmp_path: Path) -> None:
     assert (br_dir / "flow2d3d_rst.nc").exists(), "Restart file must be copied to breach directory"
 
     # 4. Stub Breach Run from Restart: starts from wet restart state, flood peaks, drains 75%
-    stub_ganga_tier1_output(br_dir, restart_file=rst_file, spinup_s=0.0)
+    stub_ganga_tier1_output(br_dir, restart_file=rst_file, spinup_s=0.0, simulate_pass=True)
 
     # 5. Evaluate validity gates across both runs
     gates = evaluate_validity_gates(br_dir, warmup_case_dir=wu_dir)
@@ -418,3 +418,65 @@ def test_two_runs_warmup_and_restart_breach(tmp_path: Path) -> None:
     assert post["max_depth_tif"].exists()
     assert post["arrival_time_0_05_tif"].exists()
     assert post["gates"]["all_passed"] is True
+
+
+def test_engine_water_balance_gates_real_colab_record(tmp_path: Path) -> None:
+    """Verify evaluate_validity_gates reproduces real Colab Delft3D FM water balance verbatim.
+
+    Warm-up run:
+      in 1,080,000 | out 0 | storage +1,080,000 | residual 0 m3 | engine volume_error 0.0
+      -> gate d FAIL (outflow 0% of 100 m3/s after 3 h).
+    Breach run:
+      in 7,241,809 | out 4,166,187 | storage +3,075,622 | residual 0 m3 | engine volume_error 0.0
+      -> gate f PASS. Breach excess out 2,726,187 of 5,801,809 m3 = 47.0%, outflow at end 211.5 m3/s
+      -> gate e FAIL.
+    """
+    from pravahx.engines.delft3d_fm.ganga_tier1 import (
+        evaluate_validity_gates,
+        stub_ganga_tier1_output,
+    )
+
+    case_base = tmp_path / "real_colab_record"
+    wu_dir = case_base / "01_warmup"
+    br_dir = case_base / "02_breach"
+    wu_dir.mkdir(parents=True)
+    br_dir.mkdir(parents=True)
+
+    # Stub with default simulate_pass=False generates verbatim real Colab water balance
+    stub_ganga_tier1_output(wu_dir, is_warmup_only=True, spinup_s=10800.0, simulate_pass=False)
+    rst_file = wu_dir / "flow2d3d_rst.nc"
+    stub_ganga_tier1_output(br_dir, restart_file=rst_file, spinup_s=0.0, simulate_pass=False)
+
+    gates = evaluate_validity_gates(br_dir, warmup_case_dir=wu_dir)
+
+    # Gate f: Mass balance PASS (exact to 0 m3)
+    assert gates["gate_f"] is True
+    assert gates["engine_volume_error"] == 0.0
+    assert gates["balance_error_m3"] == 0.0
+    assert gates["balance_error_pct"] == 0.0
+    assert "Delft3D engine water balance exact" in gates["gate_f_msg"]
+
+    # Gate d: Warm-up FAIL (0% outflow after 3 h)
+    assert gates["gate_d"] is False
+    assert "outflow 0% of 100 m3/s after 3 h" in gates["gate_d_msg"]
+
+    # Gate e: Drainage FAIL (47.0% < 70%, end Q 211.5 >= 200 m3/s)
+    assert gates["gate_e"] is False
+    assert gates["breach_drainage_pct"] == 47.0
+    assert "47.0%" in gates["gate_e_msg"]
+    assert "211.5 m3/s" in gates["gate_e_msg"]
+
+    # Gate c: Inflow PASS
+    assert gates["gate_c"] is True
+
+    # Gate a and b: PASS
+    assert gates["gate_a"] is True
+    assert gates["gate_b"] is True
+
+    # Overall: halted
+    assert gates["all_passed"] is False
+
+    # Stored depression / dead volume
+    assert gates["storage_change_m3"] == 3075622.0
+    assert gates["dead_storage_m3"] == 3075622.0
+    assert abs(gates["dead_storage_mcm"] - 3.075622) < 1e-5

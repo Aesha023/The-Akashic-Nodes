@@ -141,6 +141,7 @@ module = [
     "meshkernel.*",
     "ee.*",
     "simplekml.*",
+    "pandas.*",
 ]
 ignore_missing_imports = true
 

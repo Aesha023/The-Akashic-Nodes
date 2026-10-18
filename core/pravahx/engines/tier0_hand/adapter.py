@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import time
+from typing import Any
 
 import numpy as np
 import rasterio
@@ -31,8 +32,9 @@ logger = logging.getLogger(__name__)
 class Tier0HandAdapter(EngineAdapter):
     """Tier 0 (HAND) rapid inundation engine."""
 
-    def __init__(self) -> None:
+    def __init__(self, strict: bool = False) -> None:
         self.status = EngineStatus.IDLE
+        self.strict = strict
 
     @property
     def name(self) -> str:
@@ -44,17 +46,29 @@ class Tier0HandAdapter(EngineAdapter):
         self.status = EngineStatus.PREPARING
 
         # Verify required inputs are available
-        # We need a HAND raster and a peak discharge.
-        # In Phase 1, the full breach hydrograph isn't built yet, so we assume
-        # it is provided in context or we use a placeholder.
         hand_path = context.work_dir / "hand.tif"
         if not hand_path.exists():
             raise EngineError("HAND raster not found in working directory.", engine="tier0")
+
+        metadata: dict[str, Any] = {"strict": self.strict}
+
+        # Attempt to read peak discharge from breach hydrograph if provided
+        if context.breach_hydrograph_path and context.breach_hydrograph_path.exists():
+            try:
+                import pandas as pd
+
+                df = pd.read_csv(context.breach_hydrograph_path)
+                q_cols = [c for c in df.columns if "discharge" in c.lower() or c.lower() == "q"]
+                if q_cols:
+                    metadata["peak_discharge"] = float(df[q_cols[0]].max())
+            except Exception as exc:
+                logger.debug(f"Could not read peak discharge from hydrograph: {exc}")
 
         return PreparedCase(
             engine_name="tier0",
             case_dir=context.work_dir,
             input_file_hashes={"hand.tif": compute_file_hash(hand_path)},
+            metadata=metadata,
         )
 
     def run(self, prepared: PreparedCase) -> RawResult:
@@ -65,11 +79,57 @@ class Tier0HandAdapter(EngineAdapter):
         start_time = time.time()
         hand_path = prepared.case_dir / "hand.tif"
 
-        # In later phases, this comes from the breach hydrograph.
-        # For Phase 1 testing, we assume a peak discharge from config or a default.
-        peak_discharge = 5000.0  # Placeholder, should come from context/config
-        reach_slope = 0.001  # Placeholder
-        mannings_n = 0.035  # Placeholder
+        raw_peak = prepared.metadata.get("peak_discharge")
+        peak_discharge: float | None = float(raw_peak) if raw_peak is not None else None
+        raw_slope = prepared.metadata.get("reach_slope")
+        reach_slope: float | None = float(raw_slope) if raw_slope is not None else None
+        raw_n = prepared.metadata.get("mannings_n")
+        mannings_n: float | None = float(raw_n) if raw_n is not None else None
+        strict: bool = bool(prepared.metadata.get("strict", self.strict))
+
+        missing = []
+        if peak_discharge is None:
+            missing.append("peak_discharge")
+        if reach_slope is None:
+            missing.append("reach_slope")
+        if mannings_n is None:
+            missing.append("mannings_n")
+
+        defaults_used: list[str] = []
+        if missing:
+            if strict:
+                self.status = EngineStatus.FAILED
+                raise EngineError(
+                    f"Missing required Tier-0 input(s): {', '.join(missing)}. "
+                    "Silent fallbacks are disabled in strict mode; provide explicit inputs.",
+                    engine="tier0",
+                )
+            if peak_discharge is None:
+                peak_discharge = 5000.0
+                defaults_used.append("DEFAULT USED: peak_discharge=5000.0 m3/s")
+            if reach_slope is None:
+                reach_slope = 0.001
+                defaults_used.append("DEFAULT USED: reach_slope=0.001")
+            if mannings_n is None:
+                mannings_n = 0.035
+                defaults_used.append("DEFAULT USED: mannings_n=0.035")
+
+            for warning_msg in defaults_used:
+                logger.warning(f"[Tier0HandAdapter] {warning_msg}")
+
+        assert peak_discharge is not None
+        assert reach_slope is not None
+        assert mannings_n is not None
+
+        log_path = prepared.case_dir / "tier0.log"
+        with open(log_path, "a", encoding="utf-8") as log_f:
+            if defaults_used:
+                for warning_msg in defaults_used:
+                    log_f.write(f"{warning_msg}\n")
+            log_f.write(
+                f"Tier-0 solver configuration: peak_discharge={peak_discharge:.1f} m3/s, "
+                f"reach_slope={reach_slope}, mannings_n={mannings_n}\n"
+            )
 
         try:
             stage = find_stage_for_discharge(

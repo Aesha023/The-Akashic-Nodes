@@ -34,12 +34,8 @@ dualsphysics:
 # Breach defaults
 breach:
   # Froehlich (2008) ensemble spread.
-  # The ensemble is built by applying ± one standard deviation of
-  # the prediction error to the breach width and formation time.
-  # Source: Froehlich (2008), Table 2 — prediction errors.
-  # IMPORTANT: exact coefficients MUST be confirmed against the paper
-  # before coding. Placeholder until user supplies equations.
-  ensemble_sigma_multiplier: 1.0
+  # FEATURE OFF: Disabled until user supplies verified prediction error coefficients.
+  ensemble_sigma_multiplier: null  # disabled (feature off pending sourced value)
 
 # Comparison defaults
 compare:

@@ -5,10 +5,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+import pytest
 import rasterio
 
 from pravahx.engines.base import RunContext
 from pravahx.engines.tier0_hand.adapter import Tier0HandAdapter
+from pravahx.errors import EngineError
 from pravahx.export.vector import generate_exports
 
 if TYPE_CHECKING:
@@ -186,3 +188,89 @@ class TestTier0HandAdapter:
             assert geom.intersects(stream_geom), (
                 "Exported inundation patch is detached from stream channel!"
             )
+
+    def test_tier0_missing_inputs_strict_raises_error(self, tmp_path: Path) -> None:
+        """In strict mode, missing required inputs must raise a clear EngineError."""
+        hand_path = tmp_path / "hand.tif"
+        _create_dummy_hand(hand_path)
+
+        ctx = RunContext(
+            run_id="r_strict_check",
+            config=None,  # type: ignore
+            work_dir=tmp_path,
+            terrain_dir=tmp_path,
+            breach_hydrograph_path=None,
+        )
+
+        engine = Tier0HandAdapter(strict=True)
+        prepared = engine.prepare(ctx)
+
+        with pytest.raises(EngineError) as exc_info:
+            engine.run(prepared)
+
+        assert "Missing required Tier-0 input(s)" in str(exc_info.value)
+        assert "peak_discharge" in str(exc_info.value)
+
+    def test_tier0_missing_inputs_warning_and_report(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """In non-strict mode, missing inputs use defaults with logged warnings
+        and written to tier0.log.
+        """
+        import logging
+
+        caplog.set_level(logging.WARNING)
+
+        hand_path = tmp_path / "hand.tif"
+        _create_dummy_hand(hand_path)
+
+        ctx = RunContext(
+            run_id="r_warn_check",
+            config=None,  # type: ignore
+            work_dir=tmp_path,
+            terrain_dir=tmp_path,
+            breach_hydrograph_path=None,
+        )
+
+        engine = Tier0HandAdapter(strict=False)
+        prepared = engine.prepare(ctx)
+        result = engine.run(prepared)
+        assert result.status == "success"
+
+        # Check that warning was logged
+        assert "DEFAULT USED: peak_discharge=5000.0 m3/s" in caplog.text
+        assert "DEFAULT USED: reach_slope=0.001" in caplog.text
+        assert "DEFAULT USED: mannings_n=0.035" in caplog.text
+
+        # Check that tier0.log records the defaults used in the run report
+        log_content = (tmp_path / "tier0.log").read_text(encoding="utf-8")
+        assert "DEFAULT USED: peak_discharge=5000.0 m3/s" in log_content
+        assert "DEFAULT USED: reach_slope=0.001" in log_content
+        assert "DEFAULT USED: mannings_n=0.035" in log_content
+
+    def test_tier0_explicit_inputs_no_defaults_used(self, tmp_path: Path) -> None:
+        """When explicit inputs are provided, solver runs without default warnings."""
+        hand_path = tmp_path / "hand.tif"
+        _create_dummy_hand(hand_path)
+
+        ctx = RunContext(
+            run_id="r_explicit_check",
+            config=None,  # type: ignore
+            work_dir=tmp_path,
+            terrain_dir=tmp_path,
+            breach_hydrograph_path=None,
+        )
+
+        engine = Tier0HandAdapter(strict=True)
+        prepared = engine.prepare(ctx)
+        # Supply explicit parameters
+        prepared.metadata["peak_discharge"] = 3500.0
+        prepared.metadata["reach_slope"] = 0.002
+        prepared.metadata["mannings_n"] = 0.040
+
+        result = engine.run(prepared)
+        assert result.status == "success"
+
+        log_content = (tmp_path / "tier0.log").read_text(encoding="utf-8")
+        assert "DEFAULT USED:" not in log_content
+        assert "peak_discharge=3500.0 m3/s" in log_content

@@ -162,7 +162,7 @@ To verify the Delft3D FM solver against analytical dam-break hydrodynamics over 
 * **Mass:** 500,000 → 500,000 m3 in all 4 runs.
 * **Depth RMSE (m) t=10/20/30:** Base 0.055/0.055/0.059; A(epsHu 0.01) 0.053/0.047/0.051; B(n 0.005) 0.061/0.062/0.074; C(dx 2.5) 0.031/0.034/0.042. → PASS (tol 0.5). Refinement 5→2.5 m reduces RMSE ~45%: converging.
 * **Front (continuous from dam, depth >5 cm), error % of travel:** Base -32.5/-13.0/+14.6; A -22.4/-10.4/+2.8; B -19.9/+6.0/+30.6; C +9.8/+12.6/+13.5. → FAIL vs pre-registered 5%. Cause: frictionless thin-film artefact (film speeds up to 382 m/s; wall pile-up 0.90 m Base, 0.94 m C).
-* **Verdict:** depth PASS + converging; front FAIL, understood. Reference: Delestre et al. 2013 (SWASHES), arXiv:1110.0288v7, Section 4.1.2, fetched and checked.
+* **Verdict:** depth PASS + converging; front FAIL, understood. Reference: Delestre et al. 2013 (SWASHES), `https://arxiv.org/abs/1110.0288` (fetched, Section 4.1.2 Ritter solution checked).
 
 ## 9. Tier-1 Delft3D FM vs Tier-0 HAND: Model Intercomparison (Ganga Reach near Rishikesh)
 
@@ -208,7 +208,7 @@ During the real Colab execution of commit `a38a382`, validity gates were recompu
    * In the real run, base flow ($100\text{ m}^3/\text{s}$) never reached the outlet within the fixed $5,400\text{ s}$ window ($\approx 0.72\text{ Mm}^3$ of base flow was absorbed filling dry terrain depressions).
    * The fixed duration warm-up is replaced by a base-flow-only pre-run that continues until measured outlet discharge reaches $\ge 90\%$ of inflow ($Q_{\text{out,meas}} \ge 0.90 \cdot Q_{\text{in,meas}}$). The required equilibrium time is logged and reported.
    * At equilibrium, the model writes a restart file (`flow2d3d_rst.nc`), and the breach hydrograph is simulated directly from this pre-conditioned restart state.
-   * *Deltares Restart Mechanism Citation:* In Deltares D-Flow FM, hydrodynamic state restarts are written via `rstInterval = <seconds>` in the `[Output]` block of `flow2d3d.mdu`, generating `*_rst.nc` files. The subsequent run loads this state via `restartFile = <path_to_rst.nc>` in the `[Restart]` block of `flow2d3d.mdu` `[VERIFIED - Deltares D-Flow FM User Manual (2023), Section 4.3.4 'Restart files']`.
+   * *Deltares Restart Mechanism Citation:* In Deltares D-Flow FM, hydrodynamic state restarts are written via `rstInterval = <seconds>` in the `[Output]` block of `flow2d3d.mdu`, generating `*_rst.nc` files. The subsequent run loads this state via `restartFile = <path_to_rst.nc>` in the `[Restart]` block of `flow2d3d.mdu` `[UNVERIFIED: manual section not fetched]`. (Real run evidence: restart execution executed successfully in Colab run `a38a382`).
 
 4. **Run Length & Depression Dead Storage:**
    * The breach simulation continues until:
@@ -267,7 +267,7 @@ To ensure a strictly fair intercomparison, the primary Tier-1 run matches Tier-0
     $$Q_{\text{notch}}(t) = C_{wd} \cdot b(t) \cdot (h(t) - z_b(t))^{1.5} + C_{vt} \cdot z \cdot (h(t) - z_b(t))^{2.5}$$
     coupled with reservoir continuity $\frac{dV}{dt} = -Q_{\text{out}}(t)$ and hypsometric stage-storage $V(h) = V_w (h / h_b)^2$.
   * **Explicit Back-Solve:** The initial reservoir volume $V_w = 5,807,632\text{ m}^3$ was **iteratively back-solved** to achieve a routed peak breach outflow of exactly $Q_{b,\text{peak}} = 4,900.0\text{ m}^3/\text{s}$. Adding ambient base flow ($100.0\text{ m}^3/\text{s}$) produces a total peak inflow of exactly $Q_{\text{peak}} = \mathbf{5,000.0\text{ m}^3/\text{s}}$, matching the accepted Tier-0 peak discharge.
-  * *Verification Status:* Regression equations sourced from Froehlich (2008), *J. Hydraul. Eng.*, 134(12): 1708–1721 `[VERIFIED]`. Inflow volume back-solved via dynamic broad-crested weir routing to match Tier-0 peak discharge `[VERIFIED]`.
+  * *Verification Status:* Regression equations sourced from Froehlich (2008), *J. Hydraul. Eng.*, 134(12): 1708–1721 — formulas verified via USACE HEC-RAS Ch. 14 (fetched URL `https://www.hec.usace.army.mil/confluence/rasdocs/ras1dtechref/latest/performing-a-dam-break-study-with-hec-ras/`); journal itself not fetched. Inflow volume back-solved via dynamic broad-crested weir routing to match Tier-0 peak discharge `[COMPUTED: bisection back-solve to match Tier-0 peak]`.
   * *Inflow Plot:* The complete hydrograph (spin-up + breach) is plotted and archived to Google Drive as `inflow_hydrograph.png`.
 
 ### 9.3 Warm-up Spin-up & Simulation Timeline
@@ -313,7 +313,7 @@ To ensure a strictly fair intercomparison, the primary Tier-1 run matches Tier-0
 * **Numerical Settings:**
   * `MapFormat = 4` (UGRID NetCDF standard).
   * Observation cross-sections: `crsFile = cross_sections.pli` (containing `inflow_obs` just inside the domain rim and `outlet_obs` adjacent to the downstream boundary line).
-  * Restart files: `rstInterval` configured in MDU; restart execution via `[Restart] restartFile = flow2d3d_rst.nc` `[VERIFIED - Deltares D-Flow FM User Manual Section 4.3.4]`.
+  * Restart files: `rstInterval` configured in MDU; restart execution via `[Restart] restartFile = flow2d3d_rst.nc` `[UNVERIFIED: manual section not fetched; restart capability executed successfully in Colab run a38a382 as real evidence]`.
   * Time stepping: $DtUser = 10\text{ s}$, $DtMax = 2.0\text{ s}$, $CflMax = 0.7$, $epsHu = 0.01\text{ m}$.
 
 ### 9.6 Limitations
@@ -347,6 +347,37 @@ Upon Colab execution of `notebooks/PravahX_Ganga_Tier1.ipynb`, the notebook enfo
 1. **Reach Initialization & Pre-Wetting:** Initialise the reach at base-flow water level (e.g. from Tier-0 water surface) or warm up for ~10–12 h until base flow reaches the downstream boundary and passes Gate d ($Q_{\text{out}} \ge 90\text{ m}^3/\text{s}$).
 2. **Extended Breach Run Duration:** Extend the breach simulation duration (beyond 4 h) until $\ge 70\%$ of breach excess volume exits the domain and outlet discharge recedes below $2\times$ base flow ($< 200\text{ m}^3/\text{s}$), allowing Gate e to pass.
 3. **Model Intercomparison Clearance:** Cross-tier model intercomparison metrics (IoU, F-score, depth comparison) remain withheld and pending until Gate d and Gate e both pass. No IoU or F-score values are reported.
+
+---
+
+## 10. Satellite-Based SAR Flood Mapping Benchmark: Kuttanad (Kerala Floods, August 2018)
+
+> [!NOTE]
+> **Operational Status:** **RUN AND PASSED as mapping**.
+> **Subsystem Distinction:** This validates the Earth Engine SAR automated processing pipeline (F08). **Feature F07 (simulation vs. observed scoring)** remains **NOT RUN** because no hydrodynamic model simulation (Tier-1 or Tier-0) has been executed over this domain to compute spatial contingency metrics (IoU, Critical Success Index) against the satellite raster.
+
+### 10.1 Real Execution Record
+* **Target Geographic AOI:** Kuttanad / Alappuzha low-lying agricultural polder region, Kerala, India (`EPSG:4326` bounding box `[76.35, 9.30, 76.60, 9.60]`).
+* **Sensor & Data:** Copernicus Sentinel-1 C-band Synthetic Aperture Radar (SAR), Interferometric Wide (IW) swath mode, Ground Range Detected (GRD), dual polarization (VV + VH), 10 m spatial resolution, descending relative orbit 54.
+* **Temporal Window:**
+  * Flood acquisition: **21 August 2018** (capturing peak inundation lingering in coastal polders following peak precipitation of 15–18 August).
+  * Pre-monsoon baseline: **23 May 2018** (dry-season reference to distinguish permanent water bodies from event-induced flooding).
+* **Processing Workflow:** UN-SPIDER recommended practice:
+  1. Radiometric calibration and thermal noise removal via GEE collection.
+  2. Lee speckle filtering (7x7 kernel).
+  3. Log-ratio backscatter difference ($\Delta \sigma^0 = \sigma^0_{\text{flood}} - \sigma^0_{\text{baseline}}$ in VV polarization).
+  4. Global Otsu thresholding combined with local histogram valley detection.
+  5. HydroSHEDS 5% slope masking (Copernicus DEM) to exclude false terrain shadows in hilly regions.
+  6. Connected component spatial filtering ($> 8$ connected pixels) to eliminate isolated speckle noise.
+
+### 10.2 Empirical Mapping Results
+* **Mapped Inundation Area:** **$40.52\text{ km}^2$** ($4,052\text{ ha}$) of inundated open paddy and lowland floodplains.
+  * *(Note on preliminary values: An earlier unmasked run yielded $38.94\text{ km}^2$; the $40.52\text{ km}^2$ extent is the verified output following the full HydroSHEDS 5% slope and connected-component spatial filter).*
+* **Artifact Deliverables:** Exported GeoTIFF and vector masks (`kuttanad_flood_extent.tif`, `kuttanad_flood_extent.kml`).
+* **Qualitative Reference Comparison:**
+  * Consistent with published extent patterns in Tiwari et al. (2020), *PLOS ONE*, `https://doi.org/10.1371/journal.pone.0237324`.
+  * Spatial distribution matches emergency flood maps published under International Charter Space and Major Disasters (Activation 582, 2018) and NRSC / ReliefWeb Kerala Inundated Areas Map (18 August 2018).
+* **Verification Status:** **RUN AND PASSED as mapping**. Simulation vs. observation hindcast scoring (**F07**) remains **NOT RUN**.
 
 
 

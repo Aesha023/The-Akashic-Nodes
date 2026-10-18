@@ -80,6 +80,9 @@ logs/
 frontend/src/api/generated/
 docs/API.md
 test_phase1_output/
+scratch_test.nc
+test.mdu
+*.mdu
 patch.diff
 artifacts/
 runs/
@@ -89,4 +92,5 @@ dualsphysics_results/
 CaseDamBreak_out/
 needs_human_check/
 scratch/
+
 

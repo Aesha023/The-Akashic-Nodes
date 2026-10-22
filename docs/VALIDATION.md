@@ -391,9 +391,12 @@ Upon Colab execution of `notebooks/PravahX_Ganga_Tier1.ipynb`, the notebook enfo
 * **Target Geographic Reach:** Rishikesh reach, Uttarakhand, India; AOI bounds `(78.30, 30.10, 78.35, 30.15)` in `EPSG:32644` (UTM 44N).
 * **Hydraulic Engine:** Height Above Nearest Drainage (HAND) with synthetic Manning normal-depth rating curve ($n = 0.035$, reach bed slope $S_0 = 0.001$, peak discharge $Q = 5,000.0\text{ m}^3/\text{s}$).
 * **Inundation Extent:** **$1.72\text{ km}^2$** ($1,719,000\text{ m}^2$, $171.9\text{ ha}$, 1,918 inundated 30 m grid cells).
-* **Water Depths:**
+* **Water Depths (Over All 1,918 Wet Cells):**
   * Maximum depth: **$7.73\text{ m}$** ($7.730\text{ m}$ at UTM `243449.5, 3337780.9`, lon $78.33662$, lat $30.14439$).
   * Mean water depth: **$6.31\text{ m}$** ($6.309\text{ m}$).
+  * Median water depth: **$7.23\text{ m}$**.
+  * 10th percentile (P10) depth: **$3.12\text{ m}$**.
+  * 90th percentile (P90) depth: **$7.73\text{ m}$**.
   * Minimum positive depth: **$0.005\text{ m}$**.
 * **Cloud-Optimised GeoTIFF Conversion:**
   * File: `data/ganga_inputs/tier0_max_depth_cog.tif` (converted via `rio_cogeo` deflate profile, internally tiled $256\times 256$, overviews, `BIGTIFF=IF_SAFER`).
@@ -417,19 +420,19 @@ Upon Colab execution of `notebooks/PravahX_Ganga_Tier1.ipynb`, the notebook enfo
 * **Empirical Exposure Metrics:**
   * Total population within 5x5 km AOI: **27,390.1 people**.
   * Total population exposed within inundation envelope: **2,696.5 people** (rounded: **2,696 people**).
-  * Depth class 0.0–0.5 m `[UNVERIFIED: depth class limit]`: **230.3 people** (8.5%).
-  * Depth class 0.5–1.5 m `[UNVERIFIED: depth class limit]`: **253.3 people** (9.4%).
-  * Depth class > 1.5 m `[UNVERIFIED: depth class limit]`: **2,212.9 people** (82.1%).
+  * Depth class 0.0–0.5 m `[UNVERIFIED]`: **230.3 people** (8.5%).
+  * Depth class 0.5–1.5 m `[UNVERIFIED]`: **253.3 people** (9.4%).
+  * Depth class > 1.5 m `[UNVERIFIED]`: **2,212.9 people** (82.1%).
 
 ### 11.3 Asset Exposure & Monetary Loss Status (OpenStreetMap)
 * **Source:** OpenStreetMap direct query via Overpass / OSM API (`https://api.openstreetmap.org/api/0.6/map?bbox=78.30,30.10,78.35,30.15`).
 * **Snapshot Timestamp:** **2026-10-22T12:26:58Z**.
 * **Attribution:** "© OpenStreetMap contributors, ODbL 1.0 license (`https://www.openstreetmap.org/copyright`)".
-* **Road Network Exposure:**
+* **Road Network Exposure (Unified Edge Severance Rule, Max Depth > 0.30 m):**
   * Total road network in AOI: **159.54 km** (500 features).
-  * Flooded road length: **5.68 km** (3.6% of total road length).
+  * Flooded road length: **17.34 km** (65 features, 10.9% of total road network).
 * **Building Structures Exposure:**
-  * Total mapped building polygons in AOI: **93 buildings**.
+  * Total mapped building polygons in AOI: **93 buildings** (OSM building coverage incomplete in steep gorge terrain).
   * Flooded building polygons intersecting envelope: **5 buildings** (5.4%).
 * **Critical Facilities (Hospitals, Clinics, Schools, Police):**
   * Total critical infrastructure points/polygons in AOI: **28 facilities** (including Muni ki reti police thana, Laxman Jhula Government Hospital, Sri Krishna Sewa Ashram Hospital, Nirmal Ashram Hospital, clinics, and ashram schools).
@@ -437,19 +440,23 @@ Upon Colab execution of `notebooks/PravahX_Ganga_Tier1.ipynb`, the notebook enfo
 * **Monetary Loss Status:** **NOT RUN**. No peer-reviewed, locally calibrated depth-damage function for Uttarakhand riverine buildings was fetched. Exposure counts are reported as physical units only without unverified financial multiplier speculation.
 
 ### 11.4 Evacuation Network Routing
-* **Routable Graph:** OSMnx road graph for the AOI containing **1,128 nodes** and **3,638 edges**.
-* **Vehicle Impassable Water Depth Cutoff:** $h > 0.30\text{ m}$ `[UNVERIFIED: standard literature passenger vehicle wading threshold]`.
-* **Graph Severance:** **927 of 3,638 edges** severed by water depth $> 0.30\text{ m}$.
-* **Origin-Destination Routing (Dijkstra Shortest Path):**
-  * Evaluated origins: 20 flood-affected building/settlement cluster nodes.
-  * Destination: Nearest reachable connected safe node on high ground outside the envelope.
-  * Reachable origins: **1 origin** (safe egress route length: **108.8 m**).
-  * Unreachable origins: **19 origins** (riverfront road network severed by deep canyon inundation, isolating low-lying structures from vehicle egress).
-* **Route Export Deliverables:** `data/ganga_inputs/evacuation_routes.geojson` (SHA-256 `22fc11c8e56dfe9c11880e75702d48b91be5f4dbfeae712461acc66ce52976e9`).
+* **Routable Graph:** OSMnx road graph for the AOI containing **1,128 nodes** and **3,638 edges** (985.47 km directed).
+* **Vehicle Impassable Water Depth Cutoff:** $h > 0.30\text{ m}$ `[UNVERIFIED]`.
+* **Graph Severance:** **930 of 3,638 edges** severed by water depth $> 0.30\text{ m}$ (total severed edge length: **311.84 km**, 31.64%).
+* **Origin-Destination Routing (Dijkstra Shortest Path on Non-Severed Graph):**
+  * **Flooded Building Origins (5 buildings snapped to road access nodes):**
+    - Bldg 46: lon 78.32920, lat 30.12662, bldg depth 7.73 m -> **UNREACHABLE** (access road severed).
+    - Bldg 48: lon 78.32904, lat 30.12569, bldg depth 7.23 m -> **UNREACHABLE** (access road severed).
+    - Bldg 55: lon 78.31230, lat 30.12315, bldg depth 5.23 m -> **UNREACHABLE** (access road severed).
+    - Bldg 57: lon 78.32980, lat 30.12440, bldg depth 0.00 m -> **REACHABLE** (route length: **8.0 m** to safe node 3194743738).
+    - Bldg 80: lon 78.31251, lat 30.12053, bldg depth 0.00 m -> **REACHABLE** (route length: **108.8 m** to safe node 1185803319).
+    - Summary: **2 reachable origins, 3 unreachable origins**.
+  * **Inundated Graph Nodes (186 nodes with depth > 0):** **5 reachable, 181 unreachable**.
+* **Route Export Deliverables:** `data/ganga_inputs/evacuation_routes.geojson` (SHA-256 `38eaddceaac7564acd483a80b1c2640d3604ab00c1c8a2801a8dfef43c244a7f`).
 
 ### 11.5 Deliverables Manifest & Executive Brief
 * **Downloads Manifest:** `data/ganga_inputs/manifest.json` and `artifacts/manifest.json` containing verified SHA-256 hashes, file sizes, and descriptions for all deliverables (GeoTIFF, COG, SHP, KML, GeoJSON, and PDF).
-* **One-Page PDF Brief:** `artifacts/ganga_tier0_brief.pdf` (SHA-256 `90b890bbe659d5b1ac7dbcb9694fc57a702ed93378fa37107291aea754570b32`, size 328,800 bytes, exactly 1 page) incorporating:
+* **One-Page PDF Brief:** `artifacts/ganga_tier0_brief.pdf` (SHA-256 `a1580e27e1bf5e1b413f50afd505add77ff0d0ec11f59ac1d86ef753d5adfaf7`, size 328,796 bytes, exactly 1 page) incorporating:
   1. Prominent "HYPOTHETICAL SCENARIO — TIER-0 SCREENING ONLY" banner.
   2. High-resolution terrain, road, and inundation map (`data/ganga_inputs/ganga_tier0_map.png`).
   3. Complete traceable data provenance, hydraulic numbers, population classes, asset exposure, and evacuation statistics.

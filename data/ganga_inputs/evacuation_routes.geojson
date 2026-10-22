@@ -4,6 +4,31 @@
     {
       "type": "Feature",
       "properties": {
+        "origin_type": "flooded_building",
+        "origin_id": 57,
+        "origin_node": 4045901394,
+        "safe_node": 3194743738,
+        "length_m": 8.0
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            78.3297967,
+            30.124402399999997
+          ],
+          [
+            78.3297346,
+            30.124450099999994
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "origin_type": "flooded_building",
+        "origin_id": 80,
         "origin_node": 1185803285,
         "safe_node": 1185803319,
         "length_m": 108.8
@@ -13,10 +38,10 @@
         "coordinates": [
           [
             78.3125111,
-            30.1205256
+            30.120525599999986
           ],
           [
-            78.31203,
+            78.31203000000001,
             30.1196398
           ]
         ]

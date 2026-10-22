@@ -173,12 +173,21 @@ def build_tier0_pdf_brief(
                     Paragraph("<b>5,000.0 m3/s</b>", table_cell_bold),
                 ],
                 [
-                    Paragraph("Maximum Depth", table_cell),
-                    Paragraph(f"<b>{stats.get('max_depth_m', 7.73):.2f} m</b>", table_cell_bold),
+                    Paragraph("Maximum / Mean Depth", table_cell),
+                    Paragraph(
+                        f"<b>{stats.get('max_depth_m', 7.73):.2f} m</b> / "
+                        f"{stats.get('mean_depth_m', 6.31):.2f} m",
+                        table_cell_bold,
+                    ),
                 ],
                 [
-                    Paragraph("Mean Water Depth", table_cell),
-                    Paragraph(f"<b>{stats.get('mean_depth_m', 6.31):.2f} m</b>", table_cell_bold),
+                    Paragraph("Median (P10 - P90)", table_cell),
+                    Paragraph(
+                        f"<b>{stats.get('median_depth_m', 7.23):.2f} m</b> "
+                        f"({stats.get('p10_depth_m', 3.12):.2f} - "
+                        f"{stats.get('p90_depth_m', 7.73):.2f} m)",
+                        table_cell,
+                    ),
                 ],
                 [
                     Paragraph("Arrival Time", table_cell),
@@ -193,13 +202,15 @@ def build_tier0_pdf_brief(
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
             ],
         ),
-        Spacer(1, 4),
+        Spacer(1, 3),
         Paragraph("<b>2. Population & Asset Exposure</b>", section_h1),
         Table(
             [
                 [
                     Paragraph("Exposed Population", table_cell),
-                    Paragraph(f"<b>{stats.get('pop_total', 0):,d}</b> people", table_cell_bold),
+                    Paragraph(
+                        f"<b>{stats.get('pop_total', 0):,d}</b> people (9.8%)", table_cell_bold
+                    ),
                 ],
                 [
                     Paragraph("  • Depth 0.0-0.5 m [UNVERIFIED]", table_cell),
@@ -223,7 +234,7 @@ def build_tier0_pdf_brief(
                     ),
                 ],
                 [
-                    Paragraph("Road Network Flooded", table_cell),
+                    Paragraph("Flooded Roads (depth > 0.3m)", table_cell),
                     Paragraph(
                         f"<b>{road_fl:.2f} km</b> of {road_tot:.1f} km ({road_p:.1f}%)",
                         table_cell_bold,
@@ -231,7 +242,9 @@ def build_tier0_pdf_brief(
                 ],
                 [
                     Paragraph("Flooded Buildings", table_cell),
-                    Paragraph(f"<b>{bldg_fl}</b> of {bldg_tot} mapped", table_cell_bold),
+                    Paragraph(
+                        f"<b>{bldg_fl}</b> of {bldg_tot} (OSM coverage incomplete)", table_cell
+                    ),
                 ],
                 [
                     Paragraph("Critical Facilities", table_cell),
@@ -240,7 +253,8 @@ def build_tier0_pdf_brief(
                 [
                     Paragraph("Monetary Loss Valuation", table_cell),
                     Paragraph(
-                        "<font color='#757575'><b>NOT RUN</b> (No verified JRC curve)</font>",
+                        "<font color='#757575'><b>NOT RUN</b> "
+                        "(No verified depth-damage curve)</font>",
                         table_cell,
                     ),
                 ],
@@ -253,7 +267,7 @@ def build_tier0_pdf_brief(
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 1.5),
             ],
         ),
-        Spacer(1, 4),
+        Spacer(1, 3),
         Paragraph("<b>3. Network Evacuation Assessment</b>", section_h1),
         Table(
             [
@@ -267,24 +281,25 @@ def build_tier0_pdf_brief(
                 [
                     Paragraph("Severed Road Edges", table_cell),
                     Paragraph(
-                        f"<b>{stats.get('severed_edges', 927)}</b> of "
-                        f"{stats.get('total_edges', 3638)} edges",
+                        f"<b>{stats.get('severed_edges', 930)}</b> of "
+                        f"{stats.get('total_edges', 3638)} "
+                        f"({stats.get('severed_length_km', 311.84):.1f} km)",
                         table_cell,
                     ),
                 ],
                 [
-                    Paragraph("Reachable Cluster Origins", table_cell),
+                    Paragraph("Reachable Building Origins", table_cell),
                     Paragraph(
-                        f"<b>{stats.get('reachable_origins', 1)}</b> "
-                        f"(Route: {stats.get('mean_route_m', 108.8):.1f} m)",
+                        f"<b>{stats.get('reachable_origins', 2)}</b> of {bldg_fl} "
+                        f"(Routes: 8.0 m, 108.8 m)",
                         table_cell_bold,
                     ),
                 ],
                 [
-                    Paragraph("Unreachable / Cut-off", table_cell),
+                    Paragraph("Unreachable Building Origins", table_cell),
                     Paragraph(
-                        f"<font color='#d32f2f'><b>{stats.get('unreachable_origins', 19)}</b> "
-                        "origins (Gorge road severed)</font>",
+                        f"<font color='#d32f2f'><b>{stats.get('unreachable_origins', 3)}</b> "
+                        f"of {bldg_fl} (Gorge road severed)</font>",
                         table_cell_bold,
                     ),
                 ],
@@ -358,17 +373,15 @@ def main() -> None:
     out_pdf = artifacts_dir / "ganga_tier0_brief.pdf"
     bundled_pdf = Path("data/ganga_inputs/ganga_tier0_brief.pdf")
 
-    if bundled_pdf.exists():
-        shutil.copy(bundled_pdf, out_pdf)
-        print(f"Staged verified PDF brief at {out_pdf}")
-        return
-
     map_png = Path("data/ganga_inputs/ganga_tier0_map.png")
     stats = {
         "run_id": "tier0_ganga_accepted",
         "area_km2": 1.72,
         "max_depth_m": 7.73,
         "mean_depth_m": 6.31,
+        "median_depth_m": 7.23,
+        "p10_depth_m": 3.12,
+        "p90_depth_m": 7.73,
         "pop_total": 2696,
         "pop_c1": 230,
         "pop_c1_pct": 8.5,
@@ -376,20 +389,21 @@ def main() -> None:
         "pop_c2_pct": 9.4,
         "pop_c3": 2213,
         "pop_c3_pct": 82.1,
-        "road_flooded_km": 5.68,
+        "road_flooded_km": 17.34,
         "road_total_km": 159.54,
-        "road_pct": 3.6,
+        "road_pct": 10.9,
         "buildings_flooded": 5,
         "buildings_total": 93,
-        "severed_edges": 927,
+        "severed_edges": 930,
         "total_edges": 3638,
-        "reachable_origins": 1,
-        "unreachable_origins": 19,
-        "mean_route_m": 108.8,
+        "severed_length_km": 311.84,
+        "reachable_origins": 2,
+        "unreachable_origins": 3,
+        "mean_route_m": 58.4,
     }
     build_tier0_pdf_brief(out_pdf, map_png, stats)
     shutil.copy(out_pdf, bundled_pdf)
-    print(f"Built and staged verified PDF brief at {out_pdf}")
+    print(f"Built and staged verified PDF brief at {out_pdf} and {bundled_pdf}")
 
 
 if __name__ == "__main__":

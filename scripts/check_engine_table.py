@@ -135,6 +135,8 @@ def main() -> int:
             ("1.72", "Inundation Area (km2)"),
             ("7.73", "Max Depth (m)"),
             ("6.31", "Mean Depth (m)"),
+            ("7.23", "Median Depth (m)"),
+            ("3.12", "P10 Depth (m)"),
             ("5,000.0", "Peak Flow (m3/s)"),
             ("0.035", "Manning n"),
             ("27,390.1", "Total AOI population"),
@@ -143,11 +145,12 @@ def main() -> int:
             ("253.3", "Depth class 0.5-1.5m population"),
             ("2,212.9", "Depth class >1.5m population"),
             ("159.54", "Total road network (km)"),
-            ("5.68", "Flooded roads (km)"),
+            ("17.34", "Flooded roads (km)"),
             ("93", "Total buildings in AOI"),
             ("5", "Flooded buildings"),
             ("28", "Critical facilities in AOI"),
-            ("927", "Severed road edges"),
+            ("930", "Severed road edges"),
+            ("311.84", "Severed graph edge length (km)"),
             ("108.8", "Reachable route length (m)"),
         ]
         for num, desc in sec11_expected_numbers:
@@ -171,7 +174,7 @@ def main() -> int:
                 "worldpop_ganga_32644.tif",
             ),
             (
-                "22fc11c8e56dfe9c11880e75702d48b91be5f4dbfeae712461acc66ce52976e9",
+                "38eaddceaac7564acd483a80b1c2640d3604ab00c1c8a2801a8dfef43c244a7f",
                 "evacuation_routes.geojson",
             ),
             (
@@ -179,7 +182,7 @@ def main() -> int:
                 "tier0_envelope.geojson",
             ),
             (
-                "90b890bbe659d5b1ac7dbcb9694fc57a702ed93378fa37107291aea754570b32",
+                "a1580e27e1bf5e1b413f50afd505add77ff0d0ec11f59ac1d86ef753d5adfaf7",
                 "ganga_tier0_brief.pdf",
             ),
         ]

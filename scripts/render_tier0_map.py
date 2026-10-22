@@ -1,5 +1,8 @@
 """Render high-resolution map of real Tier-0 Ganga inundation for the PDF brief."""
 
+import sys
+from pathlib import Path
+
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,6 +17,10 @@ depth_path = "data/ganga_inputs/tier0_max_depth.tif"
 env_path = "data/ganga_inputs/tier0_envelope.shp"
 osm_path = "data/ganga_inputs/osm_aoi.osm"
 out_png = "data/ganga_inputs/ganga_tier0_map.png"
+
+if Path(out_png).exists() and not Path(osm_path).exists():
+    print(f"Map image {out_png} already present; skipping re-render (raw OSM file not committed).")
+    sys.exit(0)
 
 # Read DEM
 with rasterio.open(dem_path) as src_dem:

@@ -111,15 +111,93 @@ def main() -> int:
 
         print()
 
+    # Section 11: Demo Pipeline on Tier-0 Ganga Check
+    print("Validating Section 11 ('Demo pipeline on Tier-0 Ganga') in docs/VALIDATION.md...\n")
+    if "## 11. Demo Pipeline on Tier-0 Ganga" not in validation_content:
+        errors.append(
+            "Section 11 ('Demo Pipeline on Tier-0 Ganga') missing from docs/VALIDATION.md"
+        )
+    else:
+        sec11_text = validation_content.split("## 11. Demo Pipeline on Tier-0 Ganga")[1]
+        # Mandatory banner check
+        if "hypothetical scenario, tier-0 screening" not in sec11_text.lower():
+            errors.append(
+                "Section 11 missing mandatory label 'hypothetical scenario, Tier-0 screening'"
+            )
+        else:
+            print(
+                "  [OK] Section 11 contains mandatory "
+                "'hypothetical scenario, Tier-0 screening' label"
+            )
+
+        # Verify key numbers in Section 11
+        sec11_expected_numbers = [
+            ("1.72", "Inundation Area (km2)"),
+            ("7.73", "Max Depth (m)"),
+            ("6.31", "Mean Depth (m)"),
+            ("5,000.0", "Peak Flow (m3/s)"),
+            ("0.035", "Manning n"),
+            ("27,390.1", "Total AOI population"),
+            ("2,696", "Total exposed population"),
+            ("230.3", "Depth class 0.0-0.5m population"),
+            ("253.3", "Depth class 0.5-1.5m population"),
+            ("2,212.9", "Depth class >1.5m population"),
+            ("159.54", "Total road network (km)"),
+            ("5.68", "Flooded roads (km)"),
+            ("93", "Total buildings in AOI"),
+            ("5", "Flooded buildings"),
+            ("28", "Critical facilities in AOI"),
+            ("927", "Severed road edges"),
+            ("108.8", "Reachable route length (m)"),
+        ]
+        for num, desc in sec11_expected_numbers:
+            if num not in sec11_text:
+                errors.append(f"Section 11: Number '{num}' ({desc}) missing from text")
+            else:
+                print(f"  [OK] Section 11 verified number '{num}' ({desc})")
+
+        # Verify SHA-256 hashes
+        expected_hashes = [
+            (
+                "d3168ae8ae742171cecd2abac607fd80d36e882e0ffb32e414f721202c900194",
+                "tier0_max_depth_cog.tif",
+            ),
+            (
+                "4fc54bcefe4e23c5f0638f775288375297091d5719d355d85f0820efe9199dbc",
+                "Raw WorldPop 100m",
+            ),
+            (
+                "5e8a8702c65299f4349e6ae738754ec8e976f0f141c21ece3dc961466f697a26",
+                "worldpop_ganga_32644.tif",
+            ),
+            (
+                "dd50d9183a97ec81338f9f2f0deba3955a1b38c78d2beeee3902b6ca46181ff6",
+                "evacuation_routes.geojson",
+            ),
+            (
+                "2cca3b08f6430cacd717a5dc10cee23eee06f280c3f43f0aac399df5408a3d1b",
+                "tier0_envelope.geojson",
+            ),
+            (
+                "90b890bbe659d5b1ac7dbcb9694fc57a702ed93378fa37107291aea754570b32",
+                "ganga_tier0_brief.pdf",
+            ),
+        ]
+        for h_val, h_desc in expected_hashes:
+            if h_val not in sec11_text:
+                errors.append(f"Section 11: Hash '{h_val}' ({h_desc}) missing from text")
+            else:
+                print(f"  [OK] Section 11 verified hash '{h_val[:12]}...' ({h_desc})")
+
     if errors:
-        print(f"FAILED: {len(errors)} error(s) found:")
+        print(f"\nFAILED: {len(errors)} error(s) found:")
         for err in errors:
             print(f"  [FAIL] {err}")
         return 1
 
     print(
-        "PASSED: All numeric values in BACKEND_STATUS.md engine table appear verbatim "
-        "in VALIDATION.md."
+        "\nPASSED: All numeric values in BACKEND_STATUS.md and VALIDATION.md Section 11 "
+        "are consistent and verified."
     )
     return 0
 

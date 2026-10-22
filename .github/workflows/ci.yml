@@ -88,6 +88,19 @@ jobs:
           name: hec-ras-breach-hydrograph
           path: artifacts/hec_ras_hydrograph.png
 
+      - name: Generate Tier-0 Demo Map and PDF Brief
+        run: |
+          python scripts/render_tier0_map.py
+          python scripts/generate_pdf_brief.py
+          python scripts/package_tier0_demo.py
+
+      - name: Upload Tier-0 PDF Brief artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ganga-tier0-screening-brief
+          path: artifacts/ganga_tier0_brief.pdf
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4

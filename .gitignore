@@ -53,6 +53,10 @@ docker-compose.override.yml
 data/*
 !data/README.md
 !data/samples/
+!data/ganga_inputs/
+ind_pop_test.tif
+ind_ppp_*.tif
+*.osm
 
 # ── Engine outputs ──
 *.nc

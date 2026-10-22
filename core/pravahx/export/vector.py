@@ -31,29 +31,33 @@ def export_cog(
 ) -> Path:
     """Export a raster as a Cloud Optimised GeoTIFF (COG)."""
     logger.info(f"Exporting COG to {out_path}")
+    try:
+        from rio_cogeo.cogeo import cog_translate
+        from rio_cogeo.profiles import cog_profiles
 
-    # In a full implementation we would build overviews and set block sizes.
-    # For Phase 1 we use rioxarray or rasterio with COG profile if available.
-    # Since we use rasterio without gdal tools installed directly on the path,
-    # we can use a basic tiled and deflated tif, which is a poor-man's COG.
+        profile = cog_profiles.get("deflate")  # type: ignore[no-untyped-call]
+        profile.update(dict(BIGTIFF="IF_SAFER"))
+        cog_translate(input_path, out_path, profile, in_memory=True, quiet=True)
+        return out_path
+    except ImportError:
+        logger.warning("rio-cogeo not installed, falling back to basic tiled GeoTIFF")
+        with rasterio.open(input_path) as src:
+            meta = src.meta.copy()
+            data = src.read()
 
-    with rasterio.open(input_path) as src:
-        meta = src.meta.copy()
-        data = src.read()
+        meta.update(
+            driver="GTiff",
+            tiled=True,
+            blockxsize=256,
+            blockysize=256,
+            compress="deflate",
+            interleave="pixel",
+        )
 
-    meta.update(
-        driver="GTiff",
-        tiled=True,
-        blockxsize=256,
-        blockysize=256,
-        compress="deflate",
-        interleave="pixel",
-    )
+        with rasterio.open(out_path, "w", **meta) as dest:
+            dest.write(data)
 
-    with rasterio.open(out_path, "w", **meta) as dest:
-        dest.write(data)
-
-    return out_path
+        return out_path
 
 
 def _vectorise_raster(

@@ -1,0 +1,26 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "origin_node": 1185803285,
+        "safe_node": 1185803319,
+        "length_m": 108.8
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            78.3125111,
+            30.1205256
+          ],
+          [
+            78.31203,
+            30.1196398
+          ]
+        ]
+      }
+    }
+  ]
+}

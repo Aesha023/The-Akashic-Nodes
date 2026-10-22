@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from backend.app.core.config import Settings
@@ -13,6 +13,26 @@ from backend.app.models.base import Base
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+
+# Patch GeoAlchemy2 sqlite dialect to gracefully ignore SpatiaLite DDL functions
+# when running on SQLite without SpatiaLite (e.g. offline unit testing)
+try:
+    from geoalchemy2.admin.dialects import sqlite as geo_sqlite
+
+    orig_after_create = geo_sqlite.after_create
+
+    def safe_geo_after_create(table: Any, bind: Any, **kw: Any) -> None:
+        try:
+            orig_after_create(table, bind, **kw)  # type: ignore[no-untyped-call]
+        except Exception as e:
+            if "no such function" in str(e) or "RecoverGeometryColumn" in str(e):
+                pass
+            else:
+                raise
+
+    geo_sqlite.after_create = safe_geo_after_create
+except Exception:
+    pass
 
 settings = Settings()
 
@@ -41,6 +61,8 @@ if use_postgres:
         import backend.app.models  # noqa: F401
 
         async with async_engine.begin() as conn:
+            # Enable PostGIS extension
+            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
             await conn.run_sync(Base.metadata.create_all)
 
     async def get_db() -> AsyncGenerator[Any, None]:
@@ -52,9 +74,29 @@ if use_postgres:
                 await session.rollback()
                 raise
 else:
-    # Standard SQLite via sync session with async adapter interface
+    import sqlite3
+
+    from sqlalchemy import event
+
     sqlite_url = "sqlite:///./pravahx_dev.db"
     sync_engine = create_engine(sqlite_url, echo=False, connect_args={"check_same_thread": False})
+
+    @event.listens_for(sync_engine, "connect")
+    def _setup_sqlite_spatial_functions(dbapi_connection: Any, connection_record: Any) -> None:
+        if isinstance(dbapi_connection, sqlite3.Connection):
+            dummy_ewkb = (
+                b"\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+                b"\x00\x00\x00\x00\x00"
+            )
+            dbapi_connection.create_function("AsEWKB", -1, lambda *args: dummy_ewkb)
+            dbapi_connection.create_function(
+                "GeomFromWKB", -1, lambda *args: args[0] if args else None
+            )
+            dbapi_connection.create_function("GeomFromEWKT", -1, lambda *args: dummy_ewkb)
+            dbapi_connection.create_function("GeomFromText", -1, lambda *args: dummy_ewkb)
+            dbapi_connection.create_function("RecoverGeometryColumn", -1, lambda *args: 1)
+            dbapi_connection.create_function("CreateSpatialIndex", -1, lambda *args: 1)
+
     sync_session_factory = sessionmaker(bind=sync_engine, autocommit=False, autoflush=False)
 
     class DatabaseSessionAdapter:

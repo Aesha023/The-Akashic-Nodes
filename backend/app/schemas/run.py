@@ -11,6 +11,7 @@ from pydantic import BaseModel
 class RunCreate(BaseModel):
     """Payload to dispatch a new simulation run."""
 
+    scenario_id: str | None = None
     resume: bool = True
 
 
@@ -22,6 +23,7 @@ class RunResponse(BaseModel):
     status: str
     progress_percent: float
     current_stage: str
+    is_valid: bool = True
     error_message: str | None = None
     created_at: datetime.datetime
     finished_at: datetime.datetime | None = None

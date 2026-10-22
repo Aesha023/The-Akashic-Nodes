@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import datetime
+from typing import Any
 
-from sqlalchemy import DateTime, Float, ForeignKey, String, Text
+from geoalchemy2 import Geometry
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.models.base import Base
@@ -25,6 +27,11 @@ class Run(Base):
     manifest_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     work_dir: Mapped[str] = mapped_column(String(512), nullable=False)
+    is_valid: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    envelope_geom: Mapped[Any | None] = mapped_column(
+        Geometry(geometry_type="GEOMETRY", srid=4326, spatial_index=True),
+        nullable=True,
+    )
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.datetime.now(datetime.UTC),

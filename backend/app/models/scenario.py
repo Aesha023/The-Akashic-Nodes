@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import datetime
+from typing import Any
 
-from sqlalchemy import DateTime, String, Text
+from geoalchemy2 import Geometry
+from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.models.base import Base
 
 
 class Scenario(Base):
-    """Scenario record storing schema validation and JSON definitions."""
+    """Scenario record storing schema validation, geometry AOI, and JSON definitions."""
 
     __tablename__ = "scenarios"
 
@@ -21,6 +23,12 @@ class Scenario(Base):
     failure_mode: Mapped[str | None] = mapped_column(String(64), nullable=True)
     config_json: Mapped[str] = mapped_column(Text, nullable=False)
     created_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    parent_scenario_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    aoi_geom: Mapped[Any | None] = mapped_column(
+        Geometry(geometry_type="GEOMETRY", srid=4326, spatial_index=True),
+        nullable=True,
+    )
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.datetime.now(datetime.UTC),

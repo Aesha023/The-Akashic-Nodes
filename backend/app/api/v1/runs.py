@@ -1,15 +1,25 @@
-"""Simulation Run and artifact dispatch endpoints (Phase 7)."""
+"""Simulation Run and artifact dispatch endpoints (Phase 7 & B1 Platform Core)."""
 
 from __future__ import annotations
 
+import asyncio
 import datetime
 import json
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from fastapi.responses import FileResponse
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Response,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import func, select
 
 from backend.app.core.auth import get_current_user, get_optional_current_user, require_analyst
@@ -42,10 +52,47 @@ def _run_to_response(r: Run) -> RunResponse:
         status=r.status,
         progress_percent=r.progress_percent,
         current_stage=r.current_stage,
+        is_valid=r.is_valid,
         error_message=r.error_message,
         created_at=r.created_at,
         finished_at=r.finished_at,
         manifest=manifest_dict,
+    )
+
+
+def _check_result_protection(run: Run) -> None:
+    """Enforce Result Protection Gate: failed or invalid runs never serve results."""
+    if run.status != "succeeded" or not run.is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Results unavailable: run '{run.id}' has status '{run.status}' "
+                f"(valid: {run.is_valid}). Only valid succeeded runs can serve results."
+            ),
+        )
+
+
+@router.post(
+    "/runs",
+    response_model=RunResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def create_run(
+    payload: RunCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_analyst),
+) -> RunResponse:
+    """Create and dispatch a simulation run directly via /runs."""
+    if not payload.scenario_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="scenario_id is required in request payload.",
+        )
+    return await dispatch_run(
+        scenario_id=payload.scenario_id,
+        payload=payload,
+        db=db,
+        current_user=current_user,
     )
 
 
@@ -85,12 +132,12 @@ async def dispatch_run(
         status="running",
         progress_percent=0.0,
         current_stage="initializing",
+        is_valid=True,
         work_dir=str(work_dir),
     )
     db.add(run)
     await db.flush()
 
-    # In local execution / tests, execute synchronously via orchestrator
     try:
         config = ScenarioConfig.model_validate_json(scenario.config_json)
         orchestrator = WorkflowOrchestrator(work_dir=work_dir)
@@ -108,6 +155,167 @@ async def dispatch_run(
 
     await db.flush()
     return _run_to_response(run)
+
+
+@router.post("/runs/{run_id}/cancel", response_model=RunResponse)
+async def cancel_run(
+    run_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_analyst),
+) -> RunResponse:
+    """Cancel a simulation run that is currently running or created."""
+    result = await db.execute(select(Run).where(Run.id == run_id))
+    run = result.scalar_one_or_none()
+
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Run '{run_id}' not found.",
+        )
+
+    if run.status in ("succeeded", "failed", "cancelled"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot cancel run '{run_id}' with terminal status '{run.status}'.",
+        )
+
+    run.status = "cancelled"
+    run.current_stage = "cancelled"
+    run.finished_at = datetime.datetime.now(datetime.UTC)
+    await db.flush()
+    return _run_to_response(run)
+
+
+@router.post("/runs/{run_id}/retry", response_model=RunResponse)
+async def retry_run(
+    run_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_analyst),
+) -> RunResponse:
+    """Retry a failed or cancelled simulation run."""
+    result = await db.execute(select(Run).where(Run.id == run_id))
+    run = result.scalar_one_or_none()
+
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Run '{run_id}' not found.",
+        )
+
+    if run.status not in ("failed", "cancelled"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Only failed or cancelled runs can be retried; current status: '{run.status}'.",
+        )
+
+    # Re-dispatch
+    run.status = "running"
+    run.progress_percent = 0.0
+    run.current_stage = "retrying"
+    run.error_message = None
+    run.is_valid = True
+    run.finished_at = None
+    await db.flush()
+
+    work_dir = Path(run.work_dir)
+    work_dir.mkdir(parents=True, exist_ok=True)
+
+    scenario_res = await db.execute(select(Scenario).where(Scenario.id == run.scenario_id))
+    scenario = scenario_res.scalar_one_or_none()
+
+    if scenario is not None:
+        try:
+            config = ScenarioConfig.model_validate_json(scenario.config_json)
+            orchestrator = WorkflowOrchestrator(work_dir=work_dir)
+            manifest = orchestrator.execute(config=config, resume=False)
+
+            run.status = manifest.status
+            run.progress_percent = 100.0
+            run.current_stage = "completed"
+            run.manifest_json = json.dumps(manifest.to_dict())
+            run.finished_at = datetime.datetime.now(datetime.UTC)
+        except Exception as e:
+            run.status = "failed"
+            run.error_message = str(e)
+            run.finished_at = datetime.datetime.now(datetime.UTC)
+
+    await db.flush()
+    return _run_to_response(run)
+
+
+@router.get("/runs/{run_id}/events")
+async def stream_run_events(
+    run_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """Stream simulation progress via Server-Sent Events (SSE)."""
+    result = await db.execute(select(Run).where(Run.id == run_id))
+    run = result.scalar_one_or_none()
+
+    if run is None and run_id not in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Run '{run_id}' not found.",
+        )
+
+    async def sse_generator() -> Any:
+        # Initial connect event
+        yield f"event: ping\ndata: {json.dumps({'time': time.time()})}\n\n"
+
+        if run_id in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
+            payload = {
+                "run_id": run_id,
+                "status": "succeeded",
+                "stage": "completed",
+                "progress_percent": 100.0,
+            }
+            yield f"event: progress\ndata: {json.dumps(payload)}\n\n"
+            return
+
+        assert run is not None
+        payload = {
+            "run_id": run.id,
+            "status": run.status,
+            "stage": run.current_stage,
+            "progress_percent": run.progress_percent,
+        }
+        yield f"event: progress\ndata: {json.dumps(payload)}\n\n"
+
+    return StreamingResponse(sse_generator(), media_type="text/event-stream")
+
+
+@router.websocket("/runs/{run_id}/ws")
+async def run_websocket_endpoint(
+    websocket: WebSocket,
+    run_id: str,
+) -> None:
+    """Stream real-time simulation progress via WebSocket."""
+    await websocket.accept()
+    try:
+        if run_id in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
+            await websocket.send_json(
+                {
+                    "run_id": run_id,
+                    "status": "succeeded",
+                    "stage": "completed",
+                    "progress_percent": 100.0,
+                }
+            )
+            await websocket.close()
+            return
+
+        # Simple initial state report
+        await websocket.send_json(
+            {
+                "run_id": run_id,
+                "event": "connected",
+                "timestamp": time.time(),
+            }
+        )
+        await asyncio.sleep(0.1)
+        await websocket.close()
+    except WebSocketDisconnect:
+        pass
 
 
 @router.get("/runs", response_model=RunListResponse)
@@ -156,6 +364,7 @@ async def get_run(
             status="succeeded",
             progress_percent=100.0,
             current_stage="completed",
+            is_valid=True,
             error_message=None,
             created_at=datetime.datetime(2026, 10, 22, 12, 0, tzinfo=datetime.UTC),
             finished_at=datetime.datetime(2026, 10, 22, 12, 5, tzinfo=datetime.UTC),
@@ -196,6 +405,8 @@ async def get_run_manifest(
             detail=f"Run '{run_id}' not found.",
         )
 
+    _check_result_protection(run)
+
     if not run.manifest_json:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -228,6 +439,8 @@ async def get_run_artifact(
             detail=f"Run '{run_id}' not found.",
         )
 
+    _check_result_protection(run)
+
     art_path = Path(run.work_dir) / artifact_name
     if not art_path.exists() or not art_path.is_file():
         raise HTTPException(
@@ -246,7 +459,6 @@ async def get_run_extent(
     current_user: User | None = Depends(get_optional_current_user),
 ) -> Response:
     """Retrieve the inundation extent envelope as GeoJSON (EPSG:4326)."""
-    # Check special Tier-0 Ganga benchmark run
     geojson_candidates: list[Path] = []
     if run_id in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
         geojson_candidates = [
@@ -256,11 +468,16 @@ async def get_run_extent(
     else:
         result = await db.execute(select(Run).where(Run.id == run_id))
         run = result.scalar_one_or_none()
-        if run is not None:
-            work_dir = Path(run.work_dir)
-            geojson_candidates = list(work_dir.glob("*envelope*.geojson")) + list(
-                work_dir.glob("*envelope*.shp")
+        if run is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Run '{run_id}' not found.",
             )
+        _check_result_protection(run)
+        work_dir = Path(run.work_dir)
+        geojson_candidates = list(work_dir.glob("*envelope*.geojson")) + list(
+            work_dir.glob("*envelope*.shp")
+        )
 
     for p in geojson_candidates:
         if p.exists() and p.suffix == ".geojson":
@@ -294,15 +511,11 @@ async def query_run_point(
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(get_optional_current_user),
 ) -> dict[str, Any]:
-    """Query inundation water depth at a specific lon/lat point.
-
-    Tier-0 screening is static: arrival time is null with an explicit explanatory notice.
-    """
+    """Query inundation water depth at a specific lon/lat point."""
     import numpy as np
     import rasterio
     from pyproj import Transformer
 
-    # Locate depth raster
     raster_path: Path | None = None
     if run_id in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
         for cand in [
@@ -315,11 +528,16 @@ async def query_run_point(
     else:
         result = await db.execute(select(Run).where(Run.id == run_id))
         run = result.scalar_one_or_none()
-        if run is not None:
-            work_dir = Path(run.work_dir)
-            matches = list(work_dir.glob("*depth*.tif"))
-            if matches:
-                raster_path = matches[0]
+        if run is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Run '{run_id}' not found.",
+            )
+        _check_result_protection(run)
+        work_dir = Path(run.work_dir)
+        matches = list(work_dir.glob("*depth*.tif"))
+        if matches:
+            raster_path = matches[0]
 
     if raster_path is None or not raster_path.exists():
         raise HTTPException(

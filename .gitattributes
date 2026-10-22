@@ -1,0 +1,28 @@
+# Auto-detect text files and normalize line endings to LF on commit
+* text=auto eol=lf
+
+# Explicit text files
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.geojson text eol=lf
+*.kml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.txt text eol=lf
+*.osm text eol=lf
+
+# Binary files - do not touch
+*.tif binary
+*.tiff binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pdf binary
+*.shp binary
+*.shx binary
+*.dbf binary
+*.cpg binary
+*.prj binary
+*.nc binary

@@ -445,7 +445,7 @@ Upon Colab execution of `notebooks/PravahX_Ganga_Tier1.ipynb`, the notebook enfo
   * Destination: Nearest reachable connected safe node on high ground outside the envelope.
   * Reachable origins: **1 origin** (safe egress route length: **108.8 m**).
   * Unreachable origins: **19 origins** (riverfront road network severed by deep canyon inundation, isolating low-lying structures from vehicle egress).
-* **Route Export Deliverables:** `data/ganga_inputs/evacuation_routes.geojson` (SHA-256 `dd50d9183a97ec81338f9f2f0deba3955a1b38c78d2beeee3902b6ca46181ff6`).
+* **Route Export Deliverables:** `data/ganga_inputs/evacuation_routes.geojson` (SHA-256 `22fc11c8e56dfe9c11880e75702d48b91be5f4dbfeae712461acc66ce52976e9`).
 
 ### 11.5 Deliverables Manifest & Executive Brief
 * **Downloads Manifest:** `data/ganga_inputs/manifest.json` and `artifacts/manifest.json` containing verified SHA-256 hashes, file sizes, and descriptions for all deliverables (GeoTIFF, COG, SHP, KML, GeoJSON, and PDF).

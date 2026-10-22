@@ -52,22 +52,23 @@ for fname, desc in files_to_index:
         }
     )
 
-# Also include the PDF brief if it exists in artifacts
-pdf_brief = artifacts_dir / "ganga_tier0_brief.pdf"
-if pdf_brief.exists():
-    h = hashlib.sha256()
-    with open(pdf_brief, "rb") as f:
-        while chunk := f.read(65536):
-            h.update(chunk)
-    manifest_entries.append(
-        {
-            "filename": pdf_brief.name,
-            "format": "PDF",
-            "size_bytes": pdf_brief.stat().st_size,
-            "sha256": h.hexdigest(),
-            "description": "Official 1-page PDF executive disaster impact & evacuation brief",
-        }
-    )
+# Also include the PDF brief if it exists in data/ganga_inputs or artifacts
+for cand_pdf in [export_dir / "ganga_tier0_brief.pdf", artifacts_dir / "ganga_tier0_brief.pdf"]:
+    if cand_pdf.exists():
+        h = hashlib.sha256()
+        with open(cand_pdf, "rb") as f:
+            while chunk := f.read(65536):
+                h.update(chunk)
+        manifest_entries.append(
+            {
+                "filename": cand_pdf.name,
+                "format": "PDF",
+                "size_bytes": cand_pdf.stat().st_size,
+                "sha256": h.hexdigest(),
+                "description": "Official 1-page PDF executive disaster impact & evacuation brief",
+            }
+        )
+        break
 
 manifest_doc = {
     "run_id": "tier0_ganga_accepted",
@@ -82,18 +83,23 @@ manifest_doc = {
     "provenance": {
         "dem": "Copernicus GLO-30 (30 m)",
         "population": "WorldPop 2020 Constrained (BSGM IND) 100 m",
-        "population_raw_url": "https://data.worldpop.org/GIS/Population/Global_2000_2020_Constrained/2020/BSGM/IND/ind_ppp_2020_UNadj_constrained.tif",
-        "population_raw_sha256": "4fc54bcefe4e23c5f0638f775288375297091d5719d355d85f0820efe9199dbc",
+        "population_raw_url": (
+            "https://data.worldpop.org/GIS/Population/Global_2000_2020_Constrained/"
+            "2020/BSGM/IND/ind_ppp_2020_UNadj_constrained.tif"
+        ),
+        "population_raw_sha256": (
+            "4fc54bcefe4e23c5f0638f775288375297091d5719d355d85f0820efe9199dbc"
+        ),
         "infrastructure": "OpenStreetMap contributors (ODbL 1.0)",
         "osm_snapshot_date": "2026-10-22T12:26:58Z",
     },
     "artifacts": manifest_entries,
 }
 
-with open(export_dir / "manifest.json", "w", encoding="utf-8") as f:
+with open(export_dir / "manifest.json", "w", encoding="utf-8", newline="\n") as f:
     json.dump(manifest_doc, f, indent=2)
 
-with open(artifacts_dir / "manifest.json", "w", encoding="utf-8") as f:
+with open(artifacts_dir / "manifest.json", "w", encoding="utf-8", newline="\n") as f:
     json.dump(manifest_doc, f, indent=2)
 
 print("Manifest generated successfully with", len(manifest_entries), "artifacts:")

@@ -41,8 +41,8 @@
     {
       "filename": "tier0_envelope.kml",
       "format": "KML",
-      "size_bytes": 27533,
-      "sha256": "f50733163f071ef2a2a9100c724b4723bfeb2ef79126b490a3550e59d25567f0",
+      "size_bytes": 27517,
+      "sha256": "cd9bfa4f4d92ca36ac76edcfc663d5256dbdd4557e53eb3cfb962ca61df4d200",
       "description": "Keyhole Markup Language (KML) vector polygon with semi-transparent blue fill"
     },
     {
@@ -55,8 +55,8 @@
     {
       "filename": "evacuation_routes.geojson",
       "format": "GEOJSON",
-      "size_bytes": 475,
-      "sha256": "dd50d9183a97ec81338f9f2f0deba3955a1b38c78d2beeee3902b6ca46181ff6",
+      "size_bytes": 450,
+      "sha256": "22fc11c8e56dfe9c11880e75702d48b91be5f4dbfeae712461acc66ce52976e9",
       "description": "GeoJSON (EPSG:4326) LineStrings of computed safe evacuation routes"
     },
     {

@@ -171,7 +171,7 @@ def main() -> int:
                 "worldpop_ganga_32644.tif",
             ),
             (
-                "dd50d9183a97ec81338f9f2f0deba3955a1b38c78d2beeee3902b6ca46181ff6",
+                "22fc11c8e56dfe9c11880e75702d48b91be5f4dbfeae712461acc66ce52976e9",
                 "evacuation_routes.geojson",
             ),
             (

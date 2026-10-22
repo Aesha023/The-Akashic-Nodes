@@ -52,7 +52,7 @@ class TestTier0HandAdapter:
             breach_hydrograph_path=tmp_path / "breach.csv",
         )
 
-        engine = Tier0HandAdapter()
+        engine = Tier0HandAdapter(strict=False)
 
         # Prepare
         prepared = engine.prepare(ctx)
@@ -98,7 +98,7 @@ class TestTier0HandAdapter:
             breach_hydrograph_path=None,
         )
 
-        engine = Tier0HandAdapter()
+        engine = Tier0HandAdapter(strict=False)
         prepared = engine.prepare(ctx)
         result = engine.run(prepared)
         assert result.status == "success"
@@ -161,7 +161,7 @@ class TestTier0HandAdapter:
             breach_hydrograph_path=None,
         )
 
-        engine = Tier0HandAdapter()
+        engine = Tier0HandAdapter(strict=False)
         prepared = engine.prepare(ctx)
         result = engine.run(prepared)
         norm_output = engine.postprocess(result, ctx)
@@ -202,7 +202,8 @@ class TestTier0HandAdapter:
             breach_hydrograph_path=None,
         )
 
-        engine = Tier0HandAdapter(strict=True)
+        engine = Tier0HandAdapter()
+        assert engine.strict is True
         prepared = engine.prepare(ctx)
 
         with pytest.raises(EngineError) as exc_info:

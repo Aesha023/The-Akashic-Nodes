@@ -62,6 +62,9 @@ jobs:
       - name: Type check
         run: mypy core/pravahx backend/app
 
+      - name: Validate documentation table consistency
+        run: python scripts/check_engine_table.py
+
       - name: Unit tests
         run: pytest tests/unit/ --cov=core/pravahx --cov-report=term-missing --junitxml=test-results.xml
 

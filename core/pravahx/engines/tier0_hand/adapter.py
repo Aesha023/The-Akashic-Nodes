@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 class Tier0HandAdapter(EngineAdapter):
     """Tier 0 (HAND) rapid inundation engine."""
 
-    def __init__(self, strict: bool = False) -> None:
+    def __init__(self, strict: bool = True) -> None:
         self.status = EngineStatus.IDLE
         self.strict = strict
 

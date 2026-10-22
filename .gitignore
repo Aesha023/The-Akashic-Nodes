@@ -82,7 +82,6 @@ docs/API.md
 test_phase1_output/
 scratch_test.nc
 test.mdu
-*.mdu
 patch.diff
 artifacts/
 runs/

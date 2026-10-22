@@ -112,9 +112,9 @@ Evaluating the HEC-RAS regression methods for Teton Dam ($V_w = 310.47\text{ MCM
 To verify the DualSPHysics 3D SPH formulation before applying it to complex 3D topography, the solver was executed on an idealized water column collapse setup ($a = 1.0\text{ m}, h_0 = 2.0\text{ m}, g = 9.81\text{ m/s}^2$) on an **NVIDIA Tesla T4 GPU (Google Colab)** using DualSPHysics 5.4.355 with 314,801 total particles (242,550 fluid particles, $dp = 0.02\text{ m}$).
 
 ### 7.1 Execution Record on Real Hardware
-* **Hardware & Runtime:** NVIDIA Tesla T4 GPU, 389.09 s wall time (2.0 s physical time, 29,873 time steps, 41 PART files).
-* **Provenance Archive:** `dualsphysics_results.tar.gz` (554 MB, sha256: `461646b67d4954f52dcfca0000a36f41a051b2306234296f388648f9744b7da5`).
-* **Operational Status:** **RAN ON REAL DATA**.
+* **Hardware & Runtime:** NVIDIA Tesla T4 GPU, 314,801 particles (242,550 fluid particles, $dp = 0.02\text{ m}$), 2.0 s simulated, 389 s wall (389.09 s), 29,873 time steps, 41 PARTs (41 PART files).
+* **Provenance Archive:** `dualsphysics_results.tar.gz` (554 MB, results sha256: `461646b67d4954f52dcfca0000a36f41a051b2306234296f388648f9744b7da5`, not committed).
+* **Operational Status:** **RUN AND PASSED as a run**.
 
 ### 7.2 Benchmark Verification Status: NOT VERIFIED
 
@@ -160,7 +160,7 @@ To verify the Delft3D FM solver against analytical dam-break hydrodynamics over 
 
 **RESULTS:**
 * **Mass:** 500,000 → 500,000 m3 in all 4 runs.
-* **Depth RMSE (m) t=10/20/30:** Base 0.055/0.055/0.059; A(epsHu 0.01) 0.053/0.047/0.051; B(n 0.005) 0.061/0.062/0.074; C(dx 2.5) 0.031/0.034/0.042. → PASS (tol 0.5). Refinement 5→2.5 m reduces RMSE ~45%: converging.
+* **Depth RMSE (m) t=10/20/30:** dx 5 m (Base) 0.055/0.055/0.059; A(epsHu 0.01) 0.053/0.047/0.051; B(n 0.005) 0.061/0.062/0.074; dx 2.5 m (C) 0.031/0.034/0.042. → PASS (tol 0.5). Refinement 5→2.5 m reduces RMSE ~45%: converging.
 * **Front (continuous from dam, depth >5 cm), error % of travel:** Base -32.5/-13.0/+14.6; A -22.4/-10.4/+2.8; B -19.9/+6.0/+30.6; C +9.8/+12.6/+13.5. → FAIL vs pre-registered 5%. Cause: frictionless thin-film artefact (film speeds up to 382 m/s; wall pile-up 0.90 m Base, 0.94 m C).
 * **Verdict:** depth PASS + converging; front FAIL, understood. Reference: Delestre et al. 2013 (SWASHES), `https://arxiv.org/abs/1110.0288` (fetched, Section 4.1.2 Ritter solution checked).
 
@@ -303,8 +303,8 @@ To ensure a strictly fair intercomparison, the primary Tier-1 run matches Tier-0
 ### 9.5 Model Build Specifications
 
 * **Computational Meshes:**
-  * Primary (`Primary_dx25`): $\Delta x = 25\text{ m}$, quad faces clipped strictly to valid DEM extent. Primary choice resolving canyon thalweg without boundary pinching.
-  * Sensitivity (`Sensitivity_50m`): $\Delta x = 50\text{ m}$, quad faces clipped strictly to valid DEM extent. Executed as sensitivity variant only if Gate c (inflow gate) passes.
+  * Primary (`Primary_dx25`): $\Delta x = 25\text{ m}$ (11,827 cells), quad faces clipped strictly to valid DEM extent. Primary choice resolving canyon thalweg without boundary pinching.
+  * Sensitivity (`Sensitivity_50m`): $\Delta x = 50\text{ m}$ (2,966 cells), quad faces clipped strictly to valid DEM extent. Executed as sensitivity variant only if Gate c (inflow gate) passes.
   * Both meshes are well within the $< 100\text{k}$ Colab CPU limit.
 * **Bed Level:** Interpolated at mesh nodes and cell centres from the Copernicus GLO-30 conditioned DEM.
 * **Roughness Treatment:**
@@ -375,8 +375,7 @@ Upon Colab execution of `notebooks/PravahX_Ganga_Tier1.ipynb`, the notebook enfo
   * *(Note on preliminary values: An earlier unmasked run yielded $38.94\text{ km}^2$; the $40.52\text{ km}^2$ extent is the verified output following the full HydroSHEDS 5% slope and connected-component spatial filter).*
 * **Artifact Deliverables:** Exported GeoTIFF and vector masks (`kuttanad_flood_extent.tif`, `kuttanad_flood_extent.kml`).
 * **Qualitative Reference Comparison:**
-  * Consistent with published extent patterns in Tiwari et al. (2020), *PLOS ONE*, `https://doi.org/10.1371/journal.pone.0237324`.
-  * Spatial distribution matches emergency flood maps published under International Charter Space and Major Disasters (Activation 582, 2018) and NRSC / ReliefWeb Kerala Inundated Areas Map (18 August 2018).
+  * Qualitatively consistent with published extent patterns in Tiwari et al. (2020), *PLOS ONE*, `https://doi.org/10.1371/journal.pone.0237324`.
 * **Verification Status:** **RUN AND PASSED as mapping**. Simulation vs. observation hindcast scoring (**F07**) remains **NOT RUN**.
 
 

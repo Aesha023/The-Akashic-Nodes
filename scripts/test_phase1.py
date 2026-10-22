@@ -50,7 +50,7 @@ def main() -> None:
         breach_hydrograph_path=None,
     )
 
-    engine = Tier0HandAdapter()
+    engine = Tier0HandAdapter(strict=False)
     prepared = engine.prepare(ctx)
     result = engine.run(prepared)
     norm_output = engine.postprocess(result, ctx)

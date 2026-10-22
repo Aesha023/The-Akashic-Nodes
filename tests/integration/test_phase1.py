@@ -80,7 +80,7 @@ def test_phase1_pipeline(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> No
         breach_hydrograph_path=tmp_path / "breach.csv",
     )
 
-    engine = Tier0HandAdapter()
+    engine = Tier0HandAdapter(strict=False)
 
     # 4. Prepare
     prepared = engine.prepare(ctx)

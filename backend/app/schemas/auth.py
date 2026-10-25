@@ -49,3 +49,29 @@ class RefreshTokenRequest(BaseModel):
     """Payload to refresh an expired access token."""
 
     refresh_token: str
+
+
+class ApiKeyCreate(BaseModel):
+    """Payload to generate a new API key."""
+
+    name: str = Field(..., min_length=1, max_length=128)
+    role: Literal["admin", "analyst", "viewer"] | None = None
+    expires_in_days: int | None = None
+
+
+class ApiKeyResponse(BaseModel):
+    """API key metadata without raw key."""
+
+    id: str
+    prefix: str
+    name: str
+    role: str
+    is_active: bool
+    created_at: datetime.datetime
+    expires_at: datetime.datetime | None
+
+
+class ApiKeyCreatedResponse(ApiKeyResponse):
+    """Response returned upon key creation, containing the raw plaintext key once."""
+
+    raw_key: str

@@ -22,6 +22,7 @@ from fastapi import (
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import func, select
 
+from backend.app.core.audit import log_audit_event
 from backend.app.core.auth import get_current_user, get_optional_current_user, require_analyst
 from backend.app.core.config import Settings
 from backend.app.db.session import get_db
@@ -154,6 +155,16 @@ async def dispatch_run(
         run.finished_at = datetime.datetime.now(datetime.UTC)
 
     await db.flush()
+
+    await log_audit_event(
+        db,
+        action="run.dispatch",
+        resource_type="run",
+        resource_id=run_id,
+        user_id=current_user.id,
+        details={"scenario_id": scenario_id, "status": run.status},
+    )
+
     return _run_to_response(run)
 
 
@@ -183,6 +194,15 @@ async def cancel_run(
     run.current_stage = "cancelled"
     run.finished_at = datetime.datetime.now(datetime.UTC)
     await db.flush()
+
+    await log_audit_event(
+        db,
+        action="run.cancel",
+        resource_type="run",
+        resource_id=run_id,
+        user_id=current_user.id,
+    )
+
     return _run_to_response(run)
 
 
@@ -240,6 +260,16 @@ async def retry_run(
             run.finished_at = datetime.datetime.now(datetime.UTC)
 
     await db.flush()
+
+    await log_audit_event(
+        db,
+        action="run.retry",
+        resource_type="run",
+        resource_id=run_id,
+        user_id=current_user.id,
+        details={"status": run.status},
+    )
+
     return _run_to_response(run)
 
 

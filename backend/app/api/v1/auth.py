@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import uuid
 from typing import TYPE_CHECKING
 
@@ -9,17 +10,23 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 
-from backend.app.core.auth import get_current_user
+from backend.app.core.audit import log_audit_event
+from backend.app.core.auth import get_current_user, require_analyst
 from backend.app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    generate_api_key,
     hash_password,
     verify_password,
 )
 from backend.app.db.session import get_db
+from backend.app.models.api_key import ApiKey
 from backend.app.models.user import User
 from backend.app.schemas.auth import (
+    ApiKeyCreate,
+    ApiKeyCreatedResponse,
+    ApiKeyResponse,
     RefreshTokenRequest,
     TokenResponse,
     UserCreate,
@@ -149,4 +156,120 @@ async def get_me(current_user: User = Depends(get_current_user)) -> UserResponse
         role=current_user.role,
         is_active=current_user.is_active,
         created_at=current_user.created_at,
+    )
+
+
+@router.post(
+    "/api-keys",
+    response_model=ApiKeyCreatedResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_api_key_endpoint(
+    payload: ApiKeyCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_analyst),
+) -> ApiKeyCreatedResponse:
+    """Create a new programmatic API key."""
+    raw_key, prefix, key_hash = generate_api_key()
+    key_id = str(uuid.uuid4())
+    assigned_role = payload.role or current_user.role
+
+    expires_at = None
+    if payload.expires_in_days:
+        expires_at = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
+            days=payload.expires_in_days
+        )
+
+    api_key_obj = ApiKey(
+        id=key_id,
+        prefix=prefix,
+        key_hash=key_hash,
+        name=payload.name,
+        user_id=current_user.id,
+        role=assigned_role,
+        is_active=True,
+        expires_at=expires_at,
+    )
+    db.add(api_key_obj)
+    await db.flush()
+
+    await log_audit_event(
+        db,
+        action="apikey.create",
+        resource_type="api_key",
+        resource_id=key_id,
+        user_id=current_user.id,
+        details={"name": payload.name, "prefix": prefix, "role": assigned_role},
+    )
+
+    return ApiKeyCreatedResponse(
+        id=api_key_obj.id,
+        prefix=api_key_obj.prefix,
+        name=api_key_obj.name,
+        role=api_key_obj.role,
+        is_active=api_key_obj.is_active,
+        created_at=api_key_obj.created_at,
+        expires_at=api_key_obj.expires_at,
+        raw_key=raw_key,
+    )
+
+
+@router.get("/api-keys", response_model=list[ApiKeyResponse])
+async def list_api_keys_endpoint(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[ApiKeyResponse]:
+    """List active API keys for the current user."""
+    query = (
+        select(ApiKey)
+        .where(
+            ApiKey.user_id == current_user.id,
+            ApiKey.is_active == True,  # noqa: E712
+        )
+        .order_by(ApiKey.created_at.desc())
+    )
+    res = await db.execute(query)
+    keys = res.scalars().all()
+    return [
+        ApiKeyResponse(
+            id=k.id,
+            prefix=k.prefix,
+            name=k.name,
+            role=k.role,
+            is_active=k.is_active,
+            created_at=k.created_at,
+            expires_at=k.expires_at,
+        )
+        for k in keys
+    ]
+
+
+@router.delete("/api-keys/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_api_key_endpoint(
+    key_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    """Revoke an API key."""
+    query = select(ApiKey).where(ApiKey.id == key_id)
+    if current_user.role != "admin":
+        query = query.where(ApiKey.user_id == current_user.id)
+
+    res = await db.execute(query)
+    key_obj = res.scalar_one_or_none()
+    if key_obj is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"API key '{key_id}' not found.",
+        )
+
+    key_obj.is_active = False
+    await db.flush()
+
+    await log_audit_event(
+        db,
+        action="apikey.revoke",
+        resource_type="api_key",
+        resource_id=key_id,
+        user_id=current_user.id,
     )

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 
+from backend.app.core.audit import log_audit_event
 from backend.app.core.auth import get_current_user, require_admin, require_analyst
 from backend.app.db.session import get_db
 from backend.app.models.scenario import Scenario
@@ -73,6 +74,15 @@ async def create_scenario(
     )
     db.add(scenario)
     await db.flush()
+
+    await log_audit_event(
+        db,
+        action="scenario.create",
+        resource_type="scenario",
+        resource_id=scen_id,
+        user_id=current_user.id,
+        details={"name": scenario.name, "type": scenario.scenario_type},
+    )
 
     return _scenario_to_response(scenario)
 
@@ -143,6 +153,16 @@ async def update_scenario(
     scenario.updated_at = datetime.datetime.now(datetime.UTC)
 
     await db.flush()
+
+    await log_audit_event(
+        db,
+        action="scenario.update",
+        resource_type="scenario",
+        resource_id=scenario_id,
+        user_id=current_user.id,
+        details={"version": scenario.version, "name": scenario.name},
+    )
+
     return _scenario_to_response(scenario)
 
 
@@ -200,6 +220,15 @@ async def clone_scenario(
     db.add(cloned_scenario)
     await db.flush()
 
+    await log_audit_event(
+        db,
+        action="scenario.clone",
+        resource_type="scenario",
+        resource_id=cloned_id,
+        user_id=current_user.id,
+        details={"parent_scenario_id": parent.id, "name": cloned_name},
+    )
+
     return _scenario_to_response(cloned_scenario)
 
 
@@ -221,3 +250,11 @@ async def delete_scenario(
 
     await db.delete(scenario)
     await db.flush()
+
+    await log_audit_event(
+        db,
+        action="scenario.delete",
+        resource_type="scenario",
+        resource_id=scenario_id,
+        user_id=current_user.id,
+    )

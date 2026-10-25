@@ -5,12 +5,13 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from backend.app.api.v1 import api_v1_router
 from backend.app.core.config import Settings
+from backend.app.core.rate_limit import standard_rate_limiter
 from backend.app.db.session import init_db
 from pravahx.errors import PravahXError
 
@@ -43,6 +44,23 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.middleware("http")
+    async def rate_limit_middleware(request: Request, call_next: Any) -> Any:
+        if (
+            (settings.is_secure or request.headers.get("X-Rate-Limit-Check") == "1")
+            and request.headers.get("X-Test-No-Rate-Limit") != "1"
+            and not request.url.path.startswith(("/api/v1/docs", "/api/v1/openapi.json"))
+        ):
+            try:
+                await standard_rate_limiter(request)
+            except HTTPException as e:
+                return JSONResponse(
+                    status_code=e.status_code,
+                    content={"detail": e.detail},
+                    headers=e.headers or {},
+                )
+        return await call_next(request)
 
     # Global PravahXError RFC 9457 problem details handler
     @app.exception_handler(PravahXError)

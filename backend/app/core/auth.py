@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import datetime
 from typing import TYPE_CHECKING, Any, Literal
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 
-from backend.app.core.security import decode_token
+from backend.app.core.security import decode_token, hash_api_key
 from backend.app.db.session import get_db
+from backend.app.models.api_key import ApiKey
 from backend.app.models.user import User
 from pravahx.errors import CredentialsError, TokenExpiredError
 
@@ -29,13 +31,45 @@ ROLE_LEVELS: dict[str, int] = {
 
 async def get_current_user(
     token: str | None = Depends(oauth2_scheme),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """Extract and validate current authenticated user from JWT token."""
+    """Extract and validate current authenticated user from JWT token or API key."""
+    # 1. API key authentication via X-API-Key or Bearer pvx_
+    api_key_str = x_api_key or (token if (token and token.startswith("pvx_")) else None)
+    if api_key_str:
+        h = hash_api_key(api_key_str)
+        now = datetime.datetime.now(datetime.UTC)
+        res = await db.execute(
+            select(ApiKey).where(
+                ApiKey.key_hash == h,
+                ApiKey.is_active == True,  # noqa: E712
+            )
+        )
+        key_obj = res.scalar_one_or_none()
+        if key_obj is None or (key_obj.expires_at and key_obj.expires_at < now):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired API key.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        u_res = await db.execute(select(User).where(User.id == key_obj.user_id))
+        user = u_res.scalar_one_or_none()
+        if user is None or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User account inactive or not found.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        if key_obj.role:
+            user.role = key_obj.role
+        return user
+
+    # 2. JWT Bearer token authentication
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated. Bearer token required.",
+            detail="Not authenticated. Bearer token or X-API-Key required.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -77,9 +111,32 @@ async def get_current_user(
 
 async def get_optional_current_user(
     token: str | None = Depends(oauth2_scheme),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
     db: AsyncSession = Depends(get_db),
 ) -> User | None:
-    """Extract authenticated user if token provided, else return None without 401."""
+    """Extract authenticated user if token or API key provided, else return None without 401."""
+    api_key_str = x_api_key or (token if (token and token.startswith("pvx_")) else None)
+    if api_key_str:
+        try:
+            h = hash_api_key(api_key_str)
+            now = datetime.datetime.now(datetime.UTC)
+            res = await db.execute(
+                select(ApiKey).where(
+                    ApiKey.key_hash == h,
+                    ApiKey.is_active == True,  # noqa: E712
+                )
+            )
+            key_obj = res.scalar_one_or_none()
+            if key_obj and (not key_obj.expires_at or key_obj.expires_at >= now):
+                u_res = await db.execute(select(User).where(User.id == key_obj.user_id))
+                user = u_res.scalar_one_or_none()
+                if user and user.is_active:
+                    if key_obj.role:
+                        user.role = key_obj.role
+                    return user
+        except Exception:
+            return None
+
     if not token:
         return None
     try:

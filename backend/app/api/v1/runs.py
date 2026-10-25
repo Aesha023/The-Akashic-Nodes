@@ -44,6 +44,13 @@ if TYPE_CHECKING:
 router = APIRouter(tags=["runs"])
 settings = Settings()
 
+ACCEPTED_GANGA_RUN_IDS = {
+    "tier0_ganga",
+    "tier0_accepted",
+    "ganga_tier0",
+    "tier0_ganga_accepted",
+}
+
 
 def _run_to_response(r: Run) -> RunResponse:
     manifest_dict = json.loads(r.manifest_json) if r.manifest_json else None
@@ -381,7 +388,7 @@ async def get_run(
     current_user: User = Depends(get_current_user),
 ) -> RunResponse:
     """Get status and details of a specific simulation run."""
-    if run_id in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
+    if run_id in ACCEPTED_GANGA_RUN_IDS:
         manifest_path = Path("data/ganga_inputs/manifest.json")
         manifest_dict = (
             json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -420,7 +427,7 @@ async def get_run_manifest(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Retrieve full provenance manifest JSON for a completed run."""
-    if run_id in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
+    if run_id in ACCEPTED_GANGA_RUN_IDS:
         manifest_path = Path("data/ganga_inputs/manifest.json")
         if manifest_path.exists():
             data: dict[str, Any] = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -455,7 +462,7 @@ async def get_run_artifact(
     current_user: User | None = Depends(get_optional_current_user),
 ) -> FileResponse:
     """Download a generated artifact file from the run directory."""
-    if run_id in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
+    if run_id in ACCEPTED_GANGA_RUN_IDS:
         for cand in [Path("artifacts") / artifact_name, Path("data/ganga_inputs") / artifact_name]:
             if cand.exists() and cand.is_file():
                 return FileResponse(path=cand, filename=cand.name)
@@ -490,7 +497,7 @@ async def get_run_extent(
 ) -> Response:
     """Retrieve the inundation extent envelope as GeoJSON (EPSG:4326)."""
     geojson_candidates: list[Path] = []
-    if run_id in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
+    if run_id in ACCEPTED_GANGA_RUN_IDS:
         geojson_candidates = [
             Path("data/ganga_inputs/tier0_envelope.geojson"),
             Path("data/ganga_inputs/tier0_envelope.shp"),
@@ -547,7 +554,7 @@ async def query_run_point(
     from pyproj import Transformer
 
     raster_path: Path | None = None
-    if run_id in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
+    if run_id in ACCEPTED_GANGA_RUN_IDS:
         for cand in [
             Path("data/ganga_inputs/tier0_max_depth_cog.tif"),
             Path("data/ganga_inputs/tier0_max_depth.tif"),
@@ -622,7 +629,7 @@ async def get_run_brief(
         Path("artifacts/ganga_tier0_brief.pdf"),
         Path("data/ganga_inputs/ganga_tier0_brief.pdf"),
     ]
-    if run_id not in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
+    if run_id not in ACCEPTED_GANGA_RUN_IDS:
         result = await db.execute(select(Run).where(Run.id == run_id))
         run = result.scalar_one_or_none()
         if run is None:
@@ -655,7 +662,7 @@ async def get_run_exposure(
     current_user: User | None = Depends(get_optional_current_user),
 ) -> dict[str, Any]:
     """Retrieve population and critical asset exposure metrics for the simulation run."""
-    if run_id not in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
+    if run_id not in ACCEPTED_GANGA_RUN_IDS:
         result = await db.execute(select(Run).where(Run.id == run_id))
         run = result.scalar_one_or_none()
         if run is None:
@@ -706,7 +713,7 @@ async def get_run_evacuation(
     current_user: User | None = Depends(get_optional_current_user),
 ) -> dict[str, Any]:
     """Retrieve evacuation routing metrics and severed network summary."""
-    if run_id not in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
+    if run_id not in ACCEPTED_GANGA_RUN_IDS:
         result = await db.execute(select(Run).where(Run.id == run_id))
         run = result.scalar_one_or_none()
         if run is None:
@@ -774,7 +781,7 @@ async def download_run_package(
     """Download complete zipped simulation artifact bundle for a run."""
     import zipfile
 
-    if run_id in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
+    if run_id in ACCEPTED_GANGA_RUN_IDS:
         zip_path = Path("artifacts/ganga_tier0_bundle.zip")
         if not zip_path.exists():
             zip_path.parent.mkdir(parents=True, exist_ok=True)

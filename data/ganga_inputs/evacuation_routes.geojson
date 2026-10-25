@@ -5,21 +5,21 @@
       "type": "Feature",
       "properties": {
         "origin_type": "flooded_building",
-        "origin_id": 57,
-        "origin_node": 4045901394,
-        "safe_node": 3194743738,
-        "length_m": 8.0
+        "origin_id": 31,
+        "origin_node": 10598808455,
+        "safe_node": 11916045397,
+        "length_m": 34.4
       },
       "geometry": {
         "type": "LineString",
         "coordinates": [
           [
-            78.3297967,
-            30.124402399999997
+            78.3302593,
+            30.124287500000005
           ],
           [
-            78.3297346,
-            30.124450099999994
+            78.3304184,
+            30.1245639
           ]
         ]
       }
@@ -28,21 +28,21 @@
       "type": "Feature",
       "properties": {
         "origin_type": "flooded_building",
-        "origin_id": 80,
-        "origin_node": 1185803285,
-        "safe_node": 1185803319,
-        "length_m": 108.8
+        "origin_id": 35,
+        "origin_node": 3814408820,
+        "safe_node": 5479826449,
+        "length_m": 4.7
       },
       "geometry": {
         "type": "LineString",
         "coordinates": [
           [
-            78.3125111,
-            30.120525599999986
+            78.3122512,
+            30.120104500000004
           ],
           [
-            78.31203000000001,
-            30.1196398
+            78.3122299,
+            30.120066300000005
           ]
         ]
       }

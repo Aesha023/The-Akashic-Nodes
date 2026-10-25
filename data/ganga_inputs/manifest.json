@@ -55,8 +55,8 @@
     {
       "filename": "evacuation_routes.geojson",
       "format": "GEOJSON",
-      "size_bytes": 1016,
-      "sha256": "38eaddceaac7564acd483a80b1c2640d3604ab00c1c8a2801a8dfef43c244a7f",
+      "size_bytes": 1010,
+      "sha256": "5d9cf7dbc839bd0cb4dcc8bae92455a9f87205bea749e99045d598196d6becd2",
       "description": "GeoJSON (EPSG:4326) LineStrings of computed safe evacuation routes"
     },
     {
@@ -69,8 +69,8 @@
     {
       "filename": "ganga_tier0_brief.pdf",
       "format": "PDF",
-      "size_bytes": 328796,
-      "sha256": "a1580e27e1bf5e1b413f50afd505add77ff0d0ec11f59ac1d86ef753d5adfaf7",
+      "size_bytes": 328874,
+      "sha256": "acdaad391f768c5c41dbb9b2b6569e13a20fcbbdfc3c623bf715eac02b0f8866",
       "description": "Official 1-page PDF executive disaster impact & evacuation brief"
     }
   ]

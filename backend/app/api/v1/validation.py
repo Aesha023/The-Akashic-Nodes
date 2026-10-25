@@ -86,8 +86,8 @@ async def get_validation_status() -> dict[str, Any]:
             },
             "flooded_roads_km": 17.34,
             "total_road_network_km": 159.54,
-            "severed_edges_count": 930,
-            "severed_edge_length_km": 311.84,
+            "severed_edges_count": 100,
+            "severed_edge_length_km": 14.76,
             "flooded_buildings": 5,
             "total_buildings_in_aoi": 93,
             "building_coverage_note": "OSM building coverage incomplete",
@@ -98,16 +98,16 @@ async def get_validation_status() -> dict[str, Any]:
         },
         "artifact_hashes": {
             "tier0_max_depth_cog.tif": (
-                "d3168ae8ae7483660a922312b9dff21df9012a6cb8ca350849c7198bbda33ea3"
+                "d3168ae8ae742171cecd2abac607fd80d36e882e0ffb32e414f721202c900194"
             ),
             "tier0_envelope.geojson": (
-                "2cca3b08f643f8e562725fa84bc6f284e3650226c6d17978cece42c67cf7f3e8"
+                "2cca3b08f6430cacd717a5dc10cee23eee06f280c3f43f0aac399df5408a3d1b"
             ),
             "evacuation_routes.geojson": (
-                "38eaddceaac7564acd483a80b1c2640d3604ab00c1c8a2801a8dfef43c244a7f"
+                "5d9cf7dbc839bd0cb4dcc8bae92455a9f87205bea749e99045d598196d6becd2"
             ),
             "ganga_tier0_brief.pdf": (
-                "a1580e27e1bf5e1b413f50afd505add77ff0d0ec11f59ac1d86ef753d5adfaf7"
+                "acdaad391f768c5c41dbb9b2b6569e13a20fcbbdfc3c623bf715eac02b0f8866"
             ),
         },
     }

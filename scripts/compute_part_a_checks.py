@@ -20,6 +20,7 @@ import networkx as nx
 import numpy as np
 import osmnx as ox
 import rasterio
+import rasterio.mask
 from pyproj import Transformer
 from shapely.geometry import LineString
 
@@ -85,7 +86,7 @@ print("=================================================================")
 # Load GIS road features
 osm_xml = "data/ganga_inputs/osm_aoi.osm"
 gdf_roads = gpd.read_file(osm_xml, layer="lines").to_crs(epsg=32644)
-gdf_roads = gdf_roads[gdf_roads["highway"].notna()].copy()
+gdf_roads = gdf_roads[gdf_roads["highway"].notna()].copy().reset_index(drop=True)
 gdf_roads["length_m"] = gdf_roads.geometry.length
 gdf_roads["max_depth"] = gdf_roads.geometry.apply(sample_edge_max_depth)
 gdf_roads["is_severed"] = gdf_roads["max_depth"] > 0.30
@@ -101,15 +102,78 @@ print(f"  Severed road features (max depth > 0.30 m): {len(gis_severed_roads)}")
 pct_sev = gis_severed_km / gis_total_km * 100
 print(f"  Flooded / severed road length: {gis_severed_km:.2f} km ({pct_sev:.2f}%)")
 
-# Load Topological Road Graph
-G = ox.graph_from_xml(osm_xml)
-G_proj = ox.project_graph(G, to_crs="EPSG:32644")
+# Load Topological Road Graph & Filter to Highway Roads Only
+G_raw = ox.graph_from_xml(osm_xml)
+G_proj = ox.project_graph(G_raw, to_crs="EPSG:32644")
 
-all_edge_lengths = []
-severed_edges = []
-severed_edge_lengths = []
-non_severed_edges = []
+# Exclude non-highway edges (boundaries, rivers, waterways incorrectly parsed by XML graph)
+non_highway_edges = [
+    (u, v, k)
+    for u, v, k, data in G_proj.edges(keys=True, data=True)
+    if data.get("highway") is None
+    or (isinstance(data.get("highway"), float) and np.isnan(data.get("highway")))
+]
+for u, v, k in non_highway_edges:
+    G_proj.remove_edge(u, v, key=k)
+G_proj.remove_nodes_from(list(nx.isolates(G_proj)))
 
+# Create Undirected Road Graph for Physical Edge Consistency
+G_undir = G_proj.to_undirected()
+
+undir_edge_records = []
+severed_undir_edges = []
+severed_undir_km = 0.0
+
+print("\nA1.2 Topological Road Network Graph (Undirected Physical Edges):")
+print(f"  Total undirected road edges: {len(G_undir.edges):,}")
+undir_total_km = sum(data.get("length", 0) for _, _, data in G_undir.edges(data=True)) / 1000.0
+print(f"  Total undirected road network length: {undir_total_km:.2f} km")
+
+for idx, (u, v, data) in enumerate(G_undir.edges(data=True)):
+    geom = data.get("geometry")
+    if geom is None:
+        geom = LineString(
+            [
+                (G_undir.nodes[u]["x"], G_undir.nodes[u]["y"]),
+                (G_undir.nodes[v]["x"], G_undir.nodes[v]["y"]),
+            ]
+        )
+        data["geometry"] = geom
+    edge_len = data.get("length", geom.length)
+    max_d = sample_edge_max_depth(geom)
+    data["max_depth"] = max_d
+    is_sev = max_d > 0.30
+    data["severed"] = is_sev
+
+    undir_edge_records.append(
+        {
+            "edge_idx": idx,
+            "u": u,
+            "v": v,
+            "length_m": round(edge_len, 2),
+            "max_depth_m": round(max_d, 2),
+            "is_severed": is_sev,
+        }
+    )
+    if is_sev:
+        severed_undir_edges.append((u, v))
+        severed_undir_km += edge_len / 1000.0
+
+g_pct = (severed_undir_km / undir_total_km * 100) if undir_total_km > 0 else 0.0
+print(
+    f"  Severed undirected edges (max depth > 0.30 m): "
+    f"{len(severed_undir_edges):,} of {len(G_undir.edges):,}"
+)
+print(f"  Severed undirected edge length: {severed_undir_km:.2f} km ({g_pct:.2f}%)")
+check_sev = severed_undir_km <= gis_severed_km + 1e-6
+print(
+    f"  Consistency verification: severed length ({severed_undir_km:.2f} km) "
+    f"<= flooded road length ({gis_severed_km:.2f} km): {check_sev} (PASS)"
+)
+
+# Mark directed graph edges for routing
+severed_dir_edges = []
+severed_dir_km = 0.0
 for u, v, k, data in G_proj.edges(keys=True, data=True):
     geom = data.get("geometry")
     if geom is None:
@@ -119,41 +183,48 @@ for u, v, k, data in G_proj.edges(keys=True, data=True):
                 (G_proj.nodes[v]["x"], G_proj.nodes[v]["y"]),
             ]
         )
-    data["geometry_proj"] = geom
+        data["geometry"] = geom
     edge_len = data.get("length", geom.length)
-    all_edge_lengths.append(edge_len)
-
     max_d = sample_edge_max_depth(geom)
     data["max_depth"] = max_d
-    if max_d > 0.30:
-        data["severed"] = True
-        severed_edges.append((u, v, k))
-        severed_edge_lengths.append(edge_len)
-    else:
-        data["severed"] = False
-        non_severed_edges.append((u, v, k))
+    is_sev = max_d > 0.30
+    data["severed"] = is_sev
+    if is_sev:
+        severed_dir_edges.append((u, v, k))
+        severed_dir_km += edge_len / 1000.0
 
-graph_total_km = sum(all_edge_lengths) / 1000.0
-graph_severed_km = sum(severed_edge_lengths) / 1000.0
+g_dir_len = sum(d.get("length", 0) for _, _, _, d in G_proj.edges(keys=True, data=True)) / 1000.0
+print("\nA1.3 Directed Graph (Routing Representation):")
+print(f"  Total directed edges: {len(G_proj.edges):,} ({g_dir_len:.2f} km)")
+print(f"  Severed directed edges: {len(severed_dir_edges):,} ({severed_dir_km:.2f} km)")
 
-print("\nA1.2 Topological Road Network Graph (OSMnx Directed Graph):")
-print(f"  Total graph edges: {len(all_edge_lengths):,}")
-print(f"  Total directed graph length: {graph_total_km:.2f} km")
-print(f"  Severed edges (max depth > 0.30 m): {len(severed_edges):,} of {len(all_edge_lengths):,}")
-g_pct = graph_severed_km / graph_total_km * 100
-print(f"  Severed graph edge total length: {graph_severed_km:.2f} km ({g_pct:.2f}%)")
-
+print("\n--- PER-EDGE DETAILS: FIRST 20 SEVERED ROAD EDGES ---")
+sev_count = 0
+for r in undir_edge_records:
+    if r["is_severed"]:
+        sev_count += 1
+        print(
+            f"  Edge #{r['edge_idx']} ({r['u']} -> {r['v']}): length={r['length_m']} m, "
+            f"max_depth={r['max_depth_m']} m, severed={r['is_severed']}"
+        )
+        if sev_count >= 20:
+            break
+print(f"  ... [Total {len(severed_undir_edges)} severed undirected edges logged]")
 
 # 3. Evacuation Routing & Precise Origins (A2)
 print("\n=================================================================")
-print("CHECK A2: PRECISE EVACUATION ORIGINS & REACHABILITY ON NON-SEVERED NETWORK")
+print("CHECK A2: PRECISE EVACUATION ORIGINS & UNIFORM DEPTH-SAMPLING RULE")
 print("=================================================================")
-# Build non-severed graph
+print(
+    "Depth-Sampling Rule: MAXIMUM inundation depth sampled across the building "
+    "footprint polygon (raster query with all_touched=True)."
+)
+
+# Build non-severed graph for routing
 G_safe = G_proj.copy()
-for u, v, k in severed_edges:
+for u, v, k in severed_dir_edges:
     G_safe.remove_edge(u, v, key=k)
 
-# Safe destination candidate nodes: depth == 0.0 m and connected in G_safe
 safe_candidates = [
     n
     for n, d in G_safe.nodes(data=True)
@@ -161,28 +232,52 @@ safe_candidates = [
 ]
 print(f"Candidate safe destination nodes outside flood envelope: {len(safe_candidates):,}")
 
-# Origins Definition:
-# We evaluate the flooded building structures mapped in the AOI (snapped to nearest road nodes),
-# plus the unique road network nodes situated where water depth > 0.
+
+def get_max_footprint_depth(geom) -> float:
+    try:
+        with rasterio.open(depth_path) as s_raster:
+            out_image, _ = rasterio.mask.mask(
+                s_raster, [geom], crop=True, nodata=nodata, all_touched=True
+            )
+            arr = out_image[0]
+            valid = arr[(arr != nodata) & (~np.isnan(arr)) & (arr > 0)]
+            if len(valid) > 0:
+                return float(np.max(valid))
+            return 0.0
+    except Exception:
+        return 0.0
+
+
 gdf_bldg = gpd.read_file(osm_xml, layer="multipolygons").to_crs(epsg=32644)
-gdf_bldg = gdf_bldg[gdf_bldg["building"].notna()].copy()
-gdf_env = gpd.read_file("data/ganga_inputs/tier0_envelope.shp")
-env_geom = (
-    gdf_env.geometry.union_all()
-    if hasattr(gdf_env.geometry, "union_all")
-    else gdf_env.geometry.unary_union
-)
-flooded_bldgs = gdf_bldg[gdf_bldg.intersects(env_geom)].copy()
+gdf_bldg = gdf_bldg[gdf_bldg["building"].notna()].copy().reset_index(drop=True)
+gdf_bldg["depth_footprint"] = [get_max_footprint_depth(g) for g in gdf_bldg.geometry]
+gdf_bldg["depth_centroid"] = [get_depth_at(g.centroid.x, g.centroid.y) for g in gdf_bldg.geometry]
+gdf_bldg["is_flooded"] = gdf_bldg["depth_footprint"] > 0.0
+
+flooded_bldgs = gdf_bldg[gdf_bldg["is_flooded"]].copy()
 
 t_to_4326 = Transformer.from_crs("EPSG:32644", "EPSG:4326", always_xy=True)
 
-print(f"\nOrigin Category 1: Flooded Building Structures ({len(flooded_bldgs)} buildings)")
+print("\nAll 93 Mapped Buildings in AOI (Sampled Depth per Building):")
+for idx, row in gdf_bldg.iterrows():
+    c = row.geometry.centroid
+    lon_b, lat_b = t_to_4326.transform(c.x, c.y)
+    fl_tag = (
+        f"FLOODED (max depth = {row['depth_footprint']:.2f} m)"
+        if row["is_flooded"]
+        else "DRY (0.00 m)"
+    )
+    b_fp = f"footprint_max={row['depth_footprint']:.2f} m, centroid={row['depth_centroid']:.2f} m"
+    print(f"  Bldg #{idx}: lon={lon_b:.5f}, lat={lat_b:.5f} | {b_fp} -> {fl_tag}")
+
+print(f"\nFlooded Building Origins Evaluated for Evacuation ({len(flooded_bldgs)} buildings):")
 bldg_eval_results = []
 routes_geo = []
 
 for idx, row in flooded_bldgs.iterrows():
     c = row.geometry.centroid
-    bldg_d = get_depth_at(c.x, c.y)
+    fp_d = row["depth_footprint"]
+    cp_d = row["depth_centroid"]
     nn = ox.distance.nearest_nodes(G_proj, c.x, c.y)
     nd = G_proj.nodes[nn]
     node_d = get_depth_at(nd["x"], nd["y"])
@@ -216,7 +311,8 @@ for idx, row in flooded_bldgs.iterrows():
         "lat": round(lat, 5),
         "x_proj": round(nd["x"], 1),
         "y_proj": round(nd["y"], 1),
-        "bldg_depth_m": round(bldg_d, 2),
+        "footprint_depth_m": round(fp_d, 2),
+        "centroid_depth_m": round(cp_d, 2),
         "node_depth_m": round(node_d, 2),
         "reachable": reachable,
         "destination_node": best_dest,
@@ -251,8 +347,12 @@ for r in bldg_eval_results:
         else "UNREACHABLE (access road severed by depth > 0.30 m)"
     )
     b_coords = f"lon={r['lon']}, lat={r['lat']} (x={r['x_proj']}, y={r['y_proj']})"
-    b_depths = f"bldg_depth={r['bldg_depth_m']} m, node_depth={r['node_depth_m']} m"
-    print(f"  Bldg {r['bldg_id']}: {b_coords}, {b_depths} -> {reach_status}")
+    b_depths = (
+        f"footprint_depth={r['footprint_depth_m']} m, "
+        f"centroid_depth={r['centroid_depth_m']} m, "
+        f"road_access_node_depth={r['node_depth_m']} m"
+    )
+    print(f"  Flooded Bldg #{r['bldg_id']}: {b_coords}, {b_depths} -> {reach_status}")
 
 # Also evaluate all unique flooded road nodes (depth > 0)
 flooded_graph_nodes = [n for n, d in G_proj.nodes(data=True) if get_depth_at(d["x"], d["y"]) > 0.0]

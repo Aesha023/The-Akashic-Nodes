@@ -149,9 +149,9 @@ def main() -> int:
             ("93", "Total buildings in AOI"),
             ("5", "Flooded buildings"),
             ("28", "Critical facilities in AOI"),
-            ("930", "Severed road edges"),
-            ("311.84", "Severed graph edge length (km)"),
-            ("108.8", "Reachable route length (m)"),
+            ("100", "Severed road edges"),
+            ("14.76", "Severed graph edge length (km)"),
+            ("34.4", "Reachable route length (m)"),
         ]
         for num, desc in sec11_expected_numbers:
             if num not in sec11_text:
@@ -174,7 +174,7 @@ def main() -> int:
                 "worldpop_ganga_32644.tif",
             ),
             (
-                "38eaddceaac7564acd483a80b1c2640d3604ab00c1c8a2801a8dfef43c244a7f",
+                "5d9cf7dbc839bd0cb4dcc8bae92455a9f87205bea749e99045d598196d6becd2",
                 "evacuation_routes.geojson",
             ),
             (
@@ -182,7 +182,7 @@ def main() -> int:
                 "tier0_envelope.geojson",
             ),
             (
-                "a1580e27e1bf5e1b413f50afd505add77ff0d0ec11f59ac1d86ef753d5adfaf7",
+                "acdaad391f768c5c41dbb9b2b6569e13a20fcbbdfc3c623bf715eac02b0f8866",
                 "ganga_tier0_brief.pdf",
             ),
         ]

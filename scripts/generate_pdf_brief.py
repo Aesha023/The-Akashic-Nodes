@@ -281,9 +281,9 @@ def build_tier0_pdf_brief(
                 [
                     Paragraph("Severed Road Edges", table_cell),
                     Paragraph(
-                        f"<b>{stats.get('severed_edges', 930)}</b> of "
-                        f"{stats.get('total_edges', 3638)} "
-                        f"({stats.get('severed_length_km', 311.84):.1f} km)",
+                        f"<b>{stats.get('severed_edges', 100)}</b> of "
+                        f"{stats.get('total_edges', 914)} "
+                        f"({stats.get('severed_length_km', 14.76):.1f} km)",
                         table_cell,
                     ),
                 ],
@@ -291,7 +291,7 @@ def build_tier0_pdf_brief(
                     Paragraph("Reachable Building Origins", table_cell),
                     Paragraph(
                         f"<b>{stats.get('reachable_origins', 2)}</b> of {bldg_fl} "
-                        f"(Routes: 8.0 m, 108.8 m)",
+                        f"(Routes: 34.4 m, 4.7 m)",
                         table_cell_bold,
                     ),
                 ],
@@ -339,8 +339,10 @@ def build_tier0_pdf_brief(
         "2. <b>Synthetic Rating Curve:</b> Inundation depth is derived from normal-depth Manning "
         "hydraulics along a uniform reach without bathymetric cross-section survey "
         "calibration.<br/>"
-        "3. <b>DEM Water-Surface Artefact:</b> Copernicus GLO-30 reflects water surface elevation "
-        "during acquisition; dry-season channel bed conveyance is underestimated.<br/>"
+        "3. <b>DEM Water-Surface Artefact:</b> Depths are measured above the DEM water surface; "
+        "true depth in the channel is greater (DEM records water surface, not bed). "
+        "Copernicus GLO-30 reflects water surface elevation during acquisition; "
+        "dry-season channel bed conveyance is underestimated.<br/>"
         "4. <b>Operational Scope:</b> Generated strictly for preliminary disaster risk screening "
         "and multi-agency table-top planning. NOT for structural engineering or design use.",
         limitation_style,
@@ -394,12 +396,12 @@ def main() -> None:
         "road_pct": 10.9,
         "buildings_flooded": 5,
         "buildings_total": 93,
-        "severed_edges": 930,
-        "total_edges": 3638,
-        "severed_length_km": 311.84,
+        "severed_edges": 100,
+        "total_edges": 914,
+        "severed_length_km": 14.76,
         "reachable_origins": 2,
         "unreachable_origins": 3,
-        "mean_route_m": 58.4,
+        "mean_route_m": 19.6,
     }
     build_tier0_pdf_brief(out_pdf, map_png, stats)
     shutil.copy(out_pdf, bundled_pdf)

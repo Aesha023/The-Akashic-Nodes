@@ -265,8 +265,8 @@ async def run_smoke_test(base_url: str | None = None, in_process: bool = False) 
         assert origins["total_evaluated"] == 5
         assert origins["reachable_count"] == 2
         assert origins["unreachable_count"] == 3
-        assert evac_data["severed_edges_count"] == 930
-        assert evac_data["severed_edge_length_km"] == 311.84
+        assert evac_data["severed_edges_count"] == 100
+        assert evac_data["severed_edge_length_km"] == 14.76
         print(
             f"  [OK] Evacuation Routing: 5 origins ({origins['reachable_count']} reachable, "
             f"{origins['unreachable_count']} unreachable), severed: "

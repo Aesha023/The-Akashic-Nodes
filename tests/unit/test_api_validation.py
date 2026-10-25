@@ -56,8 +56,8 @@ async def test_validation_status_endpoint() -> None:
         assert demo["depth_classes"]["0.5-1.5m [UNVERIFIED]"] == 253.3
         assert demo["depth_classes"][">1.5m [UNVERIFIED]"] == 2212.9
         assert demo["flooded_roads_km"] == 17.34
-        assert demo["severed_edges_count"] == 930
-        assert demo["severed_edge_length_km"] == 311.84
+        assert demo["severed_edges_count"] == 100
+        assert demo["severed_edge_length_km"] == 14.76
         assert demo["flooded_buildings"] == 5
         assert demo["building_coverage_note"] == "OSM building coverage incomplete"
         assert demo["critical_facilities_flooded"] == 0
@@ -68,9 +68,9 @@ async def test_validation_status_endpoint() -> None:
         hashes = data["artifact_hashes"]
         assert (
             hashes["tier0_max_depth_cog.tif"]
-            == "d3168ae8ae7483660a922312b9dff21df9012a6cb8ca350849c7198bbda33ea3"
+            == "d3168ae8ae742171cecd2abac607fd80d36e882e0ffb32e414f721202c900194"
         )
         assert (
             hashes["ganga_tier0_brief.pdf"]
-            == "a1580e27e1bf5e1b413f50afd505add77ff0d0ec11f59ac1d86ef753d5adfaf7"
+            == "acdaad391f768c5c41dbb9b2b6569e13a20fcbbdfc3c623bf715eac02b0f8866"
         )

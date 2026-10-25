@@ -44,8 +44,8 @@ async def test_demo_results_endpoints() -> None:
         res_evac = await client.get("/api/v1/runs/tier0_ganga/evacuation")
         assert res_evac.status_code == 200
         data_evac = res_evac.json()
-        assert data_evac["severed_edges_count"] == 930
-        assert data_evac["severed_edge_length_km"] == 311.84
+        assert data_evac["severed_edges_count"] == 100
+        assert data_evac["severed_edge_length_km"] == 14.76
         assert data_evac["origins"]["reachable_count"] == 2
         assert data_evac["origins"]["unreachable_count"] == 3
 

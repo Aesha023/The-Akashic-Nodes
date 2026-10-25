@@ -108,12 +108,12 @@ class TestTier0DemoPipeline:
             "road_pct": 10.9,
             "buildings_flooded": 5,
             "buildings_total": 93,
-            "severed_edges": 930,
-            "total_edges": 3638,
-            "severed_length_km": 311.84,
+            "severed_edges": 100,
+            "total_edges": 914,
+            "severed_length_km": 14.76,
             "reachable_origins": 2,
             "unreachable_origins": 3,
-            "mean_route_m": 58.4,
+            "mean_route_m": 19.6,
         }
 
         build_tier0_pdf_brief(out_pdf, map_png, stats)

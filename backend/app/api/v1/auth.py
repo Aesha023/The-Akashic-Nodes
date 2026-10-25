@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import datetime
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel
 from sqlalchemy import select
 
 from backend.app.core.audit import log_audit_event
@@ -273,3 +274,72 @@ async def revoke_api_key_endpoint(
         resource_id=key_id,
         user_id=current_user.id,
     )
+
+
+class MfaVerifyRequest(BaseModel):
+    code: str
+
+
+@router.post("/mfa/setup")
+async def setup_mfa(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Generate TOTP secret and provisioning URI for MFA setup."""
+    import pyotp
+
+    secret = pyotp.random_base32()
+    totp = pyotp.TOTP(secret)
+    provisioning_uri = totp.provisioning_uri(
+        name=current_user.email,
+        issuer_name="PravahX",
+    )
+
+    current_user.mfa_secret = secret
+    await db.flush()
+
+    return {
+        "secret": secret,
+        "provisioning_uri": provisioning_uri,
+        "mfa_enabled": current_user.mfa_enabled,
+    }
+
+
+@router.post("/mfa/verify")
+async def verify_mfa(
+    payload: MfaVerifyRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Verify TOTP 6-digit code to enable MFA on user account."""
+    import pyotp
+
+    if not current_user.mfa_secret:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="MFA setup has not been initiated. Call /auth/mfa/setup first.",
+        )
+
+    totp = pyotp.TOTP(current_user.mfa_secret)
+    if not totp.verify(payload.code.strip(), valid_window=1):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid MFA verification code.",
+        )
+
+    current_user.mfa_enabled = True
+    await db.flush()
+
+    await log_audit_event(
+        db,
+        action="mfa.enable",
+        resource_type="user",
+        resource_id=current_user.id,
+        user_id=current_user.id,
+    )
+
+    return {
+        "status": "mfa_enabled",
+        "mfa_enabled": True,
+        "message": "Multi-factor authentication successfully enabled.",
+    }

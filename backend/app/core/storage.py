@@ -47,13 +47,23 @@ class ObjectStorageAdapter:
                 aws_access_key_id=self.access_key,
                 aws_secret_access_key=self.secret_key,
                 region_name=self.region_name,
-                config=Config(signature_version="s3v4"),
+                config=Config(
+                    signature_version="s3v4",
+                    connect_timeout=1,
+                    read_timeout=2,
+                    retries={"max_attempts": 1},
+                ),
             )
 
     @property
     def client(self) -> Any:
         """Underlying boto3 S3 client."""
         return self._client
+
+    @property
+    def bucket_artifacts(self) -> str:
+        """Default artifacts bucket name."""
+        return self.default_bucket
 
     def is_available(self) -> bool:
         """Check if object storage is reachable."""

@@ -143,6 +143,15 @@ else:
     import backend.app.models  # noqa: F401
 
     Base.metadata.create_all(sync_engine)
+    with sync_engine.begin() as conn:
+        import contextlib
+
+        for col_sql in [
+            "ALTER TABLE users ADD COLUMN mfa_secret VARCHAR(64)",
+            "ALTER TABLE users ADD COLUMN mfa_enabled BOOLEAN DEFAULT 0",
+        ]:
+            with contextlib.suppress(Exception):
+                conn.execute(text(col_sql))
 
     async def get_db() -> AsyncGenerator[Any, None]:
         session = sync_session_factory()

@@ -70,6 +70,13 @@ class Settings(BaseSettings):
     gee_service_account_key_file: str = ""
     gee_project_id: str = ""
 
+    # Alerts & Notifications (F16/F17)
+    alert_webhook_url: str = ""
+    alert_email_to: str = ""
+    alert_email_from: str = "alerts@pravahx.local"
+    smtp_host: str = "localhost"
+    smtp_port: int = 1025
+
     # DualSPHysics (constraint A)
     dualsphysics_mode: Literal["cpu", "remote_gpu", "precomputed"] = "cpu"
 

@@ -23,6 +23,8 @@ class User(Base):
         String(32), default="analyst", nullable=False
     )  # admin, analyst, viewer
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    mfa_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.datetime.now(datetime.UTC),

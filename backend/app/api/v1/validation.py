@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/validation", tags=["validation"])
 
@@ -109,4 +110,46 @@ async def get_validation_status() -> dict[str, Any]:
                 "a1580e27e1bf5e1b413f50afd505add77ff0d0ec11f59ac1d86ef753d5adfaf7"
             ),
         },
+    }
+
+
+class SatelliteScoringRequest(BaseModel):
+    """Payload to score simulated raster against satellite observed flood raster."""
+
+    simulated_depth_path: str
+    observed_mask_path: str
+    depth_threshold_m: float = 0.15
+
+
+@router.post("/satellite-scoring", response_model=dict[str, Any])
+async def evaluate_satellite_scoring(
+    payload: SatelliteScoringRequest,
+) -> dict[str, Any]:
+    """Score a simulated depth raster against an observed satellite flood mask (F07)."""
+    import os
+
+    from pravahx.gee.scoring import score_simulation_against_satellite
+
+    if not os.path.exists(payload.simulated_depth_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Simulated depth raster not found: {payload.simulated_depth_path}",
+        )
+    if not os.path.exists(payload.observed_mask_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Observed mask raster not found: {payload.observed_mask_path}",
+        )
+
+    metrics = score_simulation_against_satellite(
+        simulated_depth_path=payload.simulated_depth_path,
+        observed_mask_path=payload.observed_mask_path,
+        depth_threshold_m=payload.depth_threshold_m,
+    )
+    return {
+        "status": "evaluated",
+        "metrics": metrics.model_dump(),
+        "status_label": (
+            "NOT RUN on Ganga (unit tested; no observed SAR raster for Ganga hand screening)"
+        ),
     }

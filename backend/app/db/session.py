@@ -46,9 +46,10 @@ if use_postgres:
         async_sessionmaker,
         create_async_engine,
     )
+    from sqlalchemy.pool import NullPool
 
     pg_url = db_url or settings.database_url
-    async_engine = create_async_engine(pg_url, echo=False, future=True)
+    async_engine = create_async_engine(pg_url, poolclass=NullPool, echo=False, future=True)
     async_session_factory = async_sessionmaker(
         bind=async_engine,
         autocommit=False,
@@ -62,7 +63,7 @@ if use_postgres:
         "postgresql://"
     ):
         sync_pg_url = sync_pg_url.replace("postgresql://", "postgresql+psycopg://")
-    sync_engine = create_engine(sync_pg_url, echo=False)
+    sync_engine = create_engine(sync_pg_url, poolclass=NullPool, echo=False)
     sync_session_factory = sessionmaker(bind=sync_engine, autocommit=False, autoflush=False)
 
     async def init_db() -> None:

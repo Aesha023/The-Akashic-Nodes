@@ -4,13 +4,24 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 
 from backend.app.core.security import create_access_token
-from backend.app.db.session import sync_session_factory
+from backend.app.db.session import sync_engine, sync_session_factory, use_postgres
 from backend.app.main import app
+from backend.app.models.base import Base
 from backend.app.models.run import Run
 from backend.app.models.scenario import Scenario
 from backend.app.models.user import User
+
+
+@pytest.fixture(autouse=True)
+def setup_tables() -> None:
+    if use_postgres:
+        with sync_engine.connect() as conn:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
+            conn.commit()
+    Base.metadata.create_all(sync_engine)
 
 
 @pytest.fixture

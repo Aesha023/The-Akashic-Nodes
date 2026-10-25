@@ -57,6 +57,10 @@ if use_postgres:
         class_=AsyncSession,
     )
 
+    sync_pg_url = pg_url.replace("postgresql+asyncpg://", "postgresql://")
+    sync_engine = create_engine(sync_pg_url, echo=False)
+    sync_session_factory = sessionmaker(bind=sync_engine, autocommit=False, autoflush=False)
+
     async def init_db() -> None:
         import backend.app.models  # noqa: F401
 

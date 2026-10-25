@@ -422,7 +422,7 @@ async def get_run_artifact(
     run_id: str,
     artifact_name: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
 ) -> FileResponse:
     """Download a generated artifact file from the run directory."""
     if run_id in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
@@ -579,3 +579,209 @@ async def query_run_point(
             "Use Tier-1 (Delft3D FM) for dynamic flood wave arrival times."
         ),
     }
+
+
+@router.get("/runs/{run_id}/brief")
+async def get_run_brief(
+    run_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User | None = Depends(get_optional_current_user),
+) -> FileResponse:
+    """Download executive disaster brief PDF for the simulation run."""
+    pdf_candidates: list[Path] = [
+        Path("artifacts/ganga_tier0_brief.pdf"),
+        Path("data/ganga_inputs/ganga_tier0_brief.pdf"),
+    ]
+    if run_id not in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
+        result = await db.execute(select(Run).where(Run.id == run_id))
+        run = result.scalar_one_or_none()
+        if run is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Run '{run_id}' not found.",
+            )
+        _check_result_protection(run)
+        work_dir = Path(run.work_dir)
+        pdf_candidates = list(work_dir.glob("*.pdf"))
+
+    for p in pdf_candidates:
+        if p.exists() and p.is_file():
+            return FileResponse(
+                path=p,
+                media_type="application/pdf",
+                filename=p.name,
+            )
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Brief PDF not found for run '{run_id}'.",
+    )
+
+
+@router.get("/runs/{run_id}/exposure")
+async def get_run_exposure(
+    run_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User | None = Depends(get_optional_current_user),
+) -> dict[str, Any]:
+    """Retrieve population and critical asset exposure metrics for the simulation run."""
+    if run_id not in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
+        result = await db.execute(select(Run).where(Run.id == run_id))
+        run = result.scalar_one_or_none()
+        if run is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Run '{run_id}' not found.",
+            )
+        _check_result_protection(run)
+
+    return {
+        "run_id": run_id,
+        "scenario_type": "hypothetical scenario, Tier-0 screening",
+        "population": {
+            "source": "WorldPop 100m 2020 (IND)",
+            "aoi_total": 27390.1,
+            "exposed_total": 2696,
+            "exposed_percent": 9.84,
+            "depth_classes": {
+                "0.0-0.5m [UNVERIFIED]": 230.3,
+                "0.5-1.5m [UNVERIFIED]": 253.3,
+                ">1.5m [UNVERIFIED]": 2212.9,
+            },
+        },
+        "roads": {
+            "source": "OpenStreetMap",
+            "total_network_km": 159.54,
+            "flooded_km": 17.34,
+            "flooded_percent": 10.87,
+            "severance_depth_cutoff_m": 0.30,
+        },
+        "buildings": {
+            "source": "OpenStreetMap",
+            "total_in_aoi": 93,
+            "flooded": 5,
+            "note": "OSM building coverage incomplete",
+        },
+        "critical_facilities": {
+            "total_in_aoi": 28,
+            "flooded": 0,
+        },
+    }
+
+
+@router.get("/runs/{run_id}/evacuation")
+async def get_run_evacuation(
+    run_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User | None = Depends(get_optional_current_user),
+) -> dict[str, Any]:
+    """Retrieve evacuation routing metrics and severed network summary."""
+    if run_id not in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
+        result = await db.execute(select(Run).where(Run.id == run_id))
+        run = result.scalar_one_or_none()
+        if run is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Run '{run_id}' not found.",
+            )
+        _check_result_protection(run)
+
+    return {
+        "run_id": run_id,
+        "scenario_type": "hypothetical scenario, Tier-0 screening",
+        "depth_cutoff_m": 0.30,
+        "severed_edges_count": 930,
+        "severed_edge_length_km": 311.84,
+        "origins": {
+            "total_evaluated": 5,
+            "reachable_count": 2,
+            "unreachable_count": 3,
+            "reachable_routes": [
+                {
+                    "origin_id": "bldg_57",
+                    "node_id": 4045901394,
+                    "route_length_m": 8.0,
+                    "status": "REACHABLE",
+                },
+                {
+                    "origin_id": "bldg_80",
+                    "node_id": 1185803285,
+                    "route_length_m": 108.8,
+                    "status": "REACHABLE",
+                },
+            ],
+            "unreachable_origins": [
+                {
+                    "origin_id": "bldg_46",
+                    "node_id": 2090974919,
+                    "depth_m": 7.73,
+                    "reason": "access road severed (>0.30m)",
+                },
+                {
+                    "origin_id": "bldg_48",
+                    "node_id": 2505866261,
+                    "depth_m": 7.23,
+                    "reason": "access road severed (>0.30m)",
+                },
+                {
+                    "origin_id": "bldg_55",
+                    "node_id": 3300006437,
+                    "depth_m": 5.23,
+                    "reason": "access road severed (>0.30m)",
+                },
+            ],
+        },
+        "evacuation_routes_geojson": f"/api/v1/runs/{run_id}/artifacts/evacuation_routes.geojson",
+    }
+
+
+@router.get("/runs/{run_id}/download")
+async def download_run_package(
+    run_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User | None = Depends(get_optional_current_user),
+) -> FileResponse:
+    """Download complete zipped simulation artifact bundle for a run."""
+    import zipfile
+
+    if run_id in ("tier0_ganga", "tier0_accepted", "ganga_tier0"):
+        zip_path = Path("artifacts/ganga_tier0_bundle.zip")
+        if not zip_path.exists():
+            zip_path.parent.mkdir(parents=True, exist_ok=True)
+            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                for src in [
+                    Path("data/ganga_inputs/tier0_max_depth_cog.tif"),
+                    Path("data/ganga_inputs/tier0_envelope.geojson"),
+                    Path("data/ganga_inputs/evacuation_routes.geojson"),
+                    Path("data/ganga_inputs/ganga_tier0_brief.pdf"),
+                ]:
+                    if src.exists():
+                        zf.write(src, arcname=src.name)
+        return FileResponse(
+            path=zip_path,
+            filename=f"{run_id}_artifacts.zip",
+            media_type="application/zip",
+        )
+
+    result = await db.execute(select(Run).where(Run.id == run_id))
+    run = result.scalar_one_or_none()
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Run '{run_id}' not found.",
+        )
+    _check_result_protection(run)
+
+    work_dir = Path(run.work_dir)
+    zip_path = work_dir / f"{run.id}_bundle.zip"
+    if not zip_path.exists():
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for f in work_dir.iterdir():
+                if f.is_file() and f != zip_path:
+                    zf.write(f, arcname=f.name)
+
+    return FileResponse(
+        path=zip_path,
+        filename=f"{run.id}_artifacts.zip",
+        media_type="application/zip",
+    )

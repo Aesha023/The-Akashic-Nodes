@@ -1,8 +1,10 @@
-"""Scenario CRUD API endpoints (Phase 7)."""
+"""Scenario CRUD, cloning, and versioning API endpoints (Phase 7 & B2 API Completion)."""
 
 from __future__ import annotations
 
+import datetime
 import json
+import time
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -12,6 +14,7 @@ from backend.app.core.auth import get_current_user, require_admin, require_analy
 from backend.app.db.session import get_db
 from backend.app.models.scenario import Scenario
 from backend.app.schemas.scenario import (
+    ScenarioCloneRequest,
     ScenarioCreate,
     ScenarioListResponse,
     ScenarioResponse,
@@ -33,6 +36,8 @@ def _scenario_to_response(s: Scenario) -> ScenarioResponse:
         name=s.name,
         scenario_type=s.scenario_type,
         failure_mode=s.failure_mode,
+        version=s.version,
+        parent_scenario_id=s.parent_scenario_id,
         config=config_dict,
         created_by=s.created_by,
         created_at=s.created_at,
@@ -64,6 +69,7 @@ async def create_scenario(
         failure_mode=cfg.scenario.failure_mode.value if cfg.scenario.failure_mode else None,
         config_json=cfg.model_dump_json(),
         created_by=current_user.id,
+        version=1,
     )
     db.add(scenario)
     await db.flush()
@@ -118,7 +124,7 @@ async def update_scenario(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_analyst),
 ) -> ScenarioResponse:
-    """Update configuration for an existing scenario."""
+    """Update configuration for an existing scenario, incrementing its version."""
     result = await db.execute(select(Scenario).where(Scenario.id == scenario_id))
     scenario = result.scalar_one_or_none()
 
@@ -133,9 +139,68 @@ async def update_scenario(
     scenario.scenario_type = cfg.scenario.type.value
     scenario.failure_mode = cfg.scenario.failure_mode.value if cfg.scenario.failure_mode else None
     scenario.config_json = cfg.model_dump_json()
+    scenario.version += 1
+    scenario.updated_at = datetime.datetime.now(datetime.UTC)
 
     await db.flush()
     return _scenario_to_response(scenario)
+
+
+@router.post(
+    "/{scenario_id}/clone",
+    response_model=ScenarioResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def clone_scenario(
+    scenario_id: str,
+    payload: ScenarioCloneRequest | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_analyst),
+) -> ScenarioResponse:
+    """Clone an existing scenario into a new scenario with parent lineage."""
+    result = await db.execute(select(Scenario).where(Scenario.id == scenario_id))
+    parent = result.scalar_one_or_none()
+
+    if parent is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Parent scenario '{scenario_id}' not found.",
+        )
+
+    cloned_id = (
+        payload.new_id if payload and payload.new_id else f"{parent.id}_clone_{int(time.time())}"
+    )
+    cloned_name = payload.new_name if payload and payload.new_name else f"{parent.name} (Clone)"
+
+    # Check collision
+    exist_check = await db.execute(select(Scenario).where(Scenario.id == cloned_id))
+    if exist_check.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Scenario with id '{cloned_id}' already exists.",
+        )
+
+    # Update config JSON with new scenario id and name
+    parent_cfg = json.loads(parent.config_json)
+    if "scenario" in parent_cfg:
+        parent_cfg["scenario"]["id"] = cloned_id
+        parent_cfg["scenario"]["name"] = cloned_name
+
+    cloned_scenario = Scenario(
+        id=cloned_id,
+        name=cloned_name,
+        scenario_type=parent.scenario_type,
+        failure_mode=parent.failure_mode,
+        config_json=json.dumps(parent_cfg),
+        created_by=current_user.id,
+        version=1,
+        parent_scenario_id=parent.id,
+        aoi_geom=parent.aoi_geom,
+    )
+    db.add(cloned_scenario)
+    await db.flush()
+
+    return _scenario_to_response(cloned_scenario)
 
 
 @router.delete("/{scenario_id}", status_code=status.HTTP_204_NO_CONTENT)

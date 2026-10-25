@@ -55,6 +55,14 @@ class ObjectStorageAdapter:
         """Underlying boto3 S3 client."""
         return self._client
 
+    def is_available(self) -> bool:
+        """Check if object storage is reachable."""
+        try:
+            self._client.head_bucket(Bucket=self.default_bucket)
+            return True
+        except Exception:
+            return False
+
     def ensure_bucket_exists(self, bucket: str | None = None) -> bool:
         """Create bucket if it does not already exist."""
         target_bucket = bucket or self.default_bucket

@@ -11,6 +11,7 @@ from backend.app.api.v1.runs import router as runs_router
 from backend.app.api.v1.scenarios import router as scenarios_router
 from backend.app.api.v1.system import router as system_router
 from backend.app.api.v1.tiles import router as tiles_router
+from backend.app.api.v1.validation import router as validation_router
 
 api_v1_router = APIRouter(prefix="/api/v1")
 
@@ -21,5 +22,6 @@ api_v1_router.include_router(tiles_router)
 api_v1_router.include_router(impact_router)
 api_v1_router.include_router(gee_router)
 api_v1_router.include_router(system_router)
+api_v1_router.include_router(validation_router)
 
 __all__ = ["api_v1_router"]

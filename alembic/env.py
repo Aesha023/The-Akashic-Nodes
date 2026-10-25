@@ -24,13 +24,13 @@ def get_sync_url() -> str:
     """Retrieve synchronous database URL for Alembic migrations."""
     db_url = os.environ.get("DATABASE_URL", "")
     if db_url:
-        return db_url.replace("postgresql+asyncpg://", "postgresql://")
+        return db_url.replace("postgresql+asyncpg://", "postgresql+psycopg://")
 
     settings = Settings()
     if settings.postgres_user:
         pwd = settings.postgres_password.get_secret_value()
         return (
-            f"postgresql://{settings.postgres_user}:{pwd}"
+            f"postgresql+psycopg://{settings.postgres_user}:{pwd}"
             f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
         )
     return "sqlite:///./pravahx_dev.db"

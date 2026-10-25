@@ -22,7 +22,7 @@ POSTGRES_USER = os.environ.get("POSTGRES_USER", "pravahx_test")
 POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "test_password")
 
 SYNC_PG_URL = (
-    f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}"
+    f"postgresql+psycopg://{POSTGRES_USER}:{POSTGRES_PASSWORD}"
     f"@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 )
 

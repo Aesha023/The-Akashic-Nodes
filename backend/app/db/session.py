@@ -57,7 +57,11 @@ if use_postgres:
         class_=AsyncSession,
     )
 
-    sync_pg_url = pg_url.replace("postgresql+asyncpg://", "postgresql://")
+    sync_pg_url = pg_url.replace("postgresql+asyncpg://", "postgresql+psycopg://")
+    if not sync_pg_url.startswith("postgresql+psycopg://") and sync_pg_url.startswith(
+        "postgresql://"
+    ):
+        sync_pg_url = sync_pg_url.replace("postgresql://", "postgresql+psycopg://")
     sync_engine = create_engine(sync_pg_url, echo=False)
     sync_session_factory = sessionmaker(bind=sync_engine, autocommit=False, autoflush=False)
 

@@ -71,18 +71,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
             <span>SIH 2026 · PS 26161 · Hydrodynamic Disaster Intelligence</span>
           </div>
 
-          {/* Huge award-level headline */}
-          <h1 className="text-4xl sm:text-6xl lg:text-[76px] font-bold tracking-tight text-text leading-[1.05]">
+          {/* Plain English question answering landing requirement */}
+          <div className="text-xs font-mono font-bold uppercase tracking-wider text-brand">
+            {isHi ? 'बाढ़ सिमुलेशन और जोखिम मूल्यांकन' : 'Multi-Tier Dam-Break Inundation Screening'}
+          </div>
+          <h1 className="text-4xl sm:text-6xl lg:text-[72px] font-bold tracking-tight text-text leading-[1.05]">
             {isHi 
-              ? 'पानी कहाँ जाएगा, पहले से जानें।' 
-              : 'Know where the water goes. Before it gets there.'}
+              ? 'यदि कोई बांध टूटता है तो बाढ़ का पानी कहाँ जाएगा?' 
+              : 'Where will flood water go if a dam breaches?'}
           </h1>
 
           {/* Subhead with 16px min body */}
           <p className="text-lg sm:text-xl text-text-secondary max-w-2xl mx-auto leading-relaxed">
             {isHi
-              ? 'मल्टी-टियर बांध विफलता जलप्लावन मॉडलिंग, तीव्र स्थैतिक स्क्रीनिंग, और भौतिकी-आधारित सिमुलेशन। पूर्ण वैज्ञानिक प्रामाणिकता के साथ निर्मित।'
-              : 'Multi-tier dam break inundation modeling, rapid static screening, and physics-based routing. Built with scientific honesty and verified data provenance.'}
+              ? 'मल्टी-टियर जलप्लावन मॉडलिंग, तीव्र स्थैतिक स्क्रीनिंग, और भौतिकी-आधारित सिमुलेशन। पूर्ण वैज्ञानिक प्रामाणिकता और पारदर्शी सत्यापन के साथ निर्मित।'
+              : 'Multi-tier dam-break inundation screening, rapid static terrain analysis, and hydrodynamic routing. Built with scientific honesty and verified data provenance.'}
           </p>
 
           {/* Two primary CTAs */}

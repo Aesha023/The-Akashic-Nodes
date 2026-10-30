@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Sparkles, ArrowLeft, ArrowRight, MinusCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
@@ -13,6 +13,26 @@ import { FeatureId } from '../../types';
 const SignInPage = React.lazy(() => import('../auth/SignInPage').then(m => ({ default: m.SignInPage })));
 const HomePage = React.lazy(() => import('../home/HomePage').then(m => ({ default: m.HomePage })));
 const ResultsExplorerPage = React.lazy(() => import('../map/ResultsExplorerPage').then(m => ({ default: m.ResultsExplorerPage })));
+const ImpactAnalysisPage = React.lazy(() => import('../impact/ImpactAnalysisPage').then(m => ({ default: m.ImpactAnalysisPage })));
+const EvacuationRouterPage = React.lazy(() => import('../evacuation/EvacuationRouterPage').then(m => ({ default: m.EvacuationRouterPage })));
+const MissionControlPage = React.lazy(() => import('../mission/MissionControlPage').then(m => ({ default: m.MissionControlPage })));
+const RunMonitorPage = React.lazy(() => import('../monitor/RunMonitorPage').then(m => ({ default: m.RunMonitorPage })));
+
+const NewScenarioWizardPage = React.lazy(() => import('../scenarios/NewScenarioWizardPage').then(m => ({ default: m.NewScenarioWizardPage })));
+const ScenarioLibraryPage = React.lazy(() => import('../scenarios/ScenarioLibraryPage').then(m => ({ default: m.ScenarioLibraryPage })));
+const BatchRunsPage = React.lazy(() => import('../scenarios/BatchRunsPage').then(m => ({ default: m.BatchRunsPage })));
+const EngineComparisonPage = React.lazy(() => import('../results/EngineComparisonPage').then(m => ({ default: m.EngineComparisonPage })));
+const SatelliteValidationPage = React.lazy(() => import('../results/SatelliteValidationPage').then(m => ({ default: m.SatelliteValidationPage })));
+const LiveFloodMonitorPage = React.lazy(() => import('../monitoring/LiveFloodMonitorPage').then(m => ({ default: m.LiveFloodMonitorPage })));
+const CascadeRiskPage = React.lazy(() => import('../monitoring/CascadeRiskPage').then(m => ({ default: m.CascadeRiskPage })));
+const LakeWatchPage = React.lazy(() => import('../monitoring/LakeWatchPage').then(m => ({ default: m.LakeWatchPage })));
+const AlertRulesPage = React.lazy(() => import('../monitoring/AlertRulesPage').then(m => ({ default: m.AlertRulesPage })));
+const ExportsSharePage = React.lazy(() => import('../trust/ExportsSharePage').then(m => ({ default: m.ExportsSharePage })));
+const DataCataloguePage = React.lazy(() => import('../trust/DataCataloguePage').then(m => ({ default: m.DataCataloguePage })));
+const ValidationBenchmarksPage = React.lazy(() => import('../trust/ValidationBenchmarksPage').then(m => ({ default: m.ValidationBenchmarksPage })));
+const SystemHealthPage = React.lazy(() => import('../admin/SystemHealthPage').then(m => ({ default: m.SystemHealthPage })));
+const AuditLogPage = React.lazy(() => import('../admin/AuditLogPage').then(m => ({ default: m.AuditLogPage })));
+const UserAdminPage = React.lazy(() => import('../admin/UserAdminPage').then(m => ({ default: m.UserAdminPage })));
 
 const FEATURE_QUESTIONS: Record<string, { en: string; hi: string; cta: string; ctaTarget?: FeatureId }> = {
   f01_mission_control: {
@@ -158,6 +178,43 @@ export const AppShell: React.FC = () => {
   };
 
   const renderContent = () => {
+    const DEMO_ONLY_FEATURES: FeatureId[] = [
+      'f08_live_flood',
+      'f11_cascade',
+      'f16_lake_watch',
+      'f06_engine_comparison',
+    ];
+
+    if (!isPresentationMode && DEMO_ONLY_FEATURES.includes(activeFeature)) {
+      return (
+        <div className="p-6 sm:p-10 max-w-4xl mx-auto space-y-6">
+          <div className="bg-white rounded-2xl p-8 sm:p-12 border border-border shadow-xs text-center py-16 space-y-6">
+            <div className="w-16 h-16 rounded-2xl bg-bg-subtle text-text-tertiary flex items-center justify-center mx-auto">
+              <MinusCircle size={32} />
+            </div>
+            <div className="space-y-2 max-w-md mx-auto">
+              <h2 className="text-2xl font-bold text-text">
+                {isHi ? 'परिचालन मोड में उपलब्ध नहीं' : 'Not available in Operational mode'}
+              </h2>
+              <p className="text-sm text-text-secondary leading-relaxed">
+                {isHi
+                  ? 'यह मॉड्यूल प्रदर्शन/डेमो मोड के लिए आरक्षित है। वास्तविक परिचालन में केवल सत्यापित वैज्ञानिक गणनाएं और आधिकारिक अवलोकन प्रदर्शित किए जाते हैं।'
+                  : 'This module contains demonstration or pending calibration data and is hidden in Operational mode. Switch to Presentation Mode in the top bar to view demonstration fixtures.'}
+              </p>
+            </div>
+            <div className="pt-2 flex justify-center gap-3">
+              <button
+                onClick={() => handleNavigate('f01_mission_control')}
+                className="py-2.5 px-5 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm transition-all"
+              >
+                {isHi ? 'मिशन कंट्रोल पर जाएँ' : 'Go to Mission Control'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (activeFeature === 'landing') {
       return <LandingPage onNavigate={handleNavigate} />;
     }
@@ -186,7 +243,160 @@ export const AppShell: React.FC = () => {
       );
     }
 
-    const questionInfo = FEATURE_QUESTIONS[activeFeature] || {
+    if (activeFeature === 'f01_mission_control') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading mission control...</div>}>
+          <MissionControlPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f04_run_monitor') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading run monitor...</div>}>
+          <RunMonitorPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f09_impact') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading impact assessment...</div>}>
+          <ImpactAnalysisPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f10_evacuation') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading evacuation router...</div>}>
+          <EvacuationRouterPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f02_new_scenario') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading scenario wizard...</div>}>
+          <NewScenarioWizardPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f14_library') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading scenario library...</div>}>
+          <ScenarioLibraryPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f15_batch') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading batch processing...</div>}>
+          <BatchRunsPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f06_engine_comparison') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading engine comparison...</div>}>
+          <EngineComparisonPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f07_satellite_validation') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading satellite validation...</div>}>
+          <SatelliteValidationPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f08_live_flood') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading live flood monitor...</div>}>
+          <LiveFloodMonitorPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f11_cascade') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading cascade risk...</div>}>
+          <CascadeRiskPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f16_lake_watch') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading glacial lake watch...</div>}>
+          <LakeWatchPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f17_alerts') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading alerts rules...</div>}>
+          <AlertRulesPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f18_catalogue') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading data catalogue...</div>}>
+          <DataCataloguePage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f19_benchmarks') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading validation benchmarks...</div>}>
+          <ValidationBenchmarksPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f20_health') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading system health...</div>}>
+          <SystemHealthPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f21_audit') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading audit hash chain...</div>}>
+          <AuditLogPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f22_admin') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading administration...</div>}>
+          <UserAdminPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    if (activeFeature === 'f12_exports') {
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading exports & share...</div>}>
+          <ExportsSharePage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
+    }
+
+    const featStr = String(activeFeature);
+    const questionInfo = FEATURE_QUESTIONS[featStr] || {
       en: 'What operational question does this module answer?',
       hi: 'यह मॉड्यूल किस परिचालन प्रश्न का उत्तर देता है?',
       cta: 'Open Ganga Flood Map →',
@@ -202,12 +412,12 @@ export const AppShell: React.FC = () => {
           <div className="space-y-1 max-w-3xl">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-bg-muted text-text-tertiary uppercase">
-                {activeFeature}
+                {featStr}
               </span>
-              {activeFeature.includes('cascade') ||
-              activeFeature.includes('engine_comparison') ||
-              activeFeature.includes('live_flood') ||
-              activeFeature.includes('lake_watch') ? (
+              {featStr.includes('cascade') ||
+              featStr.includes('engine_comparison') ||
+              featStr.includes('live_flood') ||
+              featStr.includes('lake_watch') ? (
                 <DemoBadge />
               ) : null}
             </div>
@@ -218,7 +428,7 @@ export const AppShell: React.FC = () => {
             </h1>
 
             <p className="text-sm text-text-secondary">
-              {t(`nav.${activeFeature}` as any, activeFeature.replace(/_/g, ' ').toUpperCase())} · PravahX Command Console
+              {t(`nav.${featStr}` as any, featStr.replace(/_/g, ' ').toUpperCase())} · PravahX Command Console
             </p>
           </div>
 
@@ -239,7 +449,7 @@ export const AppShell: React.FC = () => {
 
           <div className="space-y-2 max-w-xl mx-auto">
             <h3 className="text-2xl font-bold text-text">
-              {t(`nav.${activeFeature}` as any, activeFeature.replace(/_/g, ' ').toUpperCase())}
+              {t(`nav.${featStr}` as any, featStr.replace(/_/g, ' ').toUpperCase())}
             </h3>
             <p className="text-base text-text-secondary leading-relaxed">
               {isHi

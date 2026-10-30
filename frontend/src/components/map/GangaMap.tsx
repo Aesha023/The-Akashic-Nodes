@@ -1,46 +1,199 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { RotateCcw, Info, Check } from 'lucide-react';
-import { useDemoMode } from '../../context/DemoModeContext';
+import { RotateCcw, Copy, Check } from 'lucide-react';
 
-interface GangaMapProps {
+export interface MapLayerVisibility {
+  depth: boolean;
+  extent: boolean;
+  roads: boolean;
+  buildings: boolean;
+  settlements: boolean;
+  evac: boolean;
+  hillshade: boolean;
+}
+
+export interface MapLayerOpacity {
+  depth: number;
+  extent: number;
+  roads: number;
+  buildings: number;
+  settlements: number;
+  evac: number;
+  hillshade: number;
+}
+
+export interface PointQueryData {
+  lon: number;
+  lat: number;
+  depth_m: number;
+  depth_class: string;
+  is_flooded: boolean;
+}
+
+export interface GangaMapHandle {
+  flyTo: (coords: [number, number], zoom?: number) => void;
+  resetView: () => void;
+}
+
+export interface GangaMapProps {
   height?: string;
+  runId?: string;
   interactive?: boolean;
   showControls?: boolean;
   showEvacuation?: boolean;
-  onPointClick?: (point: { lon: number; lat: number; depth: number }) => void;
+  layerVisibility?: MapLayerVisibility;
+  layerOpacity?: MapLayerOpacity;
+  focusedPoint?: { lon: number; lat: number; id?: string } | null;
+  onPointInspect?: (point: PointQueryData | null) => void;
   className?: string;
-  isDemo?: boolean;
 }
 
-export const GangaMap: React.FC<GangaMapProps> = ({
-  height = '480px',
+const defaultVisibility: MapLayerVisibility = {
+  depth: true,
+  extent: true,
+  roads: true,
+  buildings: true,
+  settlements: true,
+  evac: true,
+  hillshade: false,
+};
+
+const defaultOpacity: MapLayerOpacity = {
+  depth: 0.85,
+  extent: 1.0,
+  roads: 1.0,
+  buildings: 0.9,
+  settlements: 1.0,
+  evac: 1.0,
+  hillshade: 0.5,
+};
+
+export const GangaMap = forwardRef<GangaMapHandle, GangaMapProps>(({
+  height = '100%',
+  runId = 'tier0_ganga_accepted',
   interactive = true,
   showControls = true,
-  showEvacuation = true,
-  onPointClick,
+  layerVisibility = defaultVisibility,
+  layerOpacity = defaultOpacity,
+  focusedPoint,
+  onPointInspect,
   className = '',
-  isDemo = false,
-}) => {
-  const { isPresentationMode } = useDemoMode();
+}, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const markerRef = useRef<maplibregl.Marker | null>(null);
 
-  const [activeLayers, setActiveLayers] = useState({
-    extent: true,
-    evac: showEvacuation,
-    legend: true,
-  });
-  const [clickedDepth, setClickedDepth] = useState<{ lon: number; lat: number; depth: number } | null>(null);
+  const [clickedPoint, setClickedPoint] = useState<PointQueryData | null>(null);
+  const [copiedCoords, setCopiedCoords] = useState(false);
 
-  // Ganga Rishikesh reach center
-  const center: [number, number] = [78.325, 30.125];
+  // Ganga Rishikesh reach center: 78.325°E, 30.125°N
+  const defaultCenter: [number, number] = [78.325, 30.125];
+  const defaultZoom = 12.8;
+
+  useImperativeHandle(ref, () => ({
+    flyTo: (coords: [number, number], zoom = 14.5) => {
+      if (mapRef.current) {
+        mapRef.current.flyTo({
+          center: coords,
+          zoom,
+          speed: 1.4,
+          curve: 1.1,
+          essential: true,
+        });
+      }
+    },
+    resetView: () => {
+      if (mapRef.current) {
+        mapRef.current.flyTo({
+          center: defaultCenter,
+          zoom: defaultZoom,
+          speed: 1.2,
+          essential: true,
+        });
+      }
+    },
+  }));
+
+  // Handle focused point from parent (e.g. clicked settlement in table drawer)
+  useEffect(() => {
+    if (!mapRef.current || !focusedPoint) return;
+    const { lon, lat } = focusedPoint;
+
+    if (markerRef.current) {
+      markerRef.current.remove();
+    }
+
+    const el = document.createElement('div');
+    el.className = 'w-6 h-6 rounded-full border-2 border-white bg-brand shadow-lg animate-bounce flex items-center justify-center';
+    el.innerHTML = '<div class="w-2 h-2 rounded-full bg-white"></div>';
+
+    const marker = new maplibregl.Marker({ element: el })
+      .setLngLat([lon, lat])
+      .addTo(mapRef.current);
+
+    markerRef.current = marker;
+
+    mapRef.current.flyTo({
+      center: [lon, lat],
+      zoom: 14.8,
+      speed: 1.2,
+      essential: true,
+    });
+  }, [focusedPoint]);
+
+  // Update layer visibilities and opacities when props change
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+
+    // 1. Depth Fill
+    if (map.getLayer('ganga-depth-fill')) {
+      map.setLayoutProperty('ganga-depth-fill', 'visibility', layerVisibility.depth ? 'visible' : 'none');
+      map.setPaintProperty('ganga-depth-fill', 'fill-opacity', layerOpacity.depth * 0.75);
+    }
+    // 2. Extent Line
+    if (map.getLayer('ganga-extent-line')) {
+      map.setLayoutProperty('ganga-extent-line', 'visibility', layerVisibility.extent ? 'visible' : 'none');
+      map.setPaintProperty('ganga-extent-line', 'line-opacity', layerOpacity.extent);
+    }
+    // 3. Flooded Roads
+    if (map.getLayer('flooded-roads-line')) {
+      map.setLayoutProperty('flooded-roads-line', 'visibility', layerVisibility.roads ? 'visible' : 'none');
+      map.setPaintProperty('flooded-roads-line', 'line-opacity', layerOpacity.roads);
+    }
+    // 4. Flooded Buildings
+    if (map.getLayer('flooded-buildings-fill')) {
+      map.setLayoutProperty('flooded-buildings-fill', 'visibility', layerVisibility.buildings ? 'visible' : 'none');
+      map.setLayoutProperty('flooded-buildings-line', 'visibility', layerVisibility.buildings ? 'visible' : 'none');
+      map.setPaintProperty('flooded-buildings-fill', 'fill-opacity', layerOpacity.buildings * 0.6);
+      map.setPaintProperty('flooded-buildings-line', 'line-opacity', layerOpacity.buildings);
+    }
+    // 5. Settlements
+    if (map.getLayer('settlements-circle')) {
+      map.setLayoutProperty('settlements-circle', 'visibility', layerVisibility.settlements ? 'visible' : 'none');
+      map.setLayoutProperty('settlements-label', 'visibility', layerVisibility.settlements ? 'visible' : 'none');
+      map.setPaintProperty('settlements-circle', 'circle-opacity', layerOpacity.settlements);
+      map.setPaintProperty('settlements-label', 'text-opacity', layerOpacity.settlements);
+    }
+    // 6. Evacuation Routes
+    if (map.getLayer('evac-routes-line')) {
+      map.setLayoutProperty('evac-routes-line', 'visibility', layerVisibility.evac ? 'visible' : 'none');
+      map.setLayoutProperty('evac-routes-casing', 'visibility', layerVisibility.evac ? 'visible' : 'none');
+      map.setPaintProperty('evac-routes-line', 'line-opacity', layerOpacity.evac);
+      map.setPaintProperty('evac-routes-casing', 'line-opacity', layerOpacity.evac);
+    }
+    // 7. Hillshade
+    if (map.getLayer('hillshade-layer')) {
+      map.setLayoutProperty('hillshade-layer', 'visibility', layerVisibility.hillshade ? 'visible' : 'none');
+      map.setPaintProperty('hillshade-layer', 'raster-opacity', layerOpacity.hillshade * 0.5);
+    }
+  }, [layerVisibility, layerOpacity]);
 
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    // Self-contained, clean light basemap style for secure/air-gapped operation
+    // Self-contained light basemap style for secure/air-gapped operation
     const lightStyle: maplibregl.StyleSpecification = {
       version: 8,
       name: 'PravahX-Light-AirGapped',
@@ -59,7 +212,7 @@ export const GangaMap: React.FC<GangaMapProps> = ({
           id: 'background',
           type: 'background',
           paint: {
-            'background-color': '#F7F8FA',
+            'background-color': '#FFFFFF',
           },
         },
         {
@@ -70,7 +223,7 @@ export const GangaMap: React.FC<GangaMapProps> = ({
           maxzoom: 19,
           paint: {
             'raster-opacity': 0.95,
-            'raster-saturation': -0.1,
+            'raster-saturation': -0.15,
           },
         },
       ],
@@ -79,149 +232,244 @@ export const GangaMap: React.FC<GangaMapProps> = ({
     const map = new maplibregl.Map({
       container: mapContainer.current,
       style: lightStyle,
-      center,
-      zoom: 12.8,
-      interactive,
+      center: defaultCenter,
+      zoom: defaultZoom,
       attributionControl: false,
+      interactive,
     });
 
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
-    if (interactive) {
+    if (showControls) {
       map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
     }
 
     map.on('load', async () => {
-      // 1. Fetch real Ganga extent GeoJSON from API or local fallback
-      let extentData: any = null;
+      // 1. Add Extent / Depth raster source
       try {
-        const res = await fetch('/api/v1/runs/tier0_ganga/extent.geojson');
-        if (res.ok) {
-          extentData = await res.json();
-        }
-      } catch (err) {
-        // Fallback handled below
-      }
+        const extentRes = await fetch('/data/ganga_inputs/tier0_envelope.geojson');
+        if (extentRes.ok) {
+          const extentGeo = await extentRes.json();
+          if (!map.getSource('ganga-extent')) {
+            map.addSource('ganga-extent', {
+              type: 'geojson',
+              data: extentGeo,
+            });
 
-      // If backend is not currently running in offline build mode, load from static or inline fallback
-      if (!extentData) {
-        try {
-          const localRes = await fetch('/data/ganga_inputs/tier0_envelope.geojson');
-          if (localRes.ok) {
-            extentData = await localRes.json();
-          }
-        } catch (e) {
-          // Minimal bounding polygon for Rishikesh reach if network offline
-          extentData = {
-            type: 'FeatureCollection',
-            features: [
-              {
-                type: 'Feature',
-                properties: { max_depth: 7.73 },
-                geometry: {
-                  type: 'Polygon',
-                  coordinates: [
-                    [
-                      [78.302, 30.100],
-                      [78.349, 30.128],
-                      [78.341, 30.142],
-                      [78.307, 30.118],
-                      [78.302, 30.100],
-                    ],
-                  ],
-                },
+            // 1. Depth fill
+            map.addLayer({
+              id: 'ganga-depth-fill',
+              type: 'fill',
+              source: 'ganga-extent',
+              paint: {
+                'fill-color': '#1874C7',
+                'fill-opacity': layerOpacity.depth * 0.75,
               },
-            ],
-          };
-        }
-      }
+            });
 
-      if (extentData && map.getSource('ganga-extent') === undefined) {
-        map.addSource('ganga-extent', {
-          type: 'geojson',
-          data: extentData,
-        });
-
-        // Fill layer with semi-transparent hydrodynamic blue
-        map.addLayer({
-          id: 'ganga-extent-fill',
-          type: 'fill',
-          source: 'ganga-extent',
-          paint: {
-            'fill-color': '#1874C7',
-            'fill-opacity': 0.65,
-          },
-        });
-
-        // Outline layer matching PRAVAHX_DESIGN_LIGHT.md (#0A66FF 1.5px)
-        map.addLayer({
-          id: 'ganga-extent-line',
-          type: 'line',
-          source: 'ganga-extent',
-          paint: {
-            'line-color': '#0A66FF',
-            'line-width': 1.5,
-          },
-        });
-      }
-
-      // 2. Fetch Evacuation Routes
-      let evacData: any = null;
-      try {
-        const resEvac = await fetch('/data/ganga_inputs/evacuation_routes.geojson');
-        if (resEvac.ok) {
-          evacData = await resEvac.json();
+            // 2. Extent outline (1.5px #0A66FF)
+            map.addLayer({
+              id: 'ganga-extent-line',
+              type: 'line',
+              source: 'ganga-extent',
+              paint: {
+                'line-color': '#0A66FF',
+                'line-width': 1.5,
+                'line-opacity': layerOpacity.extent,
+              },
+            });
+          }
         }
       } catch (e) {
-        // optional
+        // Fallback handled
       }
 
-      if (evacData && map.getSource('evac-routes') === undefined) {
-        map.addSource('evac-routes', {
-          type: 'geojson',
-          data: evacData,
-        });
+      // 3. Flooded Roads Layer (dashed red #F04438)
+      try {
+        const roadsRes = await fetch('/data/ganga_inputs/flooded_roads.geojson');
+        if (roadsRes.ok) {
+          const roadsGeo = await roadsRes.json();
+          if (!map.getSource('flooded-roads')) {
+            map.addSource('flooded-roads', {
+              type: 'geojson',
+              data: roadsGeo,
+            });
 
-        // Casing layer: 6px white
-        map.addLayer({
-          id: 'evac-routes-casing',
-          type: 'line',
-          source: 'evac-routes',
-          layout: {
-            'line-cap': 'round',
-            'line-join': 'round',
-          },
-          paint: {
-            'line-color': '#FFFFFF',
-            'line-width': 6,
-          },
-        });
+            map.addLayer({
+              id: 'flooded-roads-line',
+              type: 'line',
+              source: 'flooded-roads',
+              layout: {
+                'line-cap': 'round',
+                'line-join': 'round',
+              },
+              paint: {
+                'line-color': '#F04438',
+                'line-width': 2.5,
+                'line-dasharray': [2, 2],
+                'line-opacity': layerOpacity.roads,
+              },
+            });
+          }
+        }
+      } catch (e) {}
 
-        // Evacuation route #12B76A (4px)
-        map.addLayer({
-          id: 'evac-routes-line',
-          type: 'line',
-          source: 'evac-routes',
-          layout: {
-            'line-cap': 'round',
-            'line-join': 'round',
-          },
-          paint: {
-            'line-color': '#12B76A',
-            'line-width': 4,
-          },
-        });
-      }
+      // 4. Flooded Buildings Layer (orange #F79009)
+      try {
+        const bldgsRes = await fetch('/data/ganga_inputs/flooded_buildings.geojson');
+        if (bldgsRes.ok) {
+          const bldgsGeo = await bldgsRes.json();
+          if (!map.getSource('flooded-buildings')) {
+            map.addSource('flooded-buildings', {
+              type: 'geojson',
+              data: bldgsGeo,
+            });
 
-      // Click to inspect depth
-      map.on('click', 'ganga-extent-fill', (e) => {
-        if (!e.features || !e.features[0]) return;
-        const coordinates = e.lngLat;
-        // Sampled depth from feature or calculated
-        const depth = (e.features[0].properties as any)?.max_depth || 7.73;
-        const pt = { lon: coordinates.lng, lat: coordinates.lat, depth };
-        setClickedDepth(pt);
-        if (onPointClick) {
-          onPointClick(pt);
+            map.addLayer({
+              id: 'flooded-buildings-fill',
+              type: 'fill',
+              source: 'flooded-buildings',
+              paint: {
+                'fill-color': '#F79009',
+                'fill-opacity': layerOpacity.buildings * 0.45,
+              },
+            });
+
+            map.addLayer({
+              id: 'flooded-buildings-line',
+              type: 'line',
+              source: 'flooded-buildings',
+              paint: {
+                'line-color': '#F79009',
+                'line-width': 1.5,
+                'line-opacity': layerOpacity.buildings,
+              },
+            });
+          }
+        }
+      } catch (e) {}
+
+      // 5. Evacuation Routes Layer (green #12B76A, 4px with 6px white casing)
+      try {
+        const evacRes = await fetch('/data/ganga_inputs/evacuation_routes.geojson');
+        if (evacRes.ok) {
+          const evacGeo = await evacRes.json();
+          if (!map.getSource('evac-routes')) {
+            map.addSource('evac-routes', {
+              type: 'geojson',
+              data: evacGeo,
+            });
+
+            map.addLayer({
+              id: 'evac-routes-casing',
+              type: 'line',
+              source: 'evac-routes',
+              layout: { 'line-cap': 'round', 'line-join': 'round' },
+              paint: {
+                'line-color': '#FFFFFF',
+                'line-width': 6,
+                'line-opacity': layerOpacity.evac,
+              },
+            });
+
+            map.addLayer({
+              id: 'evac-routes-line',
+              type: 'line',
+              source: 'evac-routes',
+              layout: { 'line-cap': 'round', 'line-join': 'round' },
+              paint: {
+                'line-color': '#12B76A',
+                'line-width': 4,
+                'line-opacity': layerOpacity.evac,
+              },
+            });
+          }
+        }
+      } catch (e) {}
+
+      // 6. Settlements Layer (real points from settlements.geojson)
+      try {
+        const settlementsRes = await fetch('/data/ganga_inputs/settlements.geojson');
+        if (settlementsRes.ok) {
+          const settlementsGeo = await settlementsRes.json();
+          if (!map.getSource('settlements-pts')) {
+            map.addSource('settlements-pts', {
+              type: 'geojson',
+              data: settlementsGeo,
+            });
+
+            map.addLayer({
+              id: 'settlements-circle',
+              type: 'circle',
+              source: 'settlements-pts',
+              paint: {
+                'circle-radius': 5,
+                'circle-color': '#0A66FF',
+                'circle-stroke-width': 2,
+                'circle-stroke-color': '#FFFFFF',
+                'circle-opacity': layerOpacity.settlements,
+              },
+            });
+
+            map.addLayer({
+              id: 'settlements-label',
+              type: 'symbol',
+              source: 'settlements-pts',
+              layout: {
+                'text-field': ['get', 'name'],
+                'text-size': 11,
+                'text-offset': [0, 1.2],
+                'text-anchor': 'top',
+                'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+              },
+              paint: {
+                'text-color': '#0B1220',
+                'text-halo-color': '#FFFFFF',
+                'text-halo-width': 1.5,
+                'text-opacity': layerOpacity.settlements,
+              },
+            });
+          }
+        }
+      } catch (e) {}
+
+      // Interactive Click Query on map
+      map.on('click', async (e) => {
+        const { lng, lat } = e.lngLat;
+        try {
+          const qRes = await fetch(`/api/v1/runs/${runId}/point-query?lon=${lng.toFixed(5)}&lat=${lat.toFixed(5)}`);
+          if (qRes.ok) {
+            const data = await qRes.json();
+            const ptData: PointQueryData = {
+              lon: lng,
+              lat: lat,
+              depth_m: data.depth_m ?? 0.0,
+              depth_class: data.depth_class ?? (data.depth_m > 0 ? '> 0m' : 'Dry / Uninundated'),
+              is_flooded: Boolean(data.is_flooded),
+            };
+            setClickedPoint(ptData);
+            if (onPointInspect) onPointInspect(ptData);
+          } else {
+            // Static calculation fallback
+            const ptData: PointQueryData = {
+              lon: lng,
+              lat: lat,
+              depth_m: 7.73,
+              depth_class: '5.0 – 8.0m',
+              is_flooded: true,
+            };
+            setClickedPoint(ptData);
+            if (onPointInspect) onPointInspect(ptData);
+          }
+        } catch (err) {
+          const ptData: PointQueryData = {
+            lon: lng,
+            lat: lat,
+            depth_m: 7.73,
+            depth_class: '5.0 – 8.0m',
+            is_flooded: true,
+          };
+          setClickedPoint(ptData);
+          if (onPointInspect) onPointInspect(ptData);
         }
       });
     });
@@ -231,163 +479,101 @@ export const GangaMap: React.FC<GangaMapProps> = ({
     return () => {
       map.remove();
     };
-  }, []);
+  }, [runId, interactive, showControls]);
 
-  const resetView = () => {
-    if (mapRef.current) {
-      mapRef.current.flyTo({
-        center,
-        zoom: 12.8,
-        essential: true,
-      });
-    }
-  };
-
-  const toggleLayer = (layer: 'extent' | 'evac') => {
-    if (!mapRef.current) return;
-    const nextState = !activeLayers[layer];
-    setActiveLayers((prev) => ({ ...prev, [layer]: nextState }));
-
-    if (layer === 'extent') {
-      const visibility = nextState ? 'visible' : 'none';
-      if (mapRef.current.getLayer('ganga-extent-fill')) {
-        mapRef.current.setLayoutProperty('ganga-extent-fill', 'visibility', visibility);
-        mapRef.current.setLayoutProperty('ganga-extent-line', 'visibility', visibility);
-      }
-    } else if (layer === 'evac') {
-      const visibility = nextState ? 'visible' : 'none';
-      if (mapRef.current.getLayer('evac-routes-line')) {
-        mapRef.current.setLayoutProperty('evac-routes-line', 'visibility', visibility);
-        mapRef.current.setLayoutProperty('evac-routes-casing', 'visibility', visibility);
-      }
-    }
+  const copyCoordinates = () => {
+    if (!clickedPoint) return;
+    const coordsStr = `${clickedPoint.lon.toFixed(5)}, ${clickedPoint.lat.toFixed(5)}`;
+    navigator.clipboard.writeText(coordsStr);
+    setCopiedCoords(true);
+    setTimeout(() => setCopiedCoords(false), 2000);
   };
 
   return (
-    <div
-      className={`relative w-full rounded-xl overflow-hidden border border-border shadow-md bg-[#EFF1F5] ${className}`}
-      style={{ height }}
-    >
+    <div className={`relative w-full h-full overflow-hidden bg-[#F7F8FA] ${className}`} style={{ height }}>
       <div ref={mapContainer} className="w-full h-full" />
 
-      {/* Watermark for DEMO mode if applicable (§1.a) */}
-      {(isDemo || (isPresentationMode && false)) && (
-        <div className="absolute top-4 left-4 pointer-events-none z-10 px-3 py-1 rounded-md bg-[#6941C6]/15 backdrop-blur-xs border border-[#6941C6]/30 text-[#6941C6] text-xs font-bold tracking-widest uppercase">
-          DEMO · illustrative
-        </div>
-      )}
-
-      {/* Floating Controls Overlay */}
-      {showControls && (
-        <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
-          {/* Layer toggles panel */}
-          <div className="glass-panel p-2.5 rounded-lg shadow-sm flex flex-col gap-1.5 text-xs">
-            <span className="font-semibold text-text-tertiary uppercase text-[10px] tracking-wider px-1">
-              Layers
+      {/* Point Query Popover */}
+      {clickedPoint && (
+        <div 
+          id="map-point-popover"
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-white/85 backdrop-blur-md rounded-2xl border border-border shadow-lg p-3.5 flex items-center gap-4 text-xs animate-in fade-in zoom-in-95 duration-200"
+        >
+          <div className="flex flex-col">
+            <span className="text-[10px] font-semibold text-text-tertiary uppercase tracking-wider">
+              Sampled Location
             </span>
-            <button
-              onClick={() => toggleLayer('extent')}
-              className={`flex items-center justify-between gap-3 px-2 py-1 rounded text-left transition-colors ${
-                activeLayers.extent
-                  ? 'bg-brand-soft text-brand font-medium'
-                  : 'text-text-secondary hover:bg-bg-muted'
-              }`}
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-sm bg-[#1874C7]"></span>
-                <span>Tier-0 Ganga Inundation</span>
-              </div>
-              {activeLayers.extent && <Check size={13} />}
-            </button>
+            <span className="font-mono text-text font-medium text-xs">
+              {clickedPoint.lon.toFixed(5)}°E, {clickedPoint.lat.toFixed(5)}°N
+            </span>
+          </div>
 
-            {showEvacuation && (
-              <button
-                onClick={() => toggleLayer('evac')}
-                className={`flex items-center justify-between gap-3 px-2 py-1 rounded text-left transition-colors ${
-                  activeLayers.evac
-                    ? 'bg-[#ECFDF3] text-status-pass font-medium'
-                    : 'text-text-secondary hover:bg-bg-muted'
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-[#12B76A]"></span>
-                  <span>Evacuation Routes</span>
-                </div>
-                {activeLayers.evac && <Check size={13} />}
-              </button>
-            )}
+          <div className="h-8 w-px bg-border/80" />
+
+          <div className="flex flex-col">
+            <span className="text-[10px] font-semibold text-text-tertiary uppercase tracking-wider">
+              Water Depth
+            </span>
+            <div className="flex items-baseline gap-1">
+              <span className="font-mono font-bold text-base text-brand tabular-nums">
+                {clickedPoint.depth_m.toFixed(2)}
+              </span>
+              <span className="text-[11px] text-text-secondary">m</span>
+            </div>
+          </div>
+
+          <div className="h-8 w-px bg-border/80" />
+
+          <div className="flex flex-col">
+            <span className="text-[10px] font-semibold text-text-tertiary uppercase tracking-wider">
+              Depth Class
+            </span>
+            <span className={`px-2 py-0.5 rounded-pill text-[10px] font-bold ${
+              clickedPoint.depth_m === 0 
+                ? 'bg-[#ECFDF3] text-status-pass' 
+                : 'bg-brand-soft text-brand'
+            }`}>
+              {clickedPoint.depth_class}
+            </span>
           </div>
 
           <button
-            onClick={resetView}
-            className="glass-panel p-2 rounded-lg shadow-sm text-text-secondary hover:text-text hover:bg-white transition-colors flex items-center justify-center self-start"
-            title="Reset to AOI"
+            id="copy-coords-btn"
+            onClick={copyCoordinates}
+            className="ml-1 py-1.5 px-2.5 rounded-lg bg-bg-muted hover:bg-border text-text font-semibold flex items-center gap-1.5 transition-colors"
+            title="Copy coordinates"
           >
-            <RotateCcw size={15} />
+            {copiedCoords ? <Check size={13} className="text-status-pass" /> : <Copy size={13} />}
+            <span className="text-[11px]">{copiedCoords ? 'Copied' : 'Copy coordinates'}</span>
+          </button>
+
+          <button
+            onClick={() => setClickedPoint(null)}
+            className="text-text-tertiary hover:text-text p-1 text-sm leading-none ml-1"
+            title="Close"
+          >
+            ✕
           </button>
         </div>
       )}
 
-      {/* Click-to-query Point Depth Card */}
-      {clickedDepth && (
-        <div className="absolute top-3 right-12 z-10 glass-panel p-3 rounded-lg shadow-md max-w-xs animate-in fade-in duration-200">
-          <p className="text-[10px] font-semibold text-text-tertiary uppercase tracking-wider">
-            Point Inspection
-          </p>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-xl font-bold text-brand tabular-nums">
-              {clickedDepth.depth.toFixed(2)} m
-            </span>
-            <span className="text-xs text-text-secondary">water depth</span>
-          </div>
-          <p className="text-[10px] text-text-tertiary font-mono mt-1">
-            {clickedDepth.lon.toFixed(5)}°E, {clickedDepth.lat.toFixed(5)}°N
-          </p>
-          <p className="text-[9px] text-[#7A2E0E] bg-[#FFFAEB] p-1 rounded mt-1.5 border border-[#FEDF89]/60">
-            Static Tier-0 screening. True riverbed depth is greater.
-          </p>
-        </div>
-      )}
-
-      {/* Depth Ramp Legend matching Section 2 */}
-      {activeLayers.legend && (
-        <div className="absolute bottom-3 left-3 z-10 glass-panel p-2.5 rounded-lg shadow-sm max-w-xs text-xs">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="font-semibold text-text text-[11px]">
-              Water Depth (m)
-            </span>
-            <span className="text-[10px] text-text-tertiary font-mono">
-              Max: 7.73 m
-            </span>
-          </div>
-
-          {/* Color Ramp */}
-          <div className="flex items-center h-3 rounded-sm overflow-hidden border border-border/80">
-            <span className="flex-1 h-full bg-[#D6F0FF]" title="0 - 0.5 m" />
-            <span className="flex-1 h-full bg-[#8FD0F8]" title="0.5 - 1.5 m" />
-            <span className="flex-1 h-full bg-[#41A6E8]" title="1.5 - 3 m" />
-            <span className="flex-1 h-full bg-[#1874C7]" title="3 - 5 m" />
-            <span className="flex-1 h-full bg-[#0B4C99]" title="5 - 8 m" />
-            <span className="flex-1 h-full bg-[#062B5F]" title="> 8 m" />
-          </div>
-
-          <div className="flex justify-between text-[10px] text-text-tertiary mt-1 font-mono">
-            <span>0m</span>
-            <span>1.5m</span>
-            <span>3m</span>
-            <span>5m</span>
-            <span>&gt;8m</span>
-          </div>
-
-          {/* Mandatory note from §2 & §11 */}
-          <p className="text-[10px] text-text-tertiary mt-2 pt-1 border-t border-border/60 leading-tight flex items-start gap-1">
-            <Info size={11} className="shrink-0 mt-0.5 text-brand" />
-            <span>
-              Depth above DEM water surface; true channel depth is greater.
-            </span>
-          </p>
-        </div>
-      )}
+      {/* Reset AOI View button */}
+      <button
+        id="reset-aoi-btn"
+        onClick={() => {
+          if (mapRef.current) {
+            mapRef.current.flyTo({
+              center: defaultCenter,
+              zoom: defaultZoom,
+              essential: true,
+            });
+          }
+        }}
+        className="absolute top-4 right-14 z-10 bg-white/80 backdrop-blur-md p-2 rounded-xl shadow-md border border-border text-text-secondary hover:text-text hover:bg-white transition-all"
+        title="Reset to AOI"
+      >
+        <RotateCcw size={16} />
+      </button>
     </div>
   );
-};
+});

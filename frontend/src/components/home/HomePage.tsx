@@ -32,8 +32,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
 
         <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-text leading-tight">
           {isHi 
-            ? 'आज आप क्या करना चाहेंगे?' 
-            : 'What would you like to do today?'}
+            ? 'आज किस बात पर ध्यान देने की आवश्यकता है?' 
+            : 'What needs my attention today?'}
         </h1>
 
         <p className="text-base sm:text-lg text-text-secondary leading-relaxed">

@@ -32,6 +32,7 @@ export type FeatureId =
   | 'f20_health'
   | 'f21_audit'
   | 'f22_admin'
+  | 'f12_exports'
   | 'signin';
 
 export type StatusType =

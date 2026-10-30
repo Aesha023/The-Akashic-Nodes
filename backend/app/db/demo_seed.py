@@ -213,24 +213,24 @@ def purge_demo_data(session: Session | None = None) -> dict[str, int]:
             res_items = session.execute(
                 delete(BatchItem).where(BatchItem.batch_id.in_(demo_batch_ids))
             )
-            counts["batch_items"] = res_items.rowcount  # type: ignore[assignment]
+            counts["batch_items"] = int(getattr(res_items, "rowcount", 0) or 0)
         else:
             counts["batch_items"] = 0
 
         res_batches = session.execute(delete(Batch).where(Batch.demo == True))  # noqa: E712
-        counts["batches"] = res_batches.rowcount  # type: ignore[assignment]
+        counts["batches"] = int(getattr(res_batches, "rowcount", 0) or 0)
 
         res_alerts = session.execute(delete(Alert).where(Alert.demo == True))  # noqa: E712
-        counts["alerts"] = res_alerts.rowcount  # type: ignore[assignment]
+        counts["alerts"] = int(getattr(res_alerts, "rowcount", 0) or 0)
 
         res_rules = session.execute(delete(AlertRule).where(AlertRule.demo == True))  # noqa: E712
-        counts["alert_rules"] = res_rules.rowcount  # type: ignore[assignment]
+        counts["alert_rules"] = int(getattr(res_rules, "rowcount", 0) or 0)
 
         res_lakes = session.execute(delete(WatchedLake).where(WatchedLake.demo == True))  # noqa: E712
-        counts["watched_lakes"] = res_lakes.rowcount  # type: ignore[assignment]
+        counts["watched_lakes"] = int(getattr(res_lakes, "rowcount", 0) or 0)
 
         res_scenarios = session.execute(delete(Scenario).where(Scenario.demo == True))  # noqa: E712
-        counts["scenarios"] = res_scenarios.rowcount  # type: ignore[assignment]
+        counts["scenarios"] = int(getattr(res_scenarios, "rowcount", 0) or 0)
 
         session.commit()
     finally:

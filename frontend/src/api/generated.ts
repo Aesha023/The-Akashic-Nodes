@@ -436,6 +436,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/runs/{run_id}/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Run Logs
+         * @description Retrieve recorded or live execution logs for a simulation run.
+         */
+        get: operations["get_run_logs_api_v1_runs__run_id__logs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/runs/{run_id}/manifest": {
         parameters: {
             query?: never;
@@ -1392,6 +1412,86 @@ export interface paths {
          * @description Purge temporary demo entities and reset demo storage cache.
          */
         post: operations["purge_demo_data_api_v1_demo_purge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workers/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register Worker
+         * @description Register a remote worker node (e.g. Google Colab notebook cell or GPU VM).
+         */
+        post: operations["register_worker_api_v1_workers_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workers/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Workers Status
+         * @description Query online worker count per engine queue.
+         */
+        get: operations["get_workers_status_api_v1_workers_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workers/jobs/pull": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pull Job
+         * @description Pull the next queued job for a specific engine.
+         */
+        get: operations["pull_job_api_v1_workers_jobs_pull_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workers/jobs/{run_id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report Job Progress
+         * @description Stream live progress and logs from a remote worker node.
+         */
+        post: operations["report_job_progress_api_v1_workers_jobs__run_id__progress_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2697,6 +2797,34 @@ export interface components {
          * @enum {string}
          */
         VolumeMethod: "register" | "satellite" | "user" | "auto";
+        /** WorkerProgressUpdate */
+        WorkerProgressUpdate: {
+            /** Progress Percent */
+            progress_percent: number;
+            /** Stage */
+            stage: string;
+            /** Log Line */
+            log_line?: string | null;
+        };
+        /** WorkerRegisterRequest */
+        WorkerRegisterRequest: {
+            /** Worker Id */
+            worker_id: string;
+            /** Engine */
+            engine: string;
+            /**
+             * Hostname
+             * @default remote-node
+             */
+            hostname: string;
+            /**
+             * Capabilities
+             * @default {}
+             */
+            capabilities: {
+                [key: string]: unknown;
+            };
+        };
     };
     responses: never;
     parameters: never;
@@ -3639,6 +3767,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run_logs_api_v1_runs__run_id__logs_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -5111,6 +5274,133 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    register_worker_api_v1_workers_register_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkerRegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_workers_status_api_v1_workers_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    pull_job_api_v1_workers_jobs_pull_get: {
+        parameters: {
+            query: {
+                engine: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_job_progress_api_v1_workers_jobs__run_id__progress_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkerProgressUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

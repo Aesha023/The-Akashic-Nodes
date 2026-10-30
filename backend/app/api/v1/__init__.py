@@ -20,6 +20,7 @@ from backend.app.api.v1.share import router as share_router
 from backend.app.api.v1.system import router as system_router
 from backend.app.api.v1.tiles import router as tiles_router
 from backend.app.api.v1.validation import router as validation_router
+from backend.app.api.v1.worker import router as worker_router
 
 api_v1_router = APIRouter(prefix="/api/v1")
 
@@ -39,5 +40,6 @@ api_v1_router.include_router(validation_router)
 api_v1_router.include_router(audit_router)
 api_v1_router.include_router(share_router)
 api_v1_router.include_router(demo_router)
+api_v1_router.include_router(worker_router)
 
 __all__ = ["api_v1_router"]

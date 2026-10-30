@@ -150,5 +150,48 @@ def purge_demo() -> None:
         sys.exit(1)
 
 
+@main.command(name="import-run")
+@click.option(
+    "--engine",
+    type=click.Choice(["delft3d", "dualsphysics"], case_sensitive=False),
+    required=True,
+    help="Engine type: delft3d or dualsphysics",
+)
+@click.option(
+    "--path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
+    required=True,
+    help="Path to folder containing raw engine outputs",
+)
+@click.option(
+    "--run-id",
+    type=str,
+    default=None,
+    help="Optional custom run ID",
+)
+def import_run_cmd(engine: str, path: Path, run_id: str | None) -> None:
+    """Import past simulation outputs (Delft3D FM or DualSPHysics) into PravahX."""
+    try:
+        from pravahx.importer.run_importer import import_run
+
+        manifest = import_run(engine=engine, folder_path=path, run_id=run_id)
+        click.secho(
+            f"Run successfully imported: '{manifest['run_id']}' ({manifest['status_label']})",
+            fg="green",
+        )
+        click.echo(f"  • Engine: {manifest['engine']}")
+        click.echo(f"  • Scenario: {manifest['scenario_name']}")
+        click.echo(f"  • Computed at: {manifest['computed_at']}")
+        click.echo(f"  • Artifacts: {manifest['artifacts_count']} file(s) indexed with SHA-256")
+        for art in manifest["artifacts"][:5]:
+            sha_prefix = art["sha256"][:12]
+            click.echo(f"    - {art['name']} ({art['size_bytes']} bytes, sha256: {sha_prefix}...)")
+        if manifest["artifacts_count"] > 5:
+            click.echo(f"    ... and {manifest['artifacts_count'] - 5} more artifact(s)")
+    except Exception as exc:
+        click.secho(f"Failed to import run: {exc}", fg="red", err=True)
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     main()

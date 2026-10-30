@@ -1772,6 +1772,72 @@
         }
       }
     },
+    "/api/v1/runs/{run_id}/logs": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Run Logs",
+        "description": "Retrieve recorded or live execution logs for a simulation run.",
+        "operationId": "get_run_logs_api_v1_runs__run_id__logs_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Run Logs Api V1 Runs  Run Id  Logs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/runs/{run_id}/manifest": {
       "get": {
         "tags": [
@@ -4228,6 +4294,174 @@
                   "additionalProperties": true,
                   "type": "object",
                   "title": "Response Purge Demo Data Api V1 Demo Purge Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workers/register": {
+      "post": {
+        "tags": [
+          "workers"
+        ],
+        "summary": "Register Worker",
+        "description": "Register a remote worker node (e.g. Google Colab notebook cell or GPU VM).",
+        "operationId": "register_worker_api_v1_workers_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkerRegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Register Worker Api V1 Workers Register Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workers/status": {
+      "get": {
+        "tags": [
+          "workers"
+        ],
+        "summary": "Get Workers Status",
+        "description": "Query online worker count per engine queue.",
+        "operationId": "get_workers_status_api_v1_workers_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Workers Status Api V1 Workers Status Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workers/jobs/pull": {
+      "get": {
+        "tags": [
+          "workers"
+        ],
+        "summary": "Pull Job",
+        "description": "Pull the next queued job for a specific engine.",
+        "operationId": "pull_job_api_v1_workers_jobs_pull_get",
+        "parameters": [
+          {
+            "name": "engine",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Engine"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Pull Job Api V1 Workers Jobs Pull Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workers/jobs/{run_id}/progress": {
+      "post": {
+        "tags": [
+          "workers"
+        ],
+        "summary": "Report Job Progress",
+        "description": "Stream live progress and logs from a remote worker node.",
+        "operationId": "report_job_progress_api_v1_workers_jobs__run_id__progress_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkerProgressUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Report Job Progress Api V1 Workers Jobs  Run Id  Progress Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -6753,6 +6987,64 @@
         ],
         "title": "VolumeMethod",
         "description": "How to determine reservoir volume."
+      },
+      "WorkerProgressUpdate": {
+        "properties": {
+          "progress_percent": {
+            "type": "number",
+            "title": "Progress Percent"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "log_line": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Log Line"
+          }
+        },
+        "type": "object",
+        "required": [
+          "progress_percent",
+          "stage"
+        ],
+        "title": "WorkerProgressUpdate"
+      },
+      "WorkerRegisterRequest": {
+        "properties": {
+          "worker_id": {
+            "type": "string",
+            "title": "Worker Id"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine"
+          },
+          "hostname": {
+            "type": "string",
+            "title": "Hostname",
+            "default": "remote-node"
+          },
+          "capabilities": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Capabilities",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "worker_id",
+          "engine"
+        ],
+        "title": "WorkerRegisterRequest"
       }
     },
     "securitySchemes": {

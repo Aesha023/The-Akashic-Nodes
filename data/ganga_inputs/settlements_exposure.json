@@ -1,0 +1,240 @@
+{
+  "methodology": "OSM polygon boundary when available, else 500m planar buffer around place node in EPSG:32644; population_exposed = WorldPop 2020 sum where depth > 0; peak_depth_m = maximum Tier-0 water depth within area.",
+  "buffer_radius_m": 500.0,
+  "non_additive_note": "Settlement figures overlap and are not additive. Total AOI exposed population is computed separately without double-counting.",
+  "total_settlements_evaluated": 21,
+  "inundated_settlements_count": 9,
+  "settlements": [
+    {
+      "osm_id": "node/10813290303",
+      "name": "Malli",
+      "place_type": "hamlet",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 633,
+      "population_exposed_exact": 632.68,
+      "peak_depth_m": 7.73,
+      "depth_class": "5.0 - 8.0m",
+      "is_inundated": true
+    },
+    {
+      "osm_id": "node/342114811",
+      "name": "Laxman Jhula",
+      "place_type": "neighbourhood",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 455,
+      "population_exposed_exact": 455.45,
+      "peak_depth_m": 7.73,
+      "depth_class": "5.0 - 8.0m",
+      "is_inundated": true
+    },
+    {
+      "osm_id": "node/3821187544",
+      "name": "Pandav Gufa",
+      "place_type": "suburb",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 248,
+      "population_exposed_exact": 248.39,
+      "peak_depth_m": 7.73,
+      "depth_class": "5.0 - 8.0m",
+      "is_inundated": true
+    },
+    {
+      "osm_id": "node/3821187548",
+      "name": "Muni Ki Reti",
+      "place_type": "suburb",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 240,
+      "population_exposed_exact": 239.99,
+      "peak_depth_m": 7.73,
+      "depth_class": "5.0 - 8.0m",
+      "is_inundated": true
+    },
+    {
+      "osm_id": "node/3821187543",
+      "name": "Tapovan",
+      "place_type": "suburb",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 183,
+      "population_exposed_exact": 182.8,
+      "peak_depth_m": 7.73,
+      "depth_class": "5.0 - 8.0m",
+      "is_inundated": true
+    },
+    {
+      "osm_id": "node/3821187546",
+      "name": "Chauda Bigha",
+      "place_type": "suburb",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 43,
+      "population_exposed_exact": 43.0,
+      "peak_depth_m": 7.23,
+      "depth_class": "5.0 - 8.0m",
+      "is_inundated": true
+    },
+    {
+      "osm_id": "node/1185827080",
+      "name": "Swargashram",
+      "place_type": "suburb",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 7,
+      "population_exposed_exact": 6.86,
+      "peak_depth_m": 7.73,
+      "depth_class": "5.0 - 8.0m",
+      "is_inundated": true
+    },
+    {
+      "osm_id": "node/5954057872",
+      "name": "Sivananda Nagar",
+      "place_type": "neighbourhood",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 0,
+      "population_exposed_exact": 0.0,
+      "peak_depth_m": 7.73,
+      "depth_class": "5.0 - 8.0m",
+      "is_inundated": true
+    },
+    {
+      "osm_id": "node/3821275158",
+      "name": "Ganga Vatika",
+      "place_type": "suburb",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 0,
+      "population_exposed_exact": 0.0,
+      "peak_depth_m": 6.23,
+      "depth_class": "5.0 - 8.0m",
+      "is_inundated": true
+    },
+    {
+      "osm_id": "way/102682221",
+      "name": "Simaldhandi",
+      "place_type": "village",
+      "method": "OSM polygon boundary",
+      "population_exposed": 0,
+      "population_exposed_exact": 0.0,
+      "peak_depth_m": 0.0,
+      "depth_class": "Dry / Uninundated",
+      "is_inundated": false
+    },
+    {
+      "osm_id": "way/102684513",
+      "name": "Settlement name unavailable (OSM)",
+      "place_type": "hamlet",
+      "method": "OSM polygon boundary",
+      "population_exposed": 0,
+      "population_exposed_exact": 0.0,
+      "peak_depth_m": 0.0,
+      "depth_class": "Dry / Uninundated",
+      "is_inundated": false
+    },
+    {
+      "osm_id": "node/2505866220",
+      "name": "Ghughatyani Talli",
+      "place_type": "hamlet",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 0,
+      "population_exposed_exact": 0.0,
+      "peak_depth_m": 0.0,
+      "depth_class": "Dry / Uninundated",
+      "is_inundated": false
+    },
+    {
+      "osm_id": "node/3820748010",
+      "name": "Totla",
+      "place_type": "hamlet",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 0,
+      "population_exposed_exact": 0.0,
+      "peak_depth_m": 0.0,
+      "depth_class": "Dry / Uninundated",
+      "is_inundated": false
+    },
+    {
+      "osm_id": "node/7887157122",
+      "name": "Ghughatyani Malli",
+      "place_type": "hamlet",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 0,
+      "population_exposed_exact": 0.0,
+      "peak_depth_m": 0.0,
+      "depth_class": "Dry / Uninundated",
+      "is_inundated": false
+    },
+    {
+      "osm_id": "node/7887157123",
+      "name": "Dhoulsot",
+      "place_type": "hamlet",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 0,
+      "population_exposed_exact": 0.0,
+      "peak_depth_m": 0.0,
+      "depth_class": "Dry / Uninundated",
+      "is_inundated": false
+    },
+    {
+      "osm_id": "node/7887157125",
+      "name": "Pathaur",
+      "place_type": "hamlet",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 0,
+      "population_exposed_exact": 0.0,
+      "peak_depth_m": 0.0,
+      "depth_class": "Dry / Uninundated",
+      "is_inundated": false
+    },
+    {
+      "osm_id": "node/7887157126",
+      "name": "Nirgad",
+      "place_type": "hamlet",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 0,
+      "population_exposed_exact": 0.0,
+      "peak_depth_m": 0.0,
+      "depth_class": "Dry / Uninundated",
+      "is_inundated": false
+    },
+    {
+      "osm_id": "node/7887157136",
+      "name": "Kur",
+      "place_type": "hamlet",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 0,
+      "population_exposed_exact": 0.0,
+      "peak_depth_m": 0.0,
+      "depth_class": "Dry / Uninundated",
+      "is_inundated": false
+    },
+    {
+      "osm_id": "node/7889169929",
+      "name": "Gudanugaon",
+      "place_type": "hamlet",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 0,
+      "population_exposed_exact": 0.0,
+      "peak_depth_m": 0.0,
+      "depth_class": "Dry / Uninundated",
+      "is_inundated": false
+    },
+    {
+      "osm_id": "node/8273026814",
+      "name": "Bhaun",
+      "place_type": "hamlet",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 0,
+      "population_exposed_exact": 0.0,
+      "peak_depth_m": 0.0,
+      "depth_class": "Dry / Uninundated",
+      "is_inundated": false
+    },
+    {
+      "osm_id": "node/10809898962",
+      "name": "Khairgal",
+      "place_type": "hamlet",
+      "method": "500m radial buffer around OSM node",
+      "population_exposed": 0,
+      "population_exposed_exact": 0.0,
+      "peak_depth_m": 0.0,
+      "depth_class": "Dry / Uninundated",
+      "is_inundated": false
+    }
+  ]
+}

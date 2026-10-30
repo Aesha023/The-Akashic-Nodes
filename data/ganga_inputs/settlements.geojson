@@ -1,0 +1,446 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.339086,
+          30.136554
+        ]
+      },
+      "properties": {
+        "osm_id": "node/10813290303",
+        "name": "Malli",
+        "place_type": "hamlet",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 633,
+        "population_exposed_exact": 632.68,
+        "peak_depth_m": 7.73,
+        "depth_class": "5.0 \u2013 8.0m",
+        "is_inundated": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.328529,
+          30.125918
+        ]
+      },
+      "properties": {
+        "osm_id": "node/342114811",
+        "name": "Laxman Jhula",
+        "place_type": "neighbourhood",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 455,
+        "population_exposed_exact": 455.45,
+        "peak_depth_m": 7.73,
+        "depth_class": "5.0 \u2013 8.0m",
+        "is_inundated": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.333347,
+          30.132202
+        ]
+      },
+      "properties": {
+        "osm_id": "node/3821187544",
+        "name": "Pandav Gufa",
+        "place_type": "suburb",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 248,
+        "population_exposed_exact": 248.39,
+        "peak_depth_m": 7.73,
+        "depth_class": "5.0 \u2013 8.0m",
+        "is_inundated": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.306292,
+          30.119828
+        ]
+      },
+      "properties": {
+        "osm_id": "node/3821187548",
+        "name": "Muni Ki Reti",
+        "place_type": "suburb",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 240,
+        "population_exposed_exact": 239.99,
+        "peak_depth_m": 7.73,
+        "depth_class": "5.0 \u2013 8.0m",
+        "is_inundated": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.322114,
+          30.12966
+        ]
+      },
+      "properties": {
+        "osm_id": "node/3821187543",
+        "name": "Tapovan",
+        "place_type": "suburb",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 183,
+        "population_exposed_exact": 182.8,
+        "peak_depth_m": 7.73,
+        "depth_class": "5.0 \u2013 8.0m",
+        "is_inundated": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.302464,
+          30.113354
+        ]
+      },
+      "properties": {
+        "osm_id": "node/3821187546",
+        "name": "Chauda Bigha",
+        "place_type": "suburb",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 43,
+        "population_exposed_exact": 43.0,
+        "peak_depth_m": 7.23,
+        "depth_class": "5.0 \u2013 8.0m",
+        "is_inundated": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.313816,
+          30.118551
+        ]
+      },
+      "properties": {
+        "osm_id": "node/1185827080",
+        "name": "Swargashram",
+        "place_type": "suburb",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 7,
+        "population_exposed_exact": 6.86,
+        "peak_depth_m": 7.73,
+        "depth_class": "5.0 \u2013 8.0m",
+        "is_inundated": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.310879,
+          30.12347
+        ]
+      },
+      "properties": {
+        "osm_id": "node/5954057872",
+        "name": "Sivananda Nagar",
+        "place_type": "neighbourhood",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 0,
+        "population_exposed_exact": 0.0,
+        "peak_depth_m": 7.73,
+        "depth_class": "5.0 \u2013 8.0m",
+        "is_inundated": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.305371,
+          30.124163
+        ]
+      },
+      "properties": {
+        "osm_id": "node/3821275158",
+        "name": "Ganga Vatika",
+        "place_type": "suburb",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 0,
+        "population_exposed_exact": 0.0,
+        "peak_depth_m": 6.23,
+        "depth_class": "5.0 \u2013 8.0m",
+        "is_inundated": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.348433,
+          30.109046
+        ]
+      },
+      "properties": {
+        "osm_id": "way/102682221",
+        "name": "Simaldhandi",
+        "place_type": "village",
+        "method": "OSM polygon boundary",
+        "population_exposed": 0,
+        "population_exposed_exact": 0.0,
+        "peak_depth_m": 0.0,
+        "depth_class": "Dry / Uninundated",
+        "is_inundated": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.340587,
+          30.12691
+        ]
+      },
+      "properties": {
+        "osm_id": "way/102684513",
+        "name": "Settlement name unavailable (OSM)",
+        "place_type": "hamlet",
+        "method": "OSM polygon boundary",
+        "population_exposed": 0,
+        "population_exposed_exact": 0.0,
+        "peak_depth_m": 0.0,
+        "depth_class": "Dry / Uninundated",
+        "is_inundated": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.316679,
+          30.135968
+        ]
+      },
+      "properties": {
+        "osm_id": "node/2505866220",
+        "name": "Ghughatyani Talli",
+        "place_type": "hamlet",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 0,
+        "population_exposed_exact": 0.0,
+        "peak_depth_m": 0.0,
+        "depth_class": "Dry / Uninundated",
+        "is_inundated": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.340515,
+          30.126982
+        ]
+      },
+      "properties": {
+        "osm_id": "node/3820748010",
+        "name": "Totla",
+        "place_type": "hamlet",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 0,
+        "population_exposed_exact": 0.0,
+        "peak_depth_m": 0.0,
+        "depth_class": "Dry / Uninundated",
+        "is_inundated": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.315268,
+          30.141212
+        ]
+      },
+      "properties": {
+        "osm_id": "node/7887157122",
+        "name": "Ghughatyani Malli",
+        "place_type": "hamlet",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 0,
+        "population_exposed_exact": 0.0,
+        "peak_depth_m": 0.0,
+        "depth_class": "Dry / Uninundated",
+        "is_inundated": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.31516,
+          30.147688
+        ]
+      },
+      "properties": {
+        "osm_id": "node/7887157123",
+        "name": "Dhoulsot",
+        "place_type": "hamlet",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 0,
+        "population_exposed_exact": 0.0,
+        "peak_depth_m": 0.0,
+        "depth_class": "Dry / Uninundated",
+        "is_inundated": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.308616,
+          30.135626
+        ]
+      },
+      "properties": {
+        "osm_id": "node/7887157125",
+        "name": "Pathaur",
+        "place_type": "hamlet",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 0,
+        "population_exposed_exact": 0.0,
+        "peak_depth_m": 0.0,
+        "depth_class": "Dry / Uninundated",
+        "is_inundated": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.347175,
+          30.139022
+        ]
+      },
+      "properties": {
+        "osm_id": "node/7887157126",
+        "name": "Nirgad",
+        "place_type": "hamlet",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 0,
+        "population_exposed_exact": 0.0,
+        "peak_depth_m": 0.0,
+        "depth_class": "Dry / Uninundated",
+        "is_inundated": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.346789,
+          30.147484
+        ]
+      },
+      "properties": {
+        "osm_id": "node/7887157136",
+        "name": "Kur",
+        "place_type": "hamlet",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 0,
+        "population_exposed_exact": 0.0,
+        "peak_depth_m": 0.0,
+        "depth_class": "Dry / Uninundated",
+        "is_inundated": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.331168,
+          30.106097
+        ]
+      },
+      "properties": {
+        "osm_id": "node/7889169929",
+        "name": "Gudanugaon",
+        "place_type": "hamlet",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 0,
+        "population_exposed_exact": 0.0,
+        "peak_depth_m": 0.0,
+        "depth_class": "Dry / Uninundated",
+        "is_inundated": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.339231,
+          30.108718
+        ]
+      },
+      "properties": {
+        "osm_id": "node/8273026814",
+        "name": "Bhaun",
+        "place_type": "hamlet",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 0,
+        "population_exposed_exact": 0.0,
+        "peak_depth_m": 0.0,
+        "depth_class": "Dry / Uninundated",
+        "is_inundated": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.341618,
+          30.105689
+        ]
+      },
+      "properties": {
+        "osm_id": "node/10809898962",
+        "name": "Khairgal",
+        "place_type": "hamlet",
+        "method": "500m radial buffer around OSM node",
+        "population_exposed": 0,
+        "population_exposed_exact": 0.0,
+        "peak_depth_m": 0.0,
+        "depth_class": "Dry / Uninundated",
+        "is_inundated": false
+      }
+    }
+  ]
+}

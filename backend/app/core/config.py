@@ -122,8 +122,8 @@ class Settings(BaseSettings):
             }
             if not sec or sec in insecure_secret_defaults or len(sec) < 32:
                 msg = (
-                    "Production security violation: SECRET_KEY must be at least "
-                    f"32 chars (got {len(sec)}) in '{env_val}'."
+                    "Production security violation: SECRET_KEY must be a strong secret "
+                    f"of at least 32 characters (got length {len(sec)}) in environment '{env_val}'."
                 )
                 raise ValueError(msg)
 

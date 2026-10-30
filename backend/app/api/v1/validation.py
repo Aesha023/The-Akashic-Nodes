@@ -74,6 +74,14 @@ async def get_validation_status() -> dict[str, Any]:
                 "metrics": {"mapped_extent_km2": 40.52},
                 "notes": "qualitatively consistent with Tiwari et al. 2020",
             },
+            {
+                "engine": "Martin & Moyce (1952) Column Collapse",
+                "label": "NOT RUN",
+                "evidence": "VALIDATION.md §7.2",
+                "notes": (
+                    "Reference paper behind paywall (HTTP 403). Sensor coordinate mapping deferred."
+                ),
+            },
         ],
         "demo_pipeline": {
             "scenario": "hypothetical scenario, Tier-0 screening",

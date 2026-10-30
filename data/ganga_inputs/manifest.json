@@ -72,6 +72,13 @@
       "size_bytes": 328874,
       "sha256": "acdaad391f768c5c41dbb9b2b6569e13a20fcbbdfc3c623bf715eac02b0f8866",
       "description": "Official 1-page PDF executive disaster impact & evacuation brief"
+    },
+    {
+      "filename": "exposure.csv",
+      "format": "CSV",
+      "size_bytes": 2155,
+      "sha256": "a1317a9a993450a3b7199c9e24ee2b62deebe201809266615e2fd0faa5948e95",
+      "description": "Exposed settlements, population, and peak water depths CSV"
     }
   ]
 }

@@ -1,0 +1,22 @@
+osm_id,name,place_type,population_exposed,peak_depth_m,depth_class,is_inundated,method
+node/10813290303,Malli,hamlet,633,7.73,5.0 – 8.0m,True,500m radial buffer around OSM node
+node/342114811,Laxman Jhula,neighbourhood,455,7.73,5.0 – 8.0m,True,500m radial buffer around OSM node
+node/3821187544,Pandav Gufa,suburb,248,7.73,5.0 – 8.0m,True,500m radial buffer around OSM node
+node/3821187548,Muni Ki Reti,suburb,240,7.73,5.0 – 8.0m,True,500m radial buffer around OSM node
+node/3821187543,Tapovan,suburb,183,7.73,5.0 – 8.0m,True,500m radial buffer around OSM node
+node/3821187546,Chauda Bigha,suburb,43,7.23,5.0 – 8.0m,True,500m radial buffer around OSM node
+node/1185827080,Swargashram,suburb,7,7.73,5.0 – 8.0m,True,500m radial buffer around OSM node
+node/5954057872,Sivananda Nagar,neighbourhood,0,7.73,5.0 – 8.0m,True,500m radial buffer around OSM node
+node/3821275158,Ganga Vatika,suburb,0,6.23,5.0 – 8.0m,True,500m radial buffer around OSM node
+way/102682221,Simaldhandi,village,0,0.0,Dry / Uninundated,False,OSM polygon boundary
+way/102684513,Settlement name unavailable (OSM),hamlet,0,0.0,Dry / Uninundated,False,OSM polygon boundary
+node/2505866220,Ghughatyani Talli,hamlet,0,0.0,Dry / Uninundated,False,500m radial buffer around OSM node
+node/3820748010,Totla,hamlet,0,0.0,Dry / Uninundated,False,500m radial buffer around OSM node
+node/7887157122,Ghughatyani Malli,hamlet,0,0.0,Dry / Uninundated,False,500m radial buffer around OSM node
+node/7887157123,Dhoulsot,hamlet,0,0.0,Dry / Uninundated,False,500m radial buffer around OSM node
+node/7887157125,Pathaur,hamlet,0,0.0,Dry / Uninundated,False,500m radial buffer around OSM node
+node/7887157126,Nirgad,hamlet,0,0.0,Dry / Uninundated,False,500m radial buffer around OSM node
+node/7887157136,Kur,hamlet,0,0.0,Dry / Uninundated,False,500m radial buffer around OSM node
+node/7889169929,Gudanugaon,hamlet,0,0.0,Dry / Uninundated,False,500m radial buffer around OSM node
+node/8273026814,Bhaun,hamlet,0,0.0,Dry / Uninundated,False,500m radial buffer around OSM node
+node/10809898962,Khairgal,hamlet,0,0.0,Dry / Uninundated,False,500m radial buffer around OSM node

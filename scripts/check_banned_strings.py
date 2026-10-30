@@ -42,7 +42,13 @@ BANNED_STRINGS = [
     "Hirakud",
     "Teesta-III",
     "South Lhonak",
+    "Johnstown",
+    "CADAM",
+    "0.735",
 ]
+
+
+import re
 
 
 def check_file(file_path: Path):
@@ -53,8 +59,14 @@ def check_file(file_path: Path):
         return violations
 
     for banned in BANNED_STRINGS:
-        if banned in content:
-            violations.append((banned, file_path))
+        if banned == "₹":
+            if banned in content:
+                violations.append((banned, file_path))
+        else:
+            # Match whole term avoiding embedded substring collisions (e.g., 'CONTROL' != 'NTRO')
+            pattern = rf"(?<![A-Za-z0-9_]){re.escape(banned)}(?![A-Za-z0-9_])"
+            if re.search(pattern, content):
+                violations.append((banned, file_path))
     return violations
 
 

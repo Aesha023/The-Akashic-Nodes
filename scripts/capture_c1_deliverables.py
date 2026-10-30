@@ -1,18 +1,21 @@
 import asyncio
 import base64
+import io
 import json
-import os
 import subprocess
 import tempfile
 import time
 import urllib.request
 from pathlib import Path
-from PIL import Image
-import io
+
 import websockets
+from PIL import Image
 
 CHROME_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
-ARTIFACTS_DIR = Path(r"C:\Users\Krishna\.gemini\antigravity-ide\brain\6b2e8c01-33c5-4da5-99e7-4fc87ac35236")
+ARTIFACTS_DIR = Path(
+    r"C:\Users\Krishna\.gemini\antigravity-ide\brain\6b2e8c01-33c5-4da5-99e7-4fc87ac35236"
+)
+
 
 async def send_cdp(ws, method, params=None):
     msg_id = int(time.time() * 1000) % 1000000
@@ -24,6 +27,7 @@ async def send_cdp(ws, method, params=None):
         if data.get("id") == msg_id:
             return data.get("result", {})
 
+
 async def capture_screenshot(ws, output_path):
     res = await send_cdp(ws, "Page.captureScreenshot", {"format": "png"})
     data = res.get("data")
@@ -33,6 +37,7 @@ async def capture_screenshot(ws, output_path):
         print(f"[OK] Saved {output_path.name} ({len(img_bytes)} bytes)", flush=True)
         return Image.open(io.BytesIO(img_bytes))
     return None
+
 
 async def capture_all_screenshots():
     temp_dir = tempfile.mkdtemp()
@@ -74,12 +79,16 @@ async def capture_all_screenshots():
             # -------------------------------------------------------------
             # 1. Desktop Screenshots (1440x900)
             # -------------------------------------------------------------
-            await send_cdp(ws, "Emulation.setDeviceMetricsOverride", {
-                "width": 1440,
-                "height": 900,
-                "deviceScaleFactor": 1,
-                "mobile": False,
-            })
+            await send_cdp(
+                ws,
+                "Emulation.setDeviceMetricsOverride",
+                {
+                    "width": 1440,
+                    "height": 900,
+                    "deviceScaleFactor": 1,
+                    "mobile": False,
+                },
+            )
 
             # Landing Desktop
             print("Capturing Landing Desktop...", flush=True)
@@ -101,39 +110,53 @@ async def capture_all_screenshots():
 
             # Results Explorer (Flood Map) Desktop
             print("Capturing Results Explorer Desktop...", flush=True)
-            await send_cdp(ws, "Page.navigate", {"url": "http://127.0.0.1:3000/#f05_results_explorer"})
+            await send_cdp(
+                ws, "Page.navigate", {"url": "http://127.0.0.1:3000/#f05_results_explorer"}
+            )
             await asyncio.sleep(3.5)
             await capture_screenshot(ws, ARTIFACTS_DIR / "c1_results_floodmap_desktop.png")
 
             # App Shell Presentation Mode
             print("Capturing App Shell Presentation Mode...", flush=True)
-            await send_cdp(ws, "Page.navigate", {"url": "http://127.0.0.1:3000/#f01_mission_control"})
+            await send_cdp(
+                ws, "Page.navigate", {"url": "http://127.0.0.1:3000/#f01_mission_control"}
+            )
             await asyncio.sleep(2.0)
             await capture_screenshot(ws, ARTIFACTS_DIR / "c1_appshell_presentation_desktop.png")
 
             # App Shell Operational Mode (toggle presentation off in localStorage)
             print("Capturing App Shell Operational Mode...", flush=True)
-            await send_cdp(ws, "Runtime.evaluate", {
-                "expression": "localStorage.setItem('pravahx_presentation_mode', 'false'); window.location.reload();"
-            })
+            await send_cdp(
+                ws,
+                "Runtime.evaluate",
+                {
+                    "expression": "localStorage.setItem('pravahx_presentation_mode', 'false'); window.location.reload();"
+                },
+            )
             await asyncio.sleep(2.5)
             await capture_screenshot(ws, ARTIFACTS_DIR / "c1_appshell_operational_desktop.png")
 
             # Restore presentation mode
-            await send_cdp(ws, "Runtime.evaluate", {
-                "expression": "localStorage.setItem('pravahx_presentation_mode', 'true');"
-            })
+            await send_cdp(
+                ws,
+                "Runtime.evaluate",
+                {"expression": "localStorage.setItem('pravahx_presentation_mode', 'true');"},
+            )
 
             # -------------------------------------------------------------
             # 2. Mobile Screenshots (360x780)
             # -------------------------------------------------------------
             print("Configuring mobile viewport 360x780...", flush=True)
-            await send_cdp(ws, "Emulation.setDeviceMetricsOverride", {
-                "width": 360,
-                "height": 780,
-                "deviceScaleFactor": 2,
-                "mobile": True,
-            })
+            await send_cdp(
+                ws,
+                "Emulation.setDeviceMetricsOverride",
+                {
+                    "width": 360,
+                    "height": 780,
+                    "deviceScaleFactor": 2,
+                    "mobile": True,
+                },
+            )
 
             # Landing Mobile
             print("Capturing Landing Mobile...", flush=True)
@@ -155,7 +178,9 @@ async def capture_all_screenshots():
 
             # Results Explorer Mobile
             print("Capturing Results Explorer Mobile...", flush=True)
-            await send_cdp(ws, "Page.navigate", {"url": "http://127.0.0.1:3000/#f05_results_explorer"})
+            await send_cdp(
+                ws, "Page.navigate", {"url": "http://127.0.0.1:3000/#f05_results_explorer"}
+            )
             await asyncio.sleep(3.0)
             await capture_screenshot(ws, ARTIFACTS_DIR / "c1_results_floodmap_mobile.png")
 
@@ -163,31 +188,37 @@ async def capture_all_screenshots():
             # 3. Screen Recording 1: Landing Scroll Story (GIF)
             # -------------------------------------------------------------
             print("Recording Landing Scroll Story GIF...", flush=True)
-            await send_cdp(ws, "Emulation.setDeviceMetricsOverride", {
-                "width": 1280,
-                "height": 720,
-                "deviceScaleFactor": 1,
-                "mobile": False,
-            })
+            await send_cdp(
+                ws,
+                "Emulation.setDeviceMetricsOverride",
+                {
+                    "width": 1280,
+                    "height": 720,
+                    "deviceScaleFactor": 1,
+                    "mobile": False,
+                },
+            )
             await send_cdp(ws, "Page.navigate", {"url": "http://127.0.0.1:3000/#landing"})
             await asyncio.sleep(2.5)
 
             frames = []
             # Frame 1: Hero
             img = await capture_screenshot(ws, ARTIFACTS_DIR / "temp_frame.png")
-            if img: frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
+            if img:
+                frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
 
             # Scroll through each section slowly
-            scroll_positions = [
-                300, 600, 950, 1300, 1700, 2100, 2600, 3100, 3600, 4100, 4600, 5100
-            ]
+            scroll_positions = [300, 600, 950, 1300, 1700, 2100, 2600, 3100, 3600, 4100, 4600, 5100]
             for pos in scroll_positions:
-                await send_cdp(ws, "Runtime.evaluate", {
-                    "expression": f"window.scrollTo({{ top: {pos}, behavior: 'smooth' }});"
-                })
+                await send_cdp(
+                    ws,
+                    "Runtime.evaluate",
+                    {"expression": f"window.scrollTo({{ top: {pos}, behavior: 'smooth' }});"},
+                )
                 await asyncio.sleep(0.7)
                 img = await capture_screenshot(ws, ARTIFACTS_DIR / "temp_frame.png")
-                if img: frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
+                if img:
+                    frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
 
             if frames:
                 gif_path = ARTIFACTS_DIR / "c1_landing_scroll_story.gif"
@@ -195,11 +226,14 @@ async def capture_all_screenshots():
                     str(gif_path),
                     save_all=True,
                     append_images=frames[1:],
-                    duration=650, # ~650ms per frame
+                    duration=650,  # ~650ms per frame
                     loop=0,
-                    optimize=True
+                    optimize=True,
                 )
-                print(f"[OK] Generated {gif_path.name} with {len(frames)} frames ({gif_path.stat().st_size} bytes)", flush=True)
+                print(
+                    f"[OK] Generated {gif_path.name} with {len(frames)} frames ({gif_path.stat().st_size} bytes)",
+                    flush=True,
+                )
 
             # -------------------------------------------------------------
             # 4. Screen Recording 2: Sign-In -> Home -> Flood Map Flow (GIF)
@@ -211,42 +245,58 @@ async def capture_all_screenshots():
             await send_cdp(ws, "Page.navigate", {"url": "http://127.0.0.1:3000/#signin"})
             await asyncio.sleep(1.5)
             img = await capture_screenshot(ws, ARTIFACTS_DIR / "temp_frame.png")
-            if img: flow_frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
-            if img: flow_frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
+            if img:
+                flow_frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
+            if img:
+                flow_frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
 
             # Step 2: Click Sign In Button
-            await send_cdp(ws, "Runtime.evaluate", {
-                "expression": "document.getElementById('signin-submit-btn')?.click();"
-            })
+            await send_cdp(
+                ws,
+                "Runtime.evaluate",
+                {"expression": "document.getElementById('signin-submit-btn')?.click();"},
+            )
             await asyncio.sleep(1.8)
             img = await capture_screenshot(ws, ARTIFACTS_DIR / "temp_frame.png")
-            if img: flow_frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
-            if img: flow_frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
+            if img:
+                flow_frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
+            if img:
+                flow_frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
 
             # Step 3: On Home screen, hover over Card 2
-            await send_cdp(ws, "Runtime.evaluate", {
-                "expression": "document.getElementById('open-flood-map-btn')?.focus();"
-            })
+            await send_cdp(
+                ws,
+                "Runtime.evaluate",
+                {"expression": "document.getElementById('open-flood-map-btn')?.focus();"},
+            )
             await asyncio.sleep(1.2)
             img = await capture_screenshot(ws, ARTIFACTS_DIR / "temp_frame.png")
-            if img: flow_frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
+            if img:
+                flow_frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
 
             # Step 4: Click Open Flood Map
-            await send_cdp(ws, "Runtime.evaluate", {
-                "expression": "document.getElementById('open-flood-map-btn')?.click();"
-            })
+            await send_cdp(
+                ws,
+                "Runtime.evaluate",
+                {"expression": "document.getElementById('open-flood-map-btn')?.click();"},
+            )
             await asyncio.sleep(3.0)
             img = await capture_screenshot(ws, ARTIFACTS_DIR / "temp_frame.png")
-            if img: flow_frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
-            if img: flow_frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
+            if img:
+                flow_frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
+            if img:
+                flow_frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
 
             # Step 5: Scroll down results page to show exposed villages table
-            await send_cdp(ws, "Runtime.evaluate", {
-                "expression": "window.scrollTo({ top: 400, behavior: 'smooth' });"
-            })
+            await send_cdp(
+                ws,
+                "Runtime.evaluate",
+                {"expression": "window.scrollTo({ top: 400, behavior: 'smooth' });"},
+            )
             await asyncio.sleep(1.5)
             img = await capture_screenshot(ws, ARTIFACTS_DIR / "temp_frame.png")
-            if img: flow_frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
+            if img:
+                flow_frames.append(img.resize((854, 480), Image.Resampling.LANCZOS))
 
             if flow_frames:
                 flow_gif_path = ARTIFACTS_DIR / "c1_signin_home_map_flow.gif"
@@ -256,9 +306,12 @@ async def capture_all_screenshots():
                     append_images=flow_frames[1:],
                     duration=900,
                     loop=0,
-                    optimize=True
+                    optimize=True,
                 )
-                print(f"[OK] Generated {flow_gif_path.name} with {len(flow_frames)} frames ({flow_gif_path.stat().st_size} bytes)", flush=True)
+                print(
+                    f"[OK] Generated {flow_gif_path.name} with {len(flow_frames)} frames ({flow_gif_path.stat().st_size} bytes)",
+                    flush=True,
+                )
 
             # Cleanup temp file
             temp_frame = ARTIFACTS_DIR / "temp_frame.png"
@@ -271,6 +324,7 @@ async def capture_all_screenshots():
             proc.wait(timeout=3)
         except Exception:
             proc.kill()
+
 
 if __name__ == "__main__":
     asyncio.run(capture_all_screenshots())

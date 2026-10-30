@@ -6,10 +6,14 @@ import tempfile
 import time
 import urllib.request
 from pathlib import Path
+
 import websockets
 
 CHROME_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
-ARTIFACTS_DIR = Path(r"C:\Users\Krishna\.gemini\antigravity-ide\brain\6b2e8c01-33c5-4da5-99e7-4fc87ac35236")
+ARTIFACTS_DIR = Path(
+    r"C:\Users\Krishna\.gemini\antigravity-ide\brain\6b2e8c01-33c5-4da5-99e7-4fc87ac35236"
+)
+
 
 async def send_cdp(ws, method, params=None):
     msg_id = int(time.time() * 1000) % 1000000
@@ -20,6 +24,7 @@ async def send_cdp(ws, method, params=None):
         data = json.loads(resp)
         if data.get("id") == msg_id:
             return data.get("result", {})
+
 
 async def capture_target(url, output_path, width=1440, height=900, is_mobile=False, setup_js=None):
     temp_dir = tempfile.mkdtemp()
@@ -55,12 +60,16 @@ async def capture_target(url, output_path, width=1440, height=900, is_mobile=Fal
 
         async with websockets.connect(ws_url, max_size=25 * 1024 * 1024) as ws:
             await send_cdp(ws, "Page.enable")
-            await send_cdp(ws, "Emulation.setDeviceMetricsOverride", {
-                "width": width,
-                "height": height,
-                "deviceScaleFactor": 1,
-                "mobile": is_mobile,
-            })
+            await send_cdp(
+                ws,
+                "Emulation.setDeviceMetricsOverride",
+                {
+                    "width": width,
+                    "height": height,
+                    "deviceScaleFactor": 1,
+                    "mobile": is_mobile,
+                },
+            )
             await send_cdp(ws, "Page.navigate", {"url": url})
             await asyncio.sleep(2.5)
 
@@ -82,6 +91,7 @@ async def capture_target(url, output_path, width=1440, height=900, is_mobile=Fal
             proc.wait(timeout=3)
         except Exception:
             proc.kill()
+
 
 async def main():
     ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -106,6 +116,7 @@ async def main():
     )
 
     print("Shell screenshots saved!", flush=True)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

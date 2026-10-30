@@ -121,24 +121,36 @@ class Settings(BaseSettings):
                 "default",
             }
             if not sec or sec in insecure_secret_defaults or len(sec) < 32:
-                raise ValueError(
-                    f"Production security violation: SECRET_KEY must be a strong secret of at least 32 characters (got length {len(sec)}) in environment '{env_val}'."
+                msg = (
+                    "Production security violation: SECRET_KEY must be at least "
+                    f"32 chars (got {len(sec)}) in '{env_val}'."
                 )
+                raise ValueError(msg)
 
             # Check postgres_password
             pg_pw = self.postgres_password.get_secret_value() if self.postgres_password else ""
-            insecure_pg_defaults = {"", "postgres", "password", "pravahx_dev_secret", "test_password"}
+            insecure_pg_defaults = {
+                "",
+                "postgres",
+                "password",
+                "pravahx_dev_secret",
+                "test_password",
+            }
             if not pg_pw or pg_pw in insecure_pg_defaults:
-                raise ValueError(
-                    f"Production security violation: POSTGRES_PASSWORD cannot be default/empty in environment '{env_val}'."
+                msg = (
+                    "Production security violation: POSTGRES_PASSWORD cannot be "
+                    f"default/empty in '{env_val}'."
                 )
+                raise ValueError(msg)
 
             # Check s3_secret_key
             s3_pw = self.s3_secret_key.get_secret_value() if self.s3_secret_key else ""
             insecure_s3_defaults = {"", "minioadmin", "password"}
             if not s3_pw or s3_pw in insecure_s3_defaults:
-                raise ValueError(
-                    f"Production security violation: S3_SECRET_KEY cannot be default/empty in environment '{env_val}'."
+                msg = (
+                    "Production security violation: S3_SECRET_KEY cannot be "
+                    f"default/empty in '{env_val}'."
                 )
+                raise ValueError(msg)
 
         return self

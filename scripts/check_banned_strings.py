@@ -44,17 +44,19 @@ BANNED_STRINGS = [
     "South Lhonak",
 ]
 
+
 def check_file(file_path: Path):
     violations = []
     try:
         content = file_path.read_text(encoding="utf-8", errors="ignore")
-    except Exception as e:
+    except Exception:
         return violations
 
     for banned in BANNED_STRINGS:
         if banned in content:
             violations.append((banned, file_path))
     return violations
+
 
 def main():
     repo_root = Path(__file__).resolve().parent.parent
@@ -91,6 +93,7 @@ def main():
     else:
         print("[PASS] Zero banned strings found across frontend bundle and source code.")
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

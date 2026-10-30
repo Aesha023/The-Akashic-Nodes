@@ -24,7 +24,9 @@ def main() -> None:
     cmd = ["git", "diff", "--exit-code", str(openapi_file), str(generated_ts)]
     res = subprocess.run(cmd, cwd=str(repo_root), capture_output=True, text=True)
     if res.returncode != 0:
-        print("ERROR: Generated TypeScript API client is STALE! Run 'npm run codegen' or 'python scripts/export_openapi.py && npx openapi-typescript frontend/src/api/openapi.json -o frontend/src/api/generated.ts'.")
+        print(
+            "ERROR: Generated TypeScript API client is STALE! Run 'npm run codegen' or 'python scripts/export_openapi.py && npx openapi-typescript frontend/src/api/openapi.json -o frontend/src/api/generated.ts'."
+        )
         print(res.stdout)
         print(res.stderr)
         sys.exit(1)

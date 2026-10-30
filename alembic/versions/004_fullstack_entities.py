@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 import geoalchemy2
 import sqlalchemy as sa
+
 from alembic import op
 
 if TYPE_CHECKING:
@@ -135,7 +136,9 @@ def upgrade() -> None:
             sa.Column("layer_name", sa.String(64), nullable=False),
             sa.Column(
                 "geom",
-                geoalchemy2.Geometry(geometry_type="GEOMETRY", srid=4326, spatial_index=is_postgres),
+                geoalchemy2.Geometry(
+                    geometry_type="GEOMETRY", srid=4326, spatial_index=is_postgres
+                ),
                 nullable=False,
             ),
             sa.Column("properties_json", sa.Text(), nullable=False, server_default="{}"),
@@ -166,7 +169,9 @@ def upgrade() -> None:
             sa.Column("flooded_buildings", sa.Integer(), nullable=False, server_default="0"),
             sa.Column("total_roads_km", sa.Float(), nullable=False, server_default="0.0"),
             sa.Column("flooded_roads_km", sa.Float(), nullable=False, server_default="0.0"),
-            sa.Column("critical_facilities_count", sa.Integer(), nullable=False, server_default="0"),
+            sa.Column(
+                "critical_facilities_count", sa.Integer(), nullable=False, server_default="0"
+            ),
             sa.Column("summary_json", sa.Text(), nullable=False, server_default="{}"),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         )
@@ -186,14 +191,18 @@ def upgrade() -> None:
             sa.Column("origin_id", sa.String(128), nullable=False),
             sa.Column("origin_type", sa.String(64), nullable=False, server_default="building"),
             sa.Column("destination_id", sa.String(128), nullable=False),
-            sa.Column("destination_type", sa.String(64), nullable=False, server_default="safe_node"),
+            sa.Column(
+                "destination_type", sa.String(64), nullable=False, server_default="safe_node"
+            ),
             sa.Column("length_m", sa.Float(), nullable=False, server_default="0.0"),
             sa.Column("duration_s", sa.Float(), nullable=False, server_default="0.0"),
             sa.Column("status", sa.String(32), nullable=False, server_default="reachable"),
             sa.Column("is_safe", sa.Boolean(), nullable=False, server_default=sa.true()),
             sa.Column(
                 "route_geom",
-                geoalchemy2.Geometry(geometry_type="LINESTRING", srid=4326, spatial_index=is_postgres),
+                geoalchemy2.Geometry(
+                    geometry_type="LINESTRING", srid=4326, spatial_index=is_postgres
+                ),
                 nullable=True,
             ),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -320,7 +329,9 @@ def upgrade() -> None:
             sa.Column("sha256", sa.String(64), nullable=False),
             sa.Column(
                 "coverage_geom",
-                geoalchemy2.Geometry(geometry_type="GEOMETRY", srid=4326, spatial_index=is_postgres),
+                geoalchemy2.Geometry(
+                    geometry_type="GEOMETRY", srid=4326, spatial_index=is_postgres
+                ),
                 nullable=True,
             ),
             sa.Column("acquired_at", sa.DateTime(timezone=True), nullable=True),

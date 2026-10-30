@@ -8,7 +8,9 @@ Create Date: 2026-10-30
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+
 import sqlalchemy as sa
+
 from alembic import op
 
 if TYPE_CHECKING:
@@ -30,7 +32,9 @@ def upgrade() -> None:
         if "presentation_mode" not in cols:
             op.add_column(
                 "users",
-                sa.Column("presentation_mode", sa.Boolean(), server_default=sa.text("1"), nullable=False),
+                sa.Column(
+                    "presentation_mode", sa.Boolean(), server_default=sa.text("1"), nullable=False
+                ),
             )
 
 

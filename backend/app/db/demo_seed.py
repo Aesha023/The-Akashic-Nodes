@@ -9,10 +9,12 @@ import datetime
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import delete, select
-from sqlalchemy.orm import Session
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 from backend.app.db.session import sync_session_factory
 from backend.app.models.alert import Alert, AlertRule
@@ -200,9 +202,13 @@ def purge_demo_data(session: Session | None = None) -> dict[str, int]:
 
     try:
         # Delete demo batch items
-        demo_batch_ids = session.execute(
-            select(Batch.id).where(Batch.demo == True)  # noqa: E712
-        ).scalars().all()
+        demo_batch_ids = (
+            session.execute(
+                select(Batch.id).where(Batch.demo == True)  # noqa: E712
+            )
+            .scalars()
+            .all()
+        )
         if demo_batch_ids:
             res_items = session.execute(
                 delete(BatchItem).where(BatchItem.batch_id.in_(demo_batch_ids))

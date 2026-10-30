@@ -37,7 +37,7 @@ if hasattr(sys.stdout, "reconfigure"):
     with contextlib.suppress(Exception):
         sys.stdout.reconfigure(encoding="utf-8")
 
-import httpx  # noqa: E402
+import httpx
 
 
 async def run_smoke_test(base_url: str | None = None, in_process: bool = False) -> None:

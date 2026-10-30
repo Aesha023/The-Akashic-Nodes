@@ -1,7 +1,9 @@
 """Test that production build contains no credential pre-fills."""
+
 import re
 import sys
 from pathlib import Path
+
 
 def test_prod_bundle_no_prefill():
     dist_dir = Path("frontend/dist/assets")
@@ -20,10 +22,13 @@ def test_prod_bundle_no_prefill():
         pattern = re.compile(r'useState\s*\(\s*["\']pravahx2026!["\']\s*\)')
         match = pattern.search(content)
         if match:
-            print(f"FAILED: Found hardcoded password pre-fill in useState in {js_file.name}: {match.group(0)}")
+            print(
+                f"FAILED: Found hardcoded password pre-fill in useState in {js_file.name}: {match.group(0)}"
+            )
             sys.exit(1)
 
     print("PASS: Verified that production build has no active credential pre-fills in useState.")
+
 
 if __name__ == "__main__":
     test_prod_bundle_no_prefill()

@@ -82,7 +82,13 @@ def seed_demo_data() -> dict[str, Any]:
         "status": "success",
         "demo": True,
         "message": "Demo fixtures verified and ready in memory.",
-        "fixtures": ["watched_lakes.json", "alerts.json", "cascade.json", "batches.json", "live_flood.json"]
+        "fixtures": [
+            "watched_lakes.json",
+            "alerts.json",
+            "cascade.json",
+            "batches.json",
+            "live_flood.json",
+        ],
     }
 
 
@@ -92,6 +98,5 @@ def purge_demo_data() -> dict[str, Any]:
     return {
         "status": "success",
         "demo": True,
-        "message": "Demo entities purged. Clean state restored."
+        "message": "Demo entities purged. Clean state restored.",
     }
-

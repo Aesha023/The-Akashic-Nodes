@@ -16,11 +16,11 @@ repo_root = Path(__file__).resolve().parent.parent.parent
 if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
 
-import click
-import structlog
+import click  # noqa: E402
+import structlog  # noqa: E402
 
-from pravahx.config.schema import load_scenario_config
-from pravahx.pipeline.provenance import RunManifest, verify_artifacts
+from pravahx.config.schema import load_scenario_config  # noqa: E402
+from pravahx.pipeline.provenance import RunManifest, verify_artifacts  # noqa: E402
 
 logger = structlog.get_logger()
 

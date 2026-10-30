@@ -18,11 +18,7 @@ app = create_app()
 @pytest.fixture(scope="module")
 def openapi_schema() -> dict:
     schema_path = (
-        Path(__file__).resolve().parent.parent.parent
-        / "frontend"
-        / "src"
-        / "api"
-        / "openapi.json"
+        Path(__file__).resolve().parent.parent.parent / "frontend" / "src" / "api" / "openapi.json"
     )
     assert schema_path.exists(), "openapi.json must be generated"
     with open(schema_path, encoding="utf-8") as f:

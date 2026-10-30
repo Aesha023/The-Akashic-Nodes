@@ -99,6 +99,10 @@ select = [
     "RUF",        # ruff-specific
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["E501", "E402", "TCH001", "TCH002", "TCH003"]
+"tests/*" = ["E501", "TCH001", "TCH002", "TCH003"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["pravahx", "backend"]
 

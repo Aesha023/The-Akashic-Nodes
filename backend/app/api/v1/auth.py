@@ -31,6 +31,7 @@ from backend.app.schemas.auth import (
     RefreshTokenRequest,
     TokenResponse,
     UserCreate,
+    UserPreferencesUpdate,
     UserResponse,
 )
 
@@ -156,6 +157,28 @@ async def get_me(current_user: User = Depends(get_current_user)) -> UserResponse
         full_name=current_user.full_name,
         role=current_user.role,
         is_active=current_user.is_active,
+        presentation_mode=getattr(current_user, "presentation_mode", True),
+        created_at=current_user.created_at,
+    )
+
+
+@router.patch("/me/preferences", response_model=UserResponse)
+async def update_preferences(
+    payload: UserPreferencesUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> UserResponse:
+    """Update user preferences such as presentation mode."""
+    current_user.presentation_mode = payload.presentation_mode
+    db.add(current_user)
+    await db.flush()
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        full_name=current_user.full_name,
+        role=current_user.role,
+        is_active=current_user.is_active,
+        presentation_mode=current_user.presentation_mode,
         created_at=current_user.created_at,
     )
 

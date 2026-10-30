@@ -187,6 +187,71 @@
         }
       }
     },
+    "/api/v1/auth/me/preferences": {
+      "patch": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Update Preferences",
+        "description": "Update user preferences such as presentation mode.",
+        "operationId": "update_preferences_api_v1_auth_me_preferences_patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserPreferencesUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/api-keys": {
       "post": {
         "tags": [
@@ -4121,6 +4186,54 @@
           }
         }
       }
+    },
+    "/api/v1/demo/seed": {
+      "post": {
+        "tags": [
+          "demo"
+        ],
+        "summary": "Seed Demo Data",
+        "description": "Seed demonstrative entities into memory or demo stores.",
+        "operationId": "seed_demo_data_api_v1_demo_seed_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Seed Demo Data Api V1 Demo Seed Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demo/purge": {
+      "post": {
+        "tags": [
+          "demo"
+        ],
+        "summary": "Purge Demo Data",
+        "description": "Purge temporary demo entities and reset demo storage cache.",
+        "operationId": "purge_demo_data_api_v1_demo_purge_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Purge Demo Data Api V1 Demo Purge Post"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6531,6 +6644,20 @@
         "title": "UserCreate",
         "description": "Payload for registering a new user."
       },
+      "UserPreferencesUpdate": {
+        "properties": {
+          "presentation_mode": {
+            "type": "boolean",
+            "title": "Presentation Mode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "presentation_mode"
+        ],
+        "title": "UserPreferencesUpdate",
+        "description": "User preferences update payload."
+      },
       "UserResponse": {
         "properties": {
           "id": {
@@ -6552,6 +6679,11 @@
           "is_active": {
             "type": "boolean",
             "title": "Is Active"
+          },
+          "presentation_mode": {
+            "type": "boolean",
+            "title": "Presentation Mode",
+            "default": true
           },
           "created_at": {
             "type": "string",

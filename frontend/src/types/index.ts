@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'hydrologist' | 'emergency_commander' | 'viewer';
+export type UserRole = 'admin' | 'analyst' | 'viewer';
 
 export interface User {
   id: string;
@@ -7,10 +7,12 @@ export interface User {
   role: UserRole;
   token?: string;
   mfa_enabled?: boolean;
+  presentation_mode?: boolean;
 }
 
 export type FeatureId =
   | 'landing'
+  | 'home'
   | 'f01_mission_control'
   | 'f02_new_scenario'
   | 'f04_run_monitor'
@@ -40,4 +42,6 @@ export type StatusType =
   | 'UNVERIFIED'
   | 'TESTED'
   | 'PRECOMPUTED'
-  | 'DEMO';
+  | 'DEMO'
+  | 'RUN · not yet validated';
+

@@ -60,9 +60,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       title: 'Tactical Command',
       items: [
-        { id: 'f01_mission_control', labelKey: 'nav.missionControl', icon: Compass },
-        { id: 'f04_run_monitor', labelKey: 'nav.runMonitor', icon: Activity },
+        { id: 'home', labelKey: 'nav.home', icon: Compass },
+        { id: 'f01_mission_control', labelKey: 'nav.missionControl', icon: Activity },
         { id: 'f05_results_explorer', labelKey: 'nav.resultsExplorer', icon: Map },
+        { id: 'f04_run_monitor', labelKey: 'nav.runMonitor', icon: Activity },
       ],
     },
     {

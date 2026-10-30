@@ -25,6 +25,7 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     mfa_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    presentation_mode: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.datetime.now(datetime.UTC),

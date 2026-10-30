@@ -27,7 +27,14 @@ class UserResponse(BaseModel):
     full_name: str
     role: str
     is_active: bool
+    presentation_mode: bool = True
     created_at: datetime.datetime
+
+
+class UserPreferencesUpdate(BaseModel):
+    """User preferences update payload."""
+
+    presentation_mode: bool
 
 
 class LoginRequest(BaseModel):

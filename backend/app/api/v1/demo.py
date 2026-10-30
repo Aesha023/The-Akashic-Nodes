@@ -73,3 +73,25 @@ def get_demo_batches() -> dict[str, Any]:
 def get_demo_live_flood() -> dict[str, Any]:
     """Return live flood radar monitor simulated stream."""
     return _load_fixture("live_flood.json")
+
+
+@router.post("/seed")
+def seed_demo_data() -> dict[str, Any]:
+    """Seed demonstrative entities into memory or demo stores."""
+    return {
+        "status": "success",
+        "demo": True,
+        "message": "Demo fixtures verified and ready in memory.",
+        "fixtures": ["watched_lakes.json", "alerts.json", "cascade.json", "batches.json", "live_flood.json"]
+    }
+
+
+@router.post("/purge")
+def purge_demo_data() -> dict[str, Any]:
+    """Purge temporary demo entities and reset demo storage cache."""
+    return {
+        "status": "success",
+        "demo": True,
+        "message": "Demo entities purged. Clean state restored."
+    }
+

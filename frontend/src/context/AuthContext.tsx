@@ -20,13 +20,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
     }
-    // Default active user for quick review
+    // Default active user for quick review in dev
     return {
-      id: 'usr_lead_hydro_01',
+      id: 'usr_analyst_01',
       username: 'dr_sharma',
       email: 'a.sharma@pravahx.internal',
-      role: 'hydrologist',
+      role: 'analyst',
       mfa_enabled: true,
+      presentation_mode: true,
       token: 'jwt_mock_valid_token_pravahx',
     };
   });
@@ -39,7 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
-  const login = (username: string, role: UserRole = 'hydrologist', token: string = 'token_auth_ok') => {
+  const login = (username: string, role: UserRole = 'analyst', token: string = 'token_auth_ok') => {
     const newUser: User = {
       id: 'usr_' + Date.now(),
       username,
@@ -47,6 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       role,
       token,
       mfa_enabled: true,
+      presentation_mode: true,
     };
     setUser(newUser);
   };

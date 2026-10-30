@@ -51,6 +51,10 @@ export const Badge: React.FC<BadgeProps> = ({
   } else if (norm.includes('PRECOMPUTED')) {
     bgClass = 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]';
     IconComponent = Database;
+  } else if (norm.includes('NOT YET VALIDATED')) {
+    bgClass = 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]';
+    IconComponent = Clock;
+    text = 'RUN · not yet validated';
   } else if (norm.includes('DEMO')) {
     bgClass = 'bg-[#F4F3FF] text-[#6941C6] border-[#D9D6FE]';
     IconComponent = Sparkles;

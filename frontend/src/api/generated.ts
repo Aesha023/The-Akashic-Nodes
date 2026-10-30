@@ -84,6 +84,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/me/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Preferences
+         * @description Update user preferences such as presentation mode.
+         */
+        patch: operations["update_preferences_api_v1_auth_me_preferences_patch"];
+        trace?: never;
+    };
     "/api/v1/auth/api-keys": {
         parameters: {
             query?: never;
@@ -1338,6 +1358,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/demo/seed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Seed Demo Data
+         * @description Seed demonstrative entities into memory or demo stores.
+         */
+        post: operations["seed_demo_data_api_v1_demo_seed_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/demo/purge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Purge Demo Data
+         * @description Purge temporary demo entities and reset demo storage cache.
+         */
+        post: operations["purge_demo_data_api_v1_demo_purge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2585,6 +2645,14 @@ export interface components {
             role: "admin" | "analyst" | "viewer";
         };
         /**
+         * UserPreferencesUpdate
+         * @description User preferences update payload.
+         */
+        UserPreferencesUpdate: {
+            /** Presentation Mode */
+            presentation_mode: boolean;
+        };
+        /**
          * UserResponse
          * @description User account response without sensitive fields.
          */
@@ -2599,6 +2667,11 @@ export interface components {
             role: string;
             /** Is Active */
             is_active: boolean;
+            /**
+             * Presentation Mode
+             * @default true
+             */
+            presentation_mode: boolean;
             /**
              * Created At
              * Format: date-time
@@ -2742,6 +2815,41 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_preferences_api_v1_auth_me_preferences_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserPreferencesUpdate"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -4942,6 +5050,50 @@ export interface operations {
         };
     };
     get_demo_live_flood_api_v1_demo_live_flood_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    seed_demo_data_api_v1_demo_seed_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    purge_demo_data_api_v1_demo_purge_post: {
         parameters: {
             query?: never;
             header?: never;

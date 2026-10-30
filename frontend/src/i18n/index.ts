@@ -7,6 +7,7 @@ const resources = {
       appName: 'PravahX',
       tagline: 'Hydrodynamic Intelligence Platform',
       nav: {
+        home: 'Home / Tactical',
         missionControl: 'Mission Control',
         newScenario: 'New Scenario',
         runMonitor: 'Run Monitor',
@@ -109,6 +110,7 @@ const resources = {
       appName: 'प्रवाह-X (PravahX)',
       tagline: 'हाइड्रोडायनामिक इंटेलिजेंस प्लेटफॉर्म',
       nav: {
+        home: 'होम / त्वरित कमांड',
         missionControl: 'मिशन नियंत्रण',
         newScenario: 'नया परिदृश्य',
         runMonitor: 'रन मॉनिटर',

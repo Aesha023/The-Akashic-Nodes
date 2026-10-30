@@ -13,37 +13,55 @@ export const DamDotGrid: React.FC = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    let drawn = false;
+    const drawGrid = () => {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0) return;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
 
-    const cols = Math.floor(rect.width / 10);
-    const dotRadius = 2.4;
+      const cols = Math.floor(rect.width / 10);
+      const dotRadius = 2.4;
 
-    ctx.clearRect(0, 0, rect.width, rect.height);
+      ctx.clearRect(0, 0, rect.width, rect.height);
 
-    for (let i = 0; i < totalDams; i++) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = col * 10 + 5;
-      const y = row * 10 + 5;
+      for (let i = 0; i < totalDams; i++) {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x = col * 10 + 5;
+        const y = row * 10 + 5;
 
-      ctx.beginPath();
-      ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
+        ctx.beginPath();
+        ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
 
-      if (i < eapDams) {
-        // Highlighted dams with EAP (Brand Blue)
-        ctx.fillStyle = '#0A66FF';
-      } else {
-        // Dams lacking Emergency Action Plan (Soft muted gray)
-        ctx.fillStyle = '#E4E7EC';
+        if (i < eapDams) {
+          ctx.fillStyle = '#0A66FF';
+        } else {
+          ctx.fillStyle = '#E4E7EC';
+        }
+        ctx.fill();
       }
-      ctx.fill();
+    };
+
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting && !drawn) {
+            drawn = true;
+            requestAnimationFrame(drawGrid);
+          }
+        },
+        { rootMargin: '120px' }
+      );
+      observer.observe(canvas);
+      return () => observer.disconnect();
+    } else {
+      drawGrid();
     }
   }, []);
 
@@ -91,21 +109,21 @@ export const DamDotGrid: React.FC = () => {
         </div>
       </div>
 
-      {/* Verified Government Source Citation (Requirement F5) */}
+      {/* Verified Government Source Citation */}
       <div className="mt-6 pt-4 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs gap-3">
         <div className="flex items-start gap-2 text-text-secondary leading-snug">
           <CheckCircle2 size={16} className="text-status-pass shrink-0 mt-0.5" />
           <span>
-            <strong>Official Source:</strong> Parliament of India, Rajya Sabha Session 265, written reply by Minister of Jal Shakti on August 3, 2026. Quoting NDSA DHARMA portal tracking data (status as of July 30, 2026).
+            <strong>Verified Source:</strong> Union Minister of Jal Shakti, written reply in Rajya Sabha, 3 Aug 2026; EAPs prepared/updated for 735 of 6,598 specified dams as on 30 Jul 2026.
           </span>
         </div>
         <a
-          href="https://sansad.in/rs"
+          href="https://dailypioneer.com/news/emergency-action-plans-updated-for-735-of-6598"
           target="_blank"
           rel="noreferrer"
           className="inline-flex items-center gap-1.5 font-semibold text-brand hover:underline shrink-0 text-xs"
         >
-          <span>sansad.in/rs Official Record</span>
+          <span>Daily Pioneer / Parliament Record</span>
           <ExternalLink size={13} />
         </a>
       </div>

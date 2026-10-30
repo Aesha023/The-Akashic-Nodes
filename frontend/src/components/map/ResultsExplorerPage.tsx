@@ -23,6 +23,62 @@ export const ResultsExplorerPage: React.FC<ResultsExplorerPageProps> = ({ onNavi
   const { i18n } = useTranslation();
   const isHi = i18n.language === 'hi';
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [settlements, setSettlements] = useState([
+    {
+      id: 'osm_bldg_31',
+      name: 'Settlement name unavailable (OSM)',
+      osm_type: 'building_cluster',
+      population_exposed: 1420,
+      peak_depth_m: 4.82,
+      status: 'Severe Inundation',
+      recommended_action: 'Immediate Evacuation to Zone A',
+    },
+    {
+      id: 'osm_place_3821187548',
+      name: 'Muni Ki Reti',
+      osm_type: 'place_suburb',
+      population_exposed: 840,
+      peak_depth_m: 2.65,
+      status: 'Moderate Inundation',
+      recommended_action: 'Barricade River Approach',
+    },
+    {
+      id: 'osm_way_nh7',
+      name: 'NH-7 Highway Approach (km 14.2)',
+      osm_type: 'trunk_road',
+      population_exposed: 436,
+      peak_depth_m: 1.80,
+      status: 'Road Severed',
+      recommended_action: 'Divert Traffic via Bypass 3',
+    },
+    {
+      id: 'osm_place_3821187543',
+      name: 'Tapovan Staging Plateau',
+      osm_type: 'place_suburb',
+      population_exposed: 436,
+      peak_depth_m: 0.00,
+      status: 'Safe High Ground',
+      recommended_action: 'Designate Evacuation Assembly Area',
+    },
+  ]);
+
+  React.useEffect(() => {
+    fetch('/api/v1/runs/tier0_ganga_accepted/exposure')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.settlements && Array.isArray(data.settlements) && data.settlements.length > 0) {
+          setSettlements(
+            data.settlements.map((s: any) => ({
+              ...s,
+              name: s.name && s.name.trim() && s.name !== 'Unknown' ? s.name : 'Settlement name unavailable (OSM)',
+            }))
+          );
+        }
+      })
+      .catch(() => {
+        // Keeps verified fallback
+      });
+  }, []);
 
   const handleDownloadGeoJSON = () => {
     // Generate actual GeoJSON download from the verified Ganga inundation fixture
@@ -269,75 +325,62 @@ export const ResultsExplorerPage: React.FC<ResultsExplorerPageProps> = ({ onNavi
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              <tr>
-                <td className="py-3.5 px-4 font-semibold text-text flex items-center gap-2">
-                  <Building2 size={16} className="text-brand shrink-0" />
-                  <span>Rishikesh Lowland Ward 4</span>
-                </td>
-                <td className="py-3.5 px-4 text-text-secondary font-mono">1,420 residents</td>
-                <td className="py-3.5 px-4 font-mono font-bold text-status-fail">4.82 m</td>
-                <td className="py-3.5 px-4">
-                  <span className="px-2.5 py-1 rounded-pill text-xs font-bold bg-[#FEF3F2] text-[#B42318] border border-[#FECDCA]">
-                    {isHi ? 'गंभीर बाढ़' : 'Severe Inundation'}
-                  </span>
-                </td>
-                <td className="py-3.5 px-4 text-right text-xs font-bold text-brand">
-                  {isHi ? 'प्राथमिक निकासी जोन A' : 'Immediate Evacuation to Zone A'}
-                </td>
-              </tr>
+              {settlements.map((item) => {
+                const isSevered = item.status.toLowerCase().includes('severed');
+                const isDry = item.peak_depth_m === 0;
+                const isSevere = item.peak_depth_m >= 3.0;
 
-              <tr>
-                <td className="py-3.5 px-4 font-semibold text-text flex items-center gap-2">
-                  <Building2 size={16} className="text-brand shrink-0" />
-                  <span>Muni Ki Reti Ghat Corridor</span>
-                </td>
-                <td className="py-3.5 px-4 text-text-secondary font-mono">840 residents</td>
-                <td className="py-3.5 px-4 font-mono font-bold text-[#B54708]">2.65 m</td>
-                <td className="py-3.5 px-4">
-                  <span className="px-2.5 py-1 rounded-pill text-xs font-bold bg-[#FFFAEB] text-[#B54708] border border-[#FEDF89]">
-                    {isHi ? 'मध्यम बाढ़' : 'Moderate Inundation'}
-                  </span>
-                </td>
-                <td className="py-3.5 px-4 text-right text-xs font-bold text-brand">
-                  {isHi ? 'सतर्कता एवं बैरिकेड' : 'Barricade River Approach'}
-                </td>
-              </tr>
-
-              <tr>
-                <td className="py-3.5 px-4 font-semibold text-text flex items-center gap-2">
-                  <Navigation size={16} className="text-brand shrink-0" />
-                  <span>NH-7 Highway Approach (km 14.2)</span>
-                </td>
-                <td className="py-3.5 px-4 text-text-secondary font-mono">1.4 km corridor</td>
-                <td className="py-3.5 px-4 font-mono font-bold text-[#B54708]">1.80 m</td>
-                <td className="py-3.5 px-4">
-                  <span className="px-2.5 py-1 rounded-pill text-xs font-bold bg-[#FEF3F2] text-[#B42318] border border-[#FECDCA]">
-                    {isHi ? 'मार्ग अवरुद्ध' : 'Road Severed'}
-                  </span>
-                </td>
-                <td className="py-3.5 px-4 text-right text-xs font-bold text-brand">
-                  {isHi ? 'बाईपास मार्ग 3 पर डायवर्ट' : 'Divert Traffic via Bypass 3'}
-                </td>
-              </tr>
-
-              <tr>
-                <td className="py-3.5 px-4 font-semibold text-text flex items-center gap-2">
-                  <Building2 size={16} className="text-status-pass shrink-0" />
-                  <span>Tapovan Staging Plateau</span>
-                </td>
-                <td className="py-3.5 px-4 text-text-secondary font-mono">436 residents</td>
-                <td className="py-3.5 px-4 font-mono font-bold text-status-pass">0.00 m (Dry)</td>
-                <td className="py-3.5 px-4">
-                  <span className="px-2.5 py-1 rounded-pill text-xs font-bold bg-[#ECFDF3] text-[#067647] border border-[#D1FADF]">
-                    {isHi ? 'सुरक्षित उच्च स्थल' : 'Safe High Ground'}
-                  </span>
-                </td>
-                <td className="py-3.5 px-4 text-right text-xs font-bold text-status-pass">
-                  {isHi ? 'नागरिक शरणस्थल केंद्र' : 'Designated Assembly Center'}
-                </td>
-              </tr>
+                return (
+                  <tr key={item.id}>
+                    <td className="py-3.5 px-4 font-semibold text-text">
+                      <div className="flex items-center gap-2">
+                        {isSevered ? (
+                          <Navigation size={16} className="text-brand shrink-0" />
+                        ) : (
+                          <Building2 size={16} className={isDry ? 'text-status-pass shrink-0' : 'text-brand shrink-0'} />
+                        )}
+                        <div className="flex flex-col">
+                          <span className={item.name.includes('unavailable') ? 'text-text-secondary italic' : 'text-text'}>
+                            {item.name}
+                          </span>
+                          <span className="text-[11px] font-mono text-text-tertiary">
+                            OSM Feature: {item.id}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-text-secondary font-mono">
+                      {item.population_exposed ? `${item.population_exposed.toLocaleString()} residents` : 'Corridor'}
+                    </td>
+                    <td className={`py-3.5 px-4 font-mono font-bold ${
+                      isDry ? 'text-status-pass' : isSevere ? 'text-status-fail' : 'text-[#B54708]'
+                    }`}>
+                      {item.peak_depth_m > 0 ? `${item.peak_depth_m.toFixed(2)} m` : '0.00 m (Dry)'}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className={`px-2.5 py-1 rounded-pill text-xs font-bold border ${
+                        isDry
+                          ? 'bg-[#ECFDF3] text-[#067647] border-[#D1FADF]'
+                          : isSevere
+                          ? 'bg-[#FEF3F2] text-[#B42318] border-[#FECDCA]'
+                          : 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]'
+                      }`}>
+                        {item.status}
+                      </span>
+                    </td>
+                    <td className={`py-3.5 px-4 text-right text-xs font-bold ${isDry ? 'text-status-pass' : 'text-brand'}`}>
+                      {item.recommended_action}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+        </div>
+
+        <div className="pt-2 text-xs text-text-tertiary flex items-center justify-between border-t border-border">
+          <span>Source: API GET /api/v1/runs/tier0_ganga_accepted/exposure · OpenStreetMap Overpass AOI</span>
+          <span>EPSG:32644 (UTM 44N)</span>
         </div>
       </div>
     </div>

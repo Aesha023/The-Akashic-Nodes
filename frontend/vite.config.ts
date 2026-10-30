@@ -28,4 +28,13 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-map': ['maplibre-gl'],
+        },
+      },
+    },
+  },
 });

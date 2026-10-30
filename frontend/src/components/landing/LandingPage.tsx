@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Lenis from 'lenis';
-import { GangaMap } from '../map/GangaMap';
 import { Badge } from '../common/Badge';
 import { CountUp } from '../common/CountUp';
 import { FlowingWaterBg } from './FlowingWaterBg';
@@ -20,6 +19,8 @@ import { ScrollStoryMap } from './ScrollStoryMap';
 import { DamDotGrid } from './DamDotGrid';
 import { RitterAnimatedPlot } from './RitterAnimatedPlot';
 import { FeatureId } from '../../types';
+
+const GangaMap = React.lazy(() => import('../map/GangaMap').then(m => ({ default: m.GangaMap })));
 
 interface LandingPageProps {
   onNavigate: (feature: FeatureId) => void;
@@ -129,7 +130,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
 
           {/* Live MapLibre Map Component with Real Ganga Extent */}
           <div className="rounded-xl overflow-hidden border border-border">
-            <GangaMap height="480px" interactive={true} showControls={true} />
+            <React.Suspense fallback={
+              <div className="w-full h-[480px] bg-bg-muted flex items-center justify-center text-text-tertiary text-xs font-mono animate-pulse">
+                Rendering Ganga hydrodynamic envelope...
+              </div>
+            }>
+              <GangaMap height="480px" interactive={true} showControls={true} />
+            </React.Suspense>
           </div>
 
           {/* Verified KPI Grid with Count-Up Animations & Required Fix F.4 Labels */}

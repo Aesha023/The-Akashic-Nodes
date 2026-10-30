@@ -3,8 +3,9 @@ import {
   ChevronRight, 
   ChevronLeft
 } from 'lucide-react';
-import { GangaMap } from '../map/GangaMap';
 import { Button } from '../common/Button';
+
+const GangaMap = React.lazy(() => import('../map/GangaMap').then(m => ({ default: m.GangaMap })));
 
 interface StoryStep {
   step: number;
@@ -26,6 +27,22 @@ interface StoryStep {
 
 export const ScrollStoryMap: React.FC = () => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [isMapVisible, setIsMapVisible] = useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setIsMapVisible(true);
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   const steps: StoryStep[] = [
     {
@@ -228,13 +245,25 @@ export const ScrollStoryMap: React.FC = () => {
         </div>
 
         {/* Right Map Canvas */}
-        <div className="lg:col-span-7 bg-[#EFF1F5] relative min-h-[420px] lg:min-h-full">
-          <GangaMap
-            height="100%"
-            interactive={true}
-            showControls={true}
-            showEvacuation={current.layerState.evac}
-          />
+        <div ref={containerRef} className="lg:col-span-7 bg-[#EFF1F5] relative min-h-[420px] lg:min-h-full">
+          {isMapVisible ? (
+            <React.Suspense fallback={
+              <div className="w-full h-full min-h-[420px] flex items-center justify-center text-text-tertiary text-xs font-mono">
+                Loading hydrodynamic reach map...
+              </div>
+            }>
+              <GangaMap
+                height="100%"
+                interactive={true}
+                showControls={true}
+                showEvacuation={current.layerState.evac}
+              />
+            </React.Suspense>
+          ) : (
+            <div className="w-full h-full min-h-[420px] flex items-center justify-center text-text-tertiary text-xs font-mono">
+              Loading hydrodynamic reach map...
+            </div>
+          )}
         </div>
       </div>
     </div>

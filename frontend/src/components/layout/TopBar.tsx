@@ -133,6 +133,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             type="button"
             role="switch"
             aria-checked={isPresentationMode}
+            aria-label="Toggle Presentation Demo Mode"
             className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
               isPresentationMode ? 'bg-[#6941C6]' : 'bg-[#D0D5DD]'
             }`}

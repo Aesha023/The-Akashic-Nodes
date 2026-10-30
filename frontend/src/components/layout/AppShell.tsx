@@ -7,11 +7,12 @@ import { CommandPalette } from '../common/CommandPalette';
 import { HypotheticalBanner } from '../common/HypotheticalBanner';
 import { DemoBadge } from '../common/DemoBadge';
 import { LandingPage } from '../landing/LandingPage';
-import { SignInPage } from '../auth/SignInPage';
-import { HomePage } from '../home/HomePage';
-import { ResultsExplorerPage } from '../map/ResultsExplorerPage';
 import { useDemoMode } from '../../context/DemoModeContext';
 import { FeatureId } from '../../types';
+
+const SignInPage = React.lazy(() => import('../auth/SignInPage').then(m => ({ default: m.SignInPage })));
+const HomePage = React.lazy(() => import('../home/HomePage').then(m => ({ default: m.HomePage })));
+const ResultsExplorerPage = React.lazy(() => import('../map/ResultsExplorerPage').then(m => ({ default: m.ResultsExplorerPage })));
 
 const FEATURE_QUESTIONS: Record<string, { en: string; hi: string; cta: string; ctaTarget?: FeatureId }> = {
   f01_mission_control: {
@@ -162,15 +163,27 @@ export const AppShell: React.FC = () => {
     }
 
     if (activeFeature === 'signin') {
-      return <SignInPage onSuccess={handleNavigate} />;
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading console...</div>}>
+          <SignInPage onSuccess={handleNavigate} />
+        </React.Suspense>
+      );
     }
 
     if (activeFeature === 'home') {
-      return <HomePage onNavigate={handleNavigate} />;
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading workspace...</div>}>
+          <HomePage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
     }
 
     if (activeFeature === 'f05_results_explorer') {
-      return <ResultsExplorerPage onNavigate={handleNavigate} />;
+      return (
+        <React.Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center text-text-secondary text-sm">Loading map & results...</div>}>
+          <ResultsExplorerPage onNavigate={handleNavigate} />
+        </React.Suspense>
+      );
     }
 
     const questionInfo = FEATURE_QUESTIONS[activeFeature] || {

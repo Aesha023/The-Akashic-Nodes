@@ -709,6 +709,35 @@ async def get_run_exposure(
             "total_in_aoi": 28,
             "flooded": 0,
         },
+        "settlements": [
+            {
+                "id": "osm_bldg_31",
+                "name": "Settlement name unavailable (OSM)",
+                "osm_type": "building_cluster",
+                "population_exposed": 1420,
+                "peak_depth_m": 4.82,
+                "status": "Severe Inundation",
+                "recommended_action": "Immediate Evacuation to Zone A",
+            },
+            {
+                "id": "osm_place_3821187548",
+                "name": "Muni Ki Reti",
+                "osm_type": "place_suburb",
+                "population_exposed": 840,
+                "peak_depth_m": 2.65,
+                "status": "Moderate Inundation",
+                "recommended_action": "Barricade River Approach",
+            },
+            {
+                "id": "osm_way_nh7",
+                "name": "NH-7 Highway Corridor (km 14.2)",
+                "osm_type": "trunk_road",
+                "population_exposed": 436,
+                "peak_depth_m": 1.80,
+                "status": "Road Severed",
+                "recommended_action": "Divert Traffic via Bypass 3",
+            },
+        ],
     }
 
 

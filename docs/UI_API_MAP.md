@@ -19,7 +19,7 @@ This document establishes the authoritative contract mapping every frontend UI p
 | Page / Screen | Sub-Component / Feature | Mode | FastAPI Endpoint(s) | HTTP Method | Database Table(s) | Notes & Data Provenance |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Landing Page** | Hero Map Preview | **REAL** | `/api/v1/runs/tier0_ganga_accepted/envelope`<br>`/api/v1/validation/status` | GET | `runs`, `extent_geometries` | Displays real Ganga Tier-0 5x5 km extent ($1.72\text{ km}^2$) |
-| | Problem Counter (735 / 6,598) | **REAL** | `/api/v1/validation/status` | GET | (Static cited) | NRLD 2023 CWC Emergency Action Plan count |
+| | Problem Counter (735 / 6,598) | **REAL** | `/api/v1/validation/status` | GET | (Static cited) | Union Minister of Jal Shakti, written reply in Rajya Sabha, 3 Aug 2026; EAPs prepared/updated for 735 of 6,598 specified dams as on 30 Jul 2026 (link: dailypioneer.com/news/emergency-action-plans-updated-for-735-of-6598) |
 | | Three Tiers Architecture | **REAL** | `/api/v1/validation/status` | GET | - | Honest status badges (RUN AND PASSED, RUN AND FAILED, etc.) |
 | | Analytical Proof (Ritter Plot) | **REAL** | `/api/v1/validation/benchmarks` | GET | - | Verified Ritter dam break benchmark metrics |
 | **Authentication & RBAC (F22)** | Sign-in & Token Exchange | **REAL** | `/api/v1/auth/token`<br>`/api/v1/auth/refresh` | POST | `users` | JWT access token + refresh token rotation |

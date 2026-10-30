@@ -10,6 +10,7 @@ from backend.app.api.v1.auth import router as auth_router
 from backend.app.api.v1.batches import router as batches_router
 from backend.app.api.v1.cascade import router as cascade_router
 from backend.app.api.v1.data_catalog import router as data_catalog_router
+from backend.app.api.v1.demo import router as demo_router
 from backend.app.api.v1.gee import router as gee_router
 from backend.app.api.v1.impact import router as impact_router
 from backend.app.api.v1.lake_watch import router as lake_watch_router
@@ -37,5 +38,6 @@ api_v1_router.include_router(system_router)
 api_v1_router.include_router(validation_router)
 api_v1_router.include_router(audit_router)
 api_v1_router.include_router(share_router)
+api_v1_router.include_router(demo_router)
 
 __all__ = ["api_v1_router"]

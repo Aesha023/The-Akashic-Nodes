@@ -1,0 +1,23 @@
+{
+  "demo": true,
+  "disclaimer": "DEMO · illustrative data. Dynamic wave propagation preview available with Tier-1/Tier-2 runs.",
+  "time_steps_hours": [0, 1, 2, 3, 4, 6, 8, 12, 18, 24],
+  "isochrones": [
+    {"hour": 1, "reach_distance_km": 4.2, "peak_depth_m": 7.4},
+    {"hour": 2, "reach_distance_km": 9.8, "peak_depth_m": 6.8},
+    {"hour": 4, "reach_distance_km": 18.5, "peak_depth_m": 5.9},
+    {"hour": 8, "reach_distance_km": 31.0, "peak_depth_m": 4.7},
+    {"hour": 12, "reach_distance_km": 42.5, "peak_depth_m": 3.8}
+  ],
+  "ensemble_spread": {
+    "p10_inundation_km2": 1.45,
+    "median_inundation_km2": 1.72,
+    "p90_inundation_km2": 2.15,
+    "demo": true
+  },
+  "velocity_vectors_summary": {
+    "max_velocity_ms": 4.8,
+    "mean_channel_velocity_ms": 2.6,
+    "demo": true
+  }
+}

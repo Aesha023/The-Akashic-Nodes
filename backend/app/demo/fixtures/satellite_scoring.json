@@ -1,0 +1,23 @@
+{
+  "demo": true,
+  "disclaimer": "DEMO · illustrative data. Synthetic contingency scoring view for Ganga demo reach.",
+  "kuttanad_real_mapping": {
+    "status": "RUN AND PASSED as mapping",
+    "mapped_area_km2": 40.52,
+    "literature_source": "Tiwari et al. 2020",
+    "consistency": "Qualitatively consistent with published optical/SAR assessments",
+    "is_real": true
+  },
+  "ganga_demo_scoring": {
+    "demo": true,
+    "scenario_name": "Ganga Tier-0 Screening vs Synthetic Satellite Mask",
+    "true_positive_km2": 1.48,
+    "false_positive_km2": 0.24,
+    "false_negative_km2": 0.18,
+    "true_negative_km2": 23.10,
+    "iou": 0.779,
+    "critical_success_index": 0.779,
+    "hit_rate": 0.892,
+    "false_alarm_ratio": 0.139
+  }
+}

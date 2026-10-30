@@ -1,0 +1,29 @@
+{
+  "demo": true,
+  "disclaimer": "DEMO · illustrative data. Operational radar flood monitor simulated view.",
+  "monitoring_status": "active",
+  "active_feed_sources": [
+    "Copernicus Sentinel-1 SAR (Simulated Stream)",
+    "Earth Engine GEE Realtime Pipeline (Demo)"
+  ],
+  "monitored_basins": [
+    {
+      "basin_id": "demo_basin_alpha",
+      "name": "Demo Northern Valley Reach",
+      "last_pass_time": "2026-10-29T11:15:00Z",
+      "standing_water_ha": 412.5,
+      "change_24h_ha": 18.2,
+      "risk_status": "advisory",
+      "demo": true
+    },
+    {
+      "basin_id": "demo_basin_beta",
+      "name": "Demo Foothill Delta Basin",
+      "last_pass_time": "2026-10-29T09:40:00Z",
+      "standing_water_ha": 1280.0,
+      "change_24h_ha": -5.4,
+      "risk_status": "nominal",
+      "demo": true
+    }
+  ]
+}

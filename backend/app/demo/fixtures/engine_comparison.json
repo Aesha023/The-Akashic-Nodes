@@ -1,0 +1,30 @@
+{
+  "demo": true,
+  "disclaimer": "DEMO · illustrative data. Synthetic intercomparison dashboard for Tier-0 vs Tier-1.",
+  "status_card": {
+    "title": "Delft3D Ganga comparison: Pending",
+    "status": "PENDING",
+    "reason": "Resolving gorge depression storage pre-wetting (Gate d) and extending breach simulation time (Gate e) in Delft3D FM Ganga run.",
+    "is_real_status": true
+  },
+  "metrics": {
+    "iou_screening": 0.724,
+    "csi_index": 0.689,
+    "depth_rmse_m": 0.84,
+    "f1_score": 0.812,
+    "demo": true
+  },
+  "scatter_samples": [
+    {"point_id": 1, "tier0_depth_m": 3.4, "tier1_depth_m": 3.1, "diff_m": 0.3},
+    {"point_id": 2, "tier0_depth_m": 5.8, "tier1_depth_m": 6.2, "diff_m": -0.4},
+    {"point_id": 3, "tier0_depth_m": 7.2, "tier1_depth_m": 6.9, "diff_m": 0.3},
+    {"point_id": 4, "tier0_depth_m": 1.5, "tier1_depth_m": 1.2, "diff_m": 0.3},
+    {"point_id": 5, "tier0_depth_m": 4.1, "tier1_depth_m": 4.4, "diff_m": -0.3}
+  ],
+  "agreement_summary": {
+    "agreement_pct": 74.2,
+    "tier0_overprediction_pct": 18.1,
+    "tier0_underprediction_pct": 7.7,
+    "demo": true
+  }
+}

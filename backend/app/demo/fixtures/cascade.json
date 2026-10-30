@@ -1,0 +1,50 @@
+{
+  "demo": true,
+  "disclaimer": "DEMO · illustrative data. Fictional multi-dam cascade analysis.",
+  "cascade_id": "demo_cascade_basin_alpha",
+  "name": "Demo River Basin Cascade (Fictional Dams Alpha -> Beta -> Gamma)",
+  "total_river_length_km": 42.5,
+  "structures": [
+    {
+      "id": "demo_dam_1",
+      "name": "Demo Upstream Dam Alpha",
+      "river_station_km": 0.0,
+      "dam_height_m": 85.0,
+      "reservoir_storage_m3": 125000000.0,
+      "status": "breached_trigger",
+      "attenuation_pct": 0.0,
+      "peak_outflow_m3s": 14200.0,
+      "time_to_peak_hours": 1.2,
+      "demo": true
+    },
+    {
+      "id": "demo_dam_2",
+      "name": "Demo Midstream Barrage Beta",
+      "river_station_km": 18.4,
+      "dam_height_m": 28.0,
+      "reservoir_storage_m3": 18500000.0,
+      "status": "overtopped",
+      "attenuation_pct": 14.5,
+      "peak_outflow_m3s": 12850.0,
+      "time_to_peak_hours": 3.8,
+      "demo": true
+    },
+    {
+      "id": "demo_dam_3",
+      "name": "Demo Downstream Weir Gamma",
+      "river_station_km": 42.5,
+      "dam_height_m": 12.0,
+      "reservoir_storage_m3": 4200000.0,
+      "status": "submerged",
+      "attenuation_pct": 32.1,
+      "peak_outflow_m3s": 9650.0,
+      "time_to_peak_hours": 7.4,
+      "demo": true
+    }
+  ],
+  "downstream_impact_summary": {
+    "arrival_time_at_terminus_hours": 7.4,
+    "attenuation_total_pct": 32.1,
+    "demo": true
+  }
+}

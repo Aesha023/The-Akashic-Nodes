@@ -7,9 +7,9 @@ Never print secrets in logs, test output or the context file (Section 0.2).
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import SecretStr
+from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,6 +36,10 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
+
+    # Environment
+    app_env: str = "dev"
+    env: str = "dev"
 
     # Deployment
     pravahx_repo_url: str = ""
@@ -101,3 +105,40 @@ class Settings(BaseSettings):
     def is_secure(self) -> bool:
         """Whether outbound network calls are blocked."""
         return self.pravahx_secure_mode == SecureMode.SECURE
+
+    @model_validator(mode="after")
+    def validate_production_credentials(self) -> Self:
+        """Ensure no default/insecure credentials are used outside development mode."""
+        env_val = (self.app_env or self.env or "").lower().strip()
+        if env_val not in ("dev", "development", "test"):
+            # Check secret_key
+            sec = self.secret_key.get_secret_value() if self.secret_key else ""
+            insecure_secret_defaults = {
+                "",
+                "changeme",
+                "secret",
+                "pravahx_super_secret_jwt_key_default_32_bytes_long",
+                "default",
+            }
+            if not sec or sec in insecure_secret_defaults or len(sec) < 32:
+                raise ValueError(
+                    f"Production security violation: SECRET_KEY must be a strong secret of at least 32 characters (got length {len(sec)}) in environment '{env_val}'."
+                )
+
+            # Check postgres_password
+            pg_pw = self.postgres_password.get_secret_value() if self.postgres_password else ""
+            insecure_pg_defaults = {"", "postgres", "password", "pravahx_dev_secret", "test_password"}
+            if not pg_pw or pg_pw in insecure_pg_defaults:
+                raise ValueError(
+                    f"Production security violation: POSTGRES_PASSWORD cannot be default/empty in environment '{env_val}'."
+                )
+
+            # Check s3_secret_key
+            s3_pw = self.s3_secret_key.get_secret_value() if self.s3_secret_key else ""
+            insecure_s3_defaults = {"", "minioadmin", "password"}
+            if not s3_pw or s3_pw in insecure_s3_defaults:
+                raise ValueError(
+                    f"Production security violation: S3_SECRET_KEY cannot be default/empty in environment '{env_val}'."
+                )
+
+        return self

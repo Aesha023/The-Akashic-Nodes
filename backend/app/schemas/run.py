@@ -28,6 +28,9 @@ class RunResponse(BaseModel):
     created_at: datetime.datetime
     finished_at: datetime.datetime | None = None
     manifest: dict[str, Any] | None = None
+    precomputed: bool = False
+    computed_at: datetime.datetime | None = None
+    demo: bool = False
 
 
 class RunListResponse(BaseModel):

@@ -39,3 +39,8 @@ class Run(Base):
     finished_at: Mapped[datetime.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    precomputed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    computed_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    demo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

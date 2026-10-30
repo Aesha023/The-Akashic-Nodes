@@ -54,6 +54,9 @@ ACCEPTED_GANGA_RUN_IDS = {
 
 def _run_to_response(r: Run) -> RunResponse:
     manifest_dict = json.loads(r.manifest_json) if r.manifest_json else None
+    is_precomputed = getattr(r, "precomputed", False) or (r.id in ACCEPTED_GANGA_RUN_IDS)
+    computed_at_val = getattr(r, "computed_at", None) or r.finished_at or r.created_at
+    is_demo = getattr(r, "demo", False)
     return RunResponse(
         id=r.id,
         scenario_id=r.scenario_id,
@@ -65,6 +68,9 @@ def _run_to_response(r: Run) -> RunResponse:
         created_at=r.created_at,
         finished_at=r.finished_at,
         manifest=manifest_dict,
+        precomputed=is_precomputed,
+        computed_at=computed_at_val,
+        demo=is_demo,
     )
 
 

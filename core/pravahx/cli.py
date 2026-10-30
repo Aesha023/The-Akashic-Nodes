@@ -11,6 +11,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+# Ensure repo root is on sys.path so backend is accessible
+repo_root = Path(__file__).resolve().parent.parent.parent
+if str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
+
 import click
 import structlog
 
@@ -113,6 +118,36 @@ def verify(run_dir: Path) -> None:
             f"Verification PASSED — {len(manifest.artifacts)} artefact(s) intact.",
             fg="green",
         )
+
+
+@main.command(name="seed-demo")
+def seed_demo() -> None:
+    """Seed demo rows (tagged demo=True) into database for presentation mode."""
+    try:
+        from backend.app.db.demo_seed import seed_demo_data
+
+        counts = seed_demo_data()
+        click.secho("Demo data seeded successfully (demo=True):", fg="green")
+        for key, val in counts.items():
+            click.echo(f"  • {key}: {val} row(s)")
+    except Exception as exc:
+        click.secho(f"Failed to seed demo data: {exc}", fg="red", err=True)
+        sys.exit(1)
+
+
+@main.command(name="purge-demo")
+def purge_demo() -> None:
+    """Purge all rows flagged demo=True. Real data is strictly preserved."""
+    try:
+        from backend.app.db.demo_seed import purge_demo_data
+
+        counts = purge_demo_data()
+        click.secho("Demo data purged successfully (real data preserved):", fg="yellow")
+        for key, val in counts.items():
+            click.echo(f"  • {key}: {val} row(s) removed")
+    except Exception as exc:
+        click.secho(f"Failed to purge demo data: {exc}", fg="red", err=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

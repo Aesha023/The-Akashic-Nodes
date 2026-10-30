@@ -1,0 +1,30 @@
+{
+  "demo": true,
+  "disclaimer": "DEMO · illustrative data. Sample multi-dam batch pipeline queue.",
+  "items": [
+    {
+      "id": "batch_demo_001",
+      "name": "Demo National Dam Safety Screening Batch #1",
+      "status": "completed",
+      "total_items": 12,
+      "completed_items": 12,
+      "failed_items": 0,
+      "created_by": "operator@pravahx.org",
+      "created_at": "2026-10-28T14:00:00Z",
+      "finished_at": "2026-10-28T14:45:00Z",
+      "demo": true
+    },
+    {
+      "id": "batch_demo_002",
+      "name": "Demo Himalayan Glacial Outburst Vulnerability Queue",
+      "status": "running",
+      "total_items": 8,
+      "completed_items": 5,
+      "failed_items": 0,
+      "created_by": "analyst@pravahx.org",
+      "created_at": "2026-10-29T10:30:00Z",
+      "finished_at": null,
+      "demo": true
+    }
+  ]
+}

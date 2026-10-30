@@ -1,0 +1,6638 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PravahX API",
+    "description": "Dam break and river blockage inundation modelling platform",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register User",
+        "description": "Register a new user account.",
+        "operationId": "register_user_api_v1_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/token": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login For Token",
+        "description": "Authenticate with username/password and receive JWT tokens.",
+        "operationId": "login_for_token_api_v1_auth_token_post",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_login_for_token_api_v1_auth_token_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Refresh Token",
+        "description": "Exchange a valid refresh token for a new access token pair.",
+        "operationId": "refresh_token_api_v1_auth_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get Me",
+        "description": "Return profile information for the currently authenticated user.",
+        "operationId": "get_me_api_v1_auth_me_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/api-keys": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Create Api Key Endpoint",
+        "description": "Create a new programmatic API key.",
+        "operationId": "create_api_key_endpoint_api_v1_auth_api_keys_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiKeyCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyCreatedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "List Api Keys Endpoint",
+        "description": "List active API keys for the current user.",
+        "operationId": "list_api_keys_endpoint_api_v1_auth_api_keys_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApiKeyResponse"
+                  },
+                  "title": "Response List Api Keys Endpoint Api V1 Auth Api Keys Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/api-keys/{key_id}": {
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Revoke Api Key Endpoint",
+        "description": "Revoke an API key.",
+        "operationId": "revoke_api_key_endpoint_api_v1_auth_api_keys__key_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/mfa/setup": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Setup Mfa",
+        "description": "Generate TOTP secret and provisioning URI for MFA setup.",
+        "operationId": "setup_mfa_api_v1_auth_mfa_setup_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Setup Mfa Api V1 Auth Mfa Setup Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/mfa/verify": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Verify Mfa",
+        "description": "Verify TOTP 6-digit code to enable MFA on user account.",
+        "operationId": "verify_mfa_api_v1_auth_mfa_verify_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Verify Mfa Api V1 Auth Mfa Verify Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Users Admin",
+        "description": "List registered users with optional role and status filters (admin-only).",
+        "operationId": "list_users_admin_api_v1_admin_users_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(admin|analyst|viewer)$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Role"
+            }
+          },
+          {
+            "name": "active_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Active Only"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminUserResponse"
+                  },
+                  "title": "Response List Users Admin Api V1 Admin Users Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create User Admin",
+        "description": "Create a new user with administrative assignment of role (admin-only).",
+        "operationId": "create_user_admin_api_v1_admin_users_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUserCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users/{user_id}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Get User Admin",
+        "description": "Retrieve details for a specific user (admin-only).",
+        "operationId": "get_user_admin_api_v1_admin_users__user_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update User Admin",
+        "description": "Update role, active state, or profile for a user (admin-only).",
+        "operationId": "update_user_admin_api_v1_admin_users__user_id__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUserUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Delete User Admin",
+        "description": "Deactivate or remove a user account (admin-only).",
+        "operationId": "delete_user_admin_api_v1_admin_users__user_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenarios": {
+      "post": {
+        "tags": [
+          "scenarios"
+        ],
+        "summary": "Create Scenario",
+        "description": "Create and validate a new scenario configuration.",
+        "operationId": "create_scenario_api_v1_scenarios_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "scenarios"
+        ],
+        "summary": "List Scenarios",
+        "description": "List all saved scenarios with pagination.",
+        "operationId": "list_scenarios_api_v1_scenarios_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenarios/{scenario_id}": {
+      "get": {
+        "tags": [
+          "scenarios"
+        ],
+        "summary": "Get Scenario",
+        "description": "Retrieve details and configuration for a specific scenario.",
+        "operationId": "get_scenario_api_v1_scenarios__scenario_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scenario Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "scenarios"
+        ],
+        "summary": "Update Scenario",
+        "description": "Update configuration for an existing scenario, incrementing its version.",
+        "operationId": "update_scenario_api_v1_scenarios__scenario_id__put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scenario Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "scenarios"
+        ],
+        "summary": "Delete Scenario",
+        "description": "Delete a scenario (admin only).",
+        "operationId": "delete_scenario_api_v1_scenarios__scenario_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scenario Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenarios/{scenario_id}/clone": {
+      "post": {
+        "tags": [
+          "scenarios"
+        ],
+        "summary": "Clone Scenario",
+        "description": "Clone an existing scenario into a new scenario with parent lineage.",
+        "operationId": "clone_scenario_api_v1_scenarios__scenario_id__clone_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scenario Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ScenarioCloneRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Create Run",
+        "description": "Create and dispatch a simulation run directly via /runs.",
+        "operationId": "create_run_api_v1_runs_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "List Runs",
+        "description": "List simulation runs with optional scenario filter.",
+        "operationId": "list_runs_api_v1_runs_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "scenario_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scenario Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenarios/{scenario_id}/runs": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Dispatch Run",
+        "description": "Dispatch a simulation run for the specified scenario.",
+        "operationId": "dispatch_run_api_v1_scenarios__scenario_id__runs_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scenario Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{run_id}/cancel": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Cancel Run",
+        "description": "Cancel a simulation run that is currently running or created.",
+        "operationId": "cancel_run_api_v1_runs__run_id__cancel_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{run_id}/retry": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Retry Run",
+        "description": "Retry a failed or cancelled simulation run.",
+        "operationId": "retry_run_api_v1_runs__run_id__retry_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{run_id}/events": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Stream Run Events",
+        "description": "Stream simulation progress via Server-Sent Events (SSE).",
+        "operationId": "stream_run_events_api_v1_runs__run_id__events_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Run",
+        "description": "Get status and details of a specific simulation run.",
+        "operationId": "get_run_api_v1_runs__run_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{run_id}/manifest": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Run Manifest",
+        "description": "Retrieve full provenance manifest JSON for a completed run.",
+        "operationId": "get_run_manifest_api_v1_runs__run_id__manifest_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Run Manifest Api V1 Runs  Run Id  Manifest Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{run_id}/artifacts/{artifact_name}": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Run Artifact",
+        "description": "Download a generated artifact file from the run directory.",
+        "operationId": "get_run_artifact_api_v1_runs__run_id__artifacts__artifact_name__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "artifact_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Name"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{run_id}/extent.geojson": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Run Extent",
+        "description": "Retrieve the inundation extent envelope as GeoJSON (EPSG:4326).",
+        "operationId": "get_run_extent_api_v1_runs__run_id__extent_geojson_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{run_id}/extent": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Run Extent",
+        "description": "Retrieve the inundation extent envelope as GeoJSON (EPSG:4326).",
+        "operationId": "get_run_extent_api_v1_runs__run_id__extent_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{run_id}/point-query": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Query Run Point",
+        "description": "Query inundation water depth at a specific lon/lat point.",
+        "operationId": "query_run_point_api_v1_runs__run_id__point_query_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 180.0,
+              "minimum": -180.0,
+              "description": "Longitude in decimal degrees (EPSG:4326)",
+              "title": "Lon"
+            },
+            "description": "Longitude in decimal degrees (EPSG:4326)"
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 90.0,
+              "minimum": -90.0,
+              "description": "Latitude in decimal degrees (EPSG:4326)",
+              "title": "Lat"
+            },
+            "description": "Latitude in decimal degrees (EPSG:4326)"
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Query Run Point Api V1 Runs  Run Id  Point Query Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{run_id}/brief": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Run Brief",
+        "description": "Download executive disaster brief PDF for the simulation run.",
+        "operationId": "get_run_brief_api_v1_runs__run_id__brief_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{run_id}/exposure": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Run Exposure",
+        "description": "Retrieve population and critical asset exposure metrics for the simulation run.",
+        "operationId": "get_run_exposure_api_v1_runs__run_id__exposure_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Run Exposure Api V1 Runs  Run Id  Exposure Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{run_id}/evacuation": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Run Evacuation",
+        "description": "Retrieve evacuation routing metrics and severed network summary.",
+        "operationId": "get_run_evacuation_api_v1_runs__run_id__evacuation_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Run Evacuation Api V1 Runs  Run Id  Evacuation Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{run_id}/download": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Download Run Package",
+        "description": "Download complete zipped simulation artifact bundle for a run.",
+        "operationId": "download_run_package_api_v1_runs__run_id__download_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/batches": {
+      "post": {
+        "tags": [
+          "batches"
+        ],
+        "summary": "Create Batch",
+        "description": "Queue a batch of dam breach simulations from a structured JSON list or CSV.",
+        "operationId": "create_batch_api_v1_batches_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/batches/{batch_id}": {
+      "get": {
+        "tags": [
+          "batches"
+        ],
+        "summary": "Get Batch Status",
+        "description": "Retrieve execution progress and individual status for all runs in a batch.",
+        "operationId": "get_batch_status_api_v1_batches__batch_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cascade/evaluate": {
+      "post": {
+        "tags": [
+          "cascade"
+        ],
+        "summary": "Evaluate Cascade",
+        "description": "Evaluate multi-dam cascade overtopping risk and chained breach triggers.",
+        "operationId": "evaluate_cascade_api_v1_cascade_evaluate_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CascadeEvaluateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Evaluate Cascade Api V1 Cascade Evaluate Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lake-watch/evaluate": {
+      "post": {
+        "tags": [
+          "lake-watch"
+        ],
+        "summary": "Evaluate Lake Watch",
+        "description": "Evaluate satellite time series for a monitored lake and dispatch alerts on anomaly.",
+        "operationId": "evaluate_lake_watch_api_v1_lake_watch_evaluate_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LakeWatchEvaluateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Evaluate Lake Watch Api V1 Lake Watch Evaluate Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/alerts/test": {
+      "post": {
+        "tags": [
+          "lake-watch"
+        ],
+        "summary": "Test Alert Dispatch",
+        "description": "Test webhook and email alert delivery channels.",
+        "operationId": "test_alert_dispatch_api_v1_alerts_test_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertTestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Test Alert Dispatch Api V1 Alerts Test Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/data/catalog": {
+      "get": {
+        "tags": [
+          "data-catalog"
+        ],
+        "summary": "List Data Catalogue",
+        "description": "Retrieve inventory of reference datasets, open sources, checksums, and licences.",
+        "operationId": "list_data_catalogue_api_v1_data_catalog_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DatasetCatalogEntry"
+                  },
+                  "title": "Response List Data Catalogue Api V1 Data Catalog Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/data/catalog/{dataset_id}": {
+      "get": {
+        "tags": [
+          "data-catalog"
+        ],
+        "summary": "Get Dataset Metadata",
+        "description": "Retrieve full provenance and cryptographic checksum for a specific catalog dataset.",
+        "operationId": "get_dataset_metadata_api_v1_data_catalog__dataset_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dataset Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetCatalogEntry"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/data/catalog/validate-upload": {
+      "post": {
+        "tags": [
+          "data-catalog"
+        ],
+        "summary": "Validate Uploaded Dataset",
+        "description": "Inspect and validate a user-uploaded geospatial raster or vector file.",
+        "operationId": "validate_uploaded_dataset_api_v1_data_catalog_validate_upload_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_validate_uploaded_dataset_api_v1_data_catalog_validate_upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Validate Uploaded Dataset Api V1 Data Catalog Validate Upload Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tiles/{run_id}/{layer_name}/{z}/{x}/{y}.png": {
+      "get": {
+        "tags": [
+          "tiles"
+        ],
+        "summary": "Get Raster Tile",
+        "description": "Generate or proxy an RGBA PNG tile for the specified hydrodynamic layer via rio-tiler.",
+        "operationId": "get_raster_tile_api_v1_tiles__run_id___layer_name___z___x___y__png_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "layer_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Layer Name"
+            }
+          },
+          {
+            "name": "z",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Z"
+            }
+          },
+          {
+            "name": "x",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "X"
+            }
+          },
+          {
+            "name": "y",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Y"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/impact/hazard": {
+      "post": {
+        "tags": [
+          "impact"
+        ],
+        "summary": "Evaluate Hazard",
+        "description": "Evaluate UK Defra / Environment Agency FD2321 Flood Hazard Rating.",
+        "operationId": "evaluate_hazard_api_v1_impact_hazard_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HazardRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HazardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/impact/exposure": {
+      "post": {
+        "tags": [
+          "impact"
+        ],
+        "summary": "Evaluate Exposure",
+        "description": "Calculate village population, buildings, and critical infrastructure exposure.",
+        "operationId": "evaluate_exposure_api_v1_impact_exposure_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExposureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Evaluate Exposure Api V1 Impact Exposure Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/impact/damage": {
+      "post": {
+        "tags": [
+          "impact"
+        ],
+        "summary": "Evaluate Damage",
+        "description": "Calculate direct structural, contents, and infrastructure economic loss.",
+        "operationId": "evaluate_damage_api_v1_impact_damage_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DamageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Evaluate Damage Api V1 Impact Damage Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/impact/evacuation": {
+      "post": {
+        "tags": [
+          "impact"
+        ],
+        "summary": "Evaluate Evacuation",
+        "description": "Plan emergency evacuation routes, clearance time, and safe staging windows.",
+        "operationId": "evaluate_evacuation_api_v1_impact_evacuation_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvacuationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Evaluate Evacuation Api V1 Impact Evacuation Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/impact/brief": {
+      "post": {
+        "tags": [
+          "impact"
+        ],
+        "summary": "Generate Brief",
+        "description": "Generate automated executive disaster brief in Markdown.",
+        "operationId": "generate_brief_api_v1_impact_brief_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BriefRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Generate Brief Api V1 Impact Brief Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/gee/status": {
+      "get": {
+        "tags": [
+          "gee"
+        ],
+        "summary": "Get Gee Status",
+        "description": "Check Earth Engine service account authentication and project configuration.",
+        "operationId": "get_gee_status_api_v1_gee_status_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Gee Status Api V1 Gee Status Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/gee/lake-watch": {
+      "post": {
+        "tags": [
+          "gee"
+        ],
+        "summary": "Evaluate Lake Watch",
+        "description": "Analyze glacial/high-altitude lake area expansion time series and alert flags.",
+        "operationId": "evaluate_lake_watch_api_v1_gee_lake_watch_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LakeWatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Evaluate Lake Watch Api V1 Gee Lake Watch Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/live": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health Live",
+        "description": "Liveness probe: confirms the process is responsive.",
+        "operationId": "health_live_api_v1_health_live_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Live Api V1 Health Live Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health Ready",
+        "description": "Readiness probe: validates database and core service connectivity.",
+        "operationId": "health_ready_api_v1_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Ready Api V1 Health Ready Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "System Health",
+        "description": "Comprehensive system health probe reporting database, broker, and storage status.",
+        "operationId": "system_health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response System Health Api V1 Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/health/detailed": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "System Health Detailed",
+        "description": "Detailed operational health report.\n\nIncludes queue depth, worker status, disk usage, and last backup timestamp (F20).",
+        "operationId": "system_health_detailed_api_v1_system_health_detailed_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response System Health Detailed Api V1 System Health Detailed Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/info": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "System Info",
+        "description": "Provides system versions, deployment mode, and capability metadata.",
+        "operationId": "system_info_api_v1_system_info_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response System Info Api V1 System Info Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/validation/status": {
+      "get": {
+        "tags": [
+          "validation"
+        ],
+        "summary": "Get Validation Status",
+        "description": "Retrieve structured validation evidence, benchmark engine metrics, and feature statuses.",
+        "operationId": "get_validation_status_api_v1_validation_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Validation Status Api V1 Validation Status Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/validation/satellite-scoring": {
+      "post": {
+        "tags": [
+          "validation"
+        ],
+        "summary": "Evaluate Satellite Scoring",
+        "description": "Score a simulated depth raster against an observed satellite flood mask (F07).",
+        "operationId": "evaluate_satellite_scoring_api_v1_validation_satellite_scoring_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SatelliteScoringRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Evaluate Satellite Scoring Api V1 Validation Satellite Scoring Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/audit/logs": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "List Audit Logs",
+        "description": "Retrieve audit logs (admin only).",
+        "operationId": "list_audit_logs_api_v1_audit_logs_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/audit/verify": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "Verify Audit Logs Chain",
+        "description": "Cryptographically verify the tamper-evident hash chain integrity (admin only).",
+        "operationId": "verify_audit_logs_chain_api_v1_audit_verify_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditVerifyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/share/runs/{run_id}": {
+      "post": {
+        "tags": [
+          "share"
+        ],
+        "summary": "Generate Share Link",
+        "description": "Generate a signed, expiring read-only access link for a simulation run (F23).",
+        "operationId": "generate_share_link_api_v1_share_runs__run_id__post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ShareCreateRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/share/{token}": {
+      "get": {
+        "tags": [
+          "share"
+        ],
+        "summary": "View Shared Run",
+        "description": "Access read-only simulation run details via signed share token.",
+        "operationId": "view_shared_run_api_v1_share__token__get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response View Shared Run Api V1 Share  Token  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/share/{token}/brief": {
+      "get": {
+        "tags": [
+          "share"
+        ],
+        "summary": "Download Shared Brief",
+        "description": "Download executive disaster brief PDF via signed share link.",
+        "operationId": "download_shared_brief_api_v1_share__token__brief_get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/share/{token}/extent": {
+      "get": {
+        "tags": [
+          "share"
+        ],
+        "summary": "Get Shared Extent",
+        "description": "Download inundation extent GeoJSON via signed share link.",
+        "operationId": "get_shared_extent_api_v1_share__token__extent_get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demo/watched-lakes": {
+      "get": {
+        "tags": [
+          "demo"
+        ],
+        "summary": "Get Demo Watched Lakes",
+        "description": "Return fictional watched glacial lakes and reservoirs for preview.",
+        "operationId": "get_demo_watched_lakes_api_v1_demo_watched_lakes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Demo Watched Lakes Api V1 Demo Watched Lakes Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demo/alerts": {
+      "get": {
+        "tags": [
+          "demo"
+        ],
+        "summary": "Get Demo Alerts",
+        "description": "Return fictional emergency alert stream fixtures.",
+        "operationId": "get_demo_alerts_api_v1_demo_alerts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Demo Alerts Api V1 Demo Alerts Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demo/cascade": {
+      "get": {
+        "tags": [
+          "demo"
+        ],
+        "summary": "Get Demo Cascade",
+        "description": "Return fictional multi-dam cascade analysis fixture.",
+        "operationId": "get_demo_cascade_api_v1_demo_cascade_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Demo Cascade Api V1 Demo Cascade Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demo/engine-comparison": {
+      "get": {
+        "tags": [
+          "demo"
+        ],
+        "summary": "Get Demo Engine Comparison",
+        "description": "Return model agreement heatmap and real Delft3D status card.",
+        "operationId": "get_demo_engine_comparison_api_v1_demo_engine_comparison_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Demo Engine Comparison Api V1 Demo Engine Comparison Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demo/satellite-scoring": {
+      "get": {
+        "tags": [
+          "demo"
+        ],
+        "summary": "Get Demo Satellite Scoring",
+        "description": "Return contingency score matrix demo preview for Ganga reach.",
+        "operationId": "get_demo_satellite_scoring_api_v1_demo_satellite_scoring_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Demo Satellite Scoring Api V1 Demo Satellite Scoring Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demo/time-series": {
+      "get": {
+        "tags": [
+          "demo"
+        ],
+        "summary": "Get Demo Time Series",
+        "description": "Return dynamic wave propagation time scrubber preview.",
+        "operationId": "get_demo_time_series_api_v1_demo_time_series_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Demo Time Series Api V1 Demo Time Series Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demo/batches": {
+      "get": {
+        "tags": [
+          "demo"
+        ],
+        "summary": "Get Demo Batches",
+        "description": "Return sample multi-scenario batch execution queue.",
+        "operationId": "get_demo_batches_api_v1_demo_batches_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Demo Batches Api V1 Demo Batches Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/demo/live-flood": {
+      "get": {
+        "tags": [
+          "demo"
+        ],
+        "summary": "Get Demo Live Flood",
+        "description": "Return live flood radar monitor simulated stream.",
+        "operationId": "get_demo_live_flood_api_v1_demo_live_flood_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Demo Live Flood Api V1 Demo Live Flood Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AdminUserCreate": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "title": "Password"
+          },
+          "role": {
+            "type": "string",
+            "pattern": "^(admin|analyst|viewer)$",
+            "title": "Role",
+            "default": "analyst"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name",
+            "default": ""
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "AdminUserCreate",
+        "description": "Payload to provision a user account via admin console."
+      },
+      "AdminUserResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "mfa_enabled": {
+            "type": "boolean",
+            "title": "Mfa Enabled"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "full_name",
+          "role",
+          "is_active",
+          "mfa_enabled",
+          "created_at"
+        ],
+        "title": "AdminUserResponse",
+        "description": "User account details returned to administrators."
+      },
+      "AdminUserUpdate": {
+        "properties": {
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(admin|analyst|viewer)$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "title": "AdminUserUpdate",
+        "description": "Payload to modify user role, permissions, or activation status."
+      },
+      "AlertTestRequest": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": "PravahX Test Notification"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          },
+          "webhook_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Url"
+          },
+          "email_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email To"
+          }
+        },
+        "type": "object",
+        "title": "AlertTestRequest",
+        "description": "Payload for verifying alert dispatch channels."
+      },
+      "ApiKeyCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "admin",
+                  "analyst",
+                  "viewer"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "expires_in_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires In Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ApiKeyCreate",
+        "description": "Payload to generate a new API key."
+      },
+      "ApiKeyCreatedResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "prefix": {
+            "type": "string",
+            "title": "Prefix"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "raw_key": {
+            "type": "string",
+            "title": "Raw Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "prefix",
+          "name",
+          "role",
+          "is_active",
+          "created_at",
+          "expires_at",
+          "raw_key"
+        ],
+        "title": "ApiKeyCreatedResponse",
+        "description": "Response returned upon key creation, containing the raw plaintext key once."
+      },
+      "ApiKeyResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "prefix": {
+            "type": "string",
+            "title": "Prefix"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "prefix",
+          "name",
+          "role",
+          "is_active",
+          "created_at",
+          "expires_at"
+        ],
+        "title": "ApiKeyResponse",
+        "description": "API key metadata without raw key."
+      },
+      "AuditListResponse": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditLogResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "AuditListResponse",
+        "description": "Paginated audit log entries."
+      },
+      "AuditLogResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "resource_type": {
+            "type": "string",
+            "title": "Resource Type"
+          },
+          "resource_id": {
+            "type": "string",
+            "title": "Resource Id"
+          },
+          "details_json": {
+            "type": "string",
+            "title": "Details Json"
+          },
+          "previous_hash": {
+            "type": "string",
+            "title": "Previous Hash"
+          },
+          "entry_hash": {
+            "type": "string",
+            "title": "Entry Hash"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "timestamp",
+          "user_id",
+          "action",
+          "resource_type",
+          "resource_id",
+          "details_json",
+          "previous_hash",
+          "entry_hash"
+        ],
+        "title": "AuditLogResponse",
+        "description": "Audit log entry response."
+      },
+      "AuditVerifyResponse": {
+        "properties": {
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid"
+          },
+          "entries_verified": {
+            "type": "integer",
+            "title": "Entries Verified"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Verified At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_valid",
+          "entries_verified",
+          "failure_reason",
+          "verified_at"
+        ],
+        "title": "AuditVerifyResponse",
+        "description": "Result of cryptographic chain verification."
+      },
+      "BatchCreateRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": "Batch Dam Simulation"
+          },
+          "dams": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/BatchDamItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dams"
+          },
+          "csv_data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Csv Data"
+          },
+          "template_tier": {
+            "type": "string",
+            "title": "Template Tier",
+            "default": "tier0"
+          },
+          "breach_equation": {
+            "type": "string",
+            "title": "Breach Equation",
+            "default": "froehlich_2008"
+          },
+          "manning_n": {
+            "type": "number",
+            "title": "Manning N",
+            "default": 0.035
+          }
+        },
+        "type": "object",
+        "title": "BatchCreateRequest",
+        "description": "Request payload to initiate a batch of simulation runs."
+      },
+      "BatchDamItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "height_m": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Height M"
+          },
+          "volume_m3": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Volume M3"
+          },
+          "lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Lon"
+          },
+          "river": {
+            "type": "string",
+            "title": "River",
+            "default": "Tributary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "height_m",
+          "volume_m3",
+          "lat",
+          "lon"
+        ],
+        "title": "BatchDamItem",
+        "description": "Specification of a single dam within a batch execution list."
+      },
+      "BatchQueuedRunItem": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "scenario_id": {
+            "type": "string",
+            "title": "Scenario Id"
+          },
+          "dam_name": {
+            "type": "string",
+            "title": "Dam Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "scenario_id",
+          "dam_name",
+          "status"
+        ],
+        "title": "BatchQueuedRunItem",
+        "description": "Reference to an enqueued simulation run within a batch."
+      },
+      "BatchResponse": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "total_dams": {
+            "type": "integer",
+            "title": "Total Dams"
+          },
+          "queued_runs": {
+            "items": {
+              "$ref": "#/components/schemas/BatchQueuedRunItem"
+            },
+            "type": "array",
+            "title": "Queued Runs"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id",
+          "name",
+          "total_dams",
+          "queued_runs",
+          "status",
+          "created_at"
+        ],
+        "title": "BatchResponse",
+        "description": "Summary of created batch simulation job."
+      },
+      "BatchStatusResponse": {
+        "properties": {
+          "batch_id": {
+            "type": "string",
+            "title": "Batch Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "total_dams": {
+            "type": "integer",
+            "title": "Total Dams"
+          },
+          "completed_runs": {
+            "type": "integer",
+            "title": "Completed Runs"
+          },
+          "failed_runs": {
+            "type": "integer",
+            "title": "Failed Runs"
+          },
+          "progress_percent": {
+            "type": "number",
+            "title": "Progress Percent"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "runs": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Runs"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batch_id",
+          "name",
+          "total_dams",
+          "completed_runs",
+          "failed_runs",
+          "progress_percent",
+          "status",
+          "runs",
+          "created_at"
+        ],
+        "title": "BatchStatusResponse",
+        "description": "Detailed execution progress of an active or completed batch."
+      },
+      "Body_login_for_token_api_v1_auth_token_post": {
+        "properties": {
+          "grant_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^password$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grant Type"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "title": "Password"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope",
+            "default": ""
+          },
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "client_secret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "format": "password",
+            "title": "Client Secret"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "Body_login_for_token_api_v1_auth_token_post"
+      },
+      "Body_validate_uploaded_dataset_api_v1_data_catalog_validate_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_validate_uploaded_dataset_api_v1_data_catalog_validate_upload_post"
+      },
+      "BreachConfig": {
+        "properties": {
+          "method": {
+            "$ref": "#/components/schemas/BreachMethod",
+            "default": "auto"
+          },
+          "ensemble": {
+            "items": {
+              "$ref": "#/components/schemas/EnsembleQuantile"
+            },
+            "type": "array",
+            "title": "Ensemble",
+            "description": "Ensemble quantiles to compute.",
+            "default": [
+              "p10",
+              "p50",
+              "p90"
+            ]
+          },
+          "width_uncertainty_factor": {
+            "type": "number",
+            "title": "Width Uncertainty Factor",
+            "description": "Uncertainty factor for breach width (e.g. standard error in log space). No default."
+          },
+          "time_uncertainty_factor": {
+            "type": "number",
+            "title": "Time Uncertainty Factor",
+            "description": "Uncertainty factor for breach formation time (e.g. standard error in log space). No default."
+          },
+          "user_hydrograph": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "path"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Hydrograph",
+            "description": "User-supplied breach hydrograph (overrides computed)."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "width_uncertainty_factor",
+          "time_uncertainty_factor"
+        ],
+        "title": "BreachConfig",
+        "description": "Breach parameter settings."
+      },
+      "BreachMethod": {
+        "type": "string",
+        "enum": [
+          "froehlich_2008",
+          "landslide",
+          "user",
+          "auto"
+        ],
+        "title": "BreachMethod",
+        "description": "Breach parameter method."
+      },
+      "BriefRequest": {
+        "properties": {
+          "scenario_id": {
+            "type": "string",
+            "title": "Scenario Id"
+          },
+          "exposure": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Exposure"
+          },
+          "damage": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Damage"
+          },
+          "evacuation": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Evacuation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scenario_id",
+          "exposure",
+          "damage",
+          "evacuation"
+        ],
+        "title": "BriefRequest"
+      },
+      "CascadeConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CascadeConfig",
+        "description": "Cascade analysis settings."
+      },
+      "CascadeEvaluateRequest": {
+        "properties": {
+          "scenario_id": {
+            "type": "string",
+            "title": "Scenario Id",
+            "default": "cascade_eval"
+          },
+          "initial_dam": {
+            "$ref": "#/components/schemas/DamStructurePayload"
+          },
+          "initial_hydrograph": {
+            "items": {
+              "$ref": "#/components/schemas/ChannelHydrographPointPayload"
+            },
+            "type": "array",
+            "title": "Initial Hydrograph"
+          },
+          "downstream_dams": {
+            "items": {
+              "$ref": "#/components/schemas/DamStructurePayload"
+            },
+            "type": "array",
+            "title": "Downstream Dams"
+          },
+          "celerity_m_s": {
+            "type": "number",
+            "title": "Celerity M S",
+            "default": 4.5
+          },
+          "attenuation_rate_per_km": {
+            "type": "number",
+            "title": "Attenuation Rate Per Km",
+            "default": 0.005
+          }
+        },
+        "type": "object",
+        "required": [
+          "initial_dam",
+          "initial_hydrograph"
+        ],
+        "title": "CascadeEvaluateRequest",
+        "description": "Payload to simulate downstream flood wave propagation and overtopping checks."
+      },
+      "ChannelHydrographPointPayload": {
+        "properties": {
+          "time_seconds": {
+            "type": "number",
+            "title": "Time Seconds"
+          },
+          "discharge_m3s": {
+            "type": "number",
+            "title": "Discharge M3S"
+          },
+          "reservoir_head_m": {
+            "type": "number",
+            "title": "Reservoir Head M",
+            "default": 0.0
+          },
+          "breach_width_m": {
+            "type": "number",
+            "title": "Breach Width M",
+            "default": 0.0
+          },
+          "volume_remaining_m3": {
+            "type": "number",
+            "title": "Volume Remaining M3",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "time_seconds",
+          "discharge_m3s"
+        ],
+        "title": "ChannelHydrographPointPayload",
+        "description": "Time-series point for routed inflow/outflow hydrographs."
+      },
+      "CompareConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "max_refinements": {
+            "type": "integer",
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Max Refinements",
+            "description": "Maximum mesh/particle refinement iterations.",
+            "default": 2
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CompareConfig",
+        "description": "Engine comparison settings."
+      },
+      "DEMSource": {
+        "type": "string",
+        "enum": [
+          "copernicus_glo30",
+          "srtm",
+          "aster"
+        ],
+        "title": "DEMSource",
+        "description": "Built-in DEM sources."
+      },
+      "DamStructurePayload": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "river": {
+            "type": "string",
+            "title": "River"
+          },
+          "chainage_km": {
+            "type": "number",
+            "title": "Chainage Km"
+          },
+          "dam_height_m": {
+            "type": "number",
+            "title": "Dam Height M"
+          },
+          "storage_m3": {
+            "type": "number",
+            "title": "Storage M3"
+          },
+          "crest_elevation_m": {
+            "type": "number",
+            "title": "Crest Elevation M"
+          },
+          "bed_elevation_m": {
+            "type": "number",
+            "title": "Bed Elevation M"
+          },
+          "spillway_capacity_m3s": {
+            "type": "number",
+            "title": "Spillway Capacity M3S"
+          },
+          "initial_storage_fraction": {
+            "type": "number",
+            "title": "Initial Storage Fraction",
+            "default": 0.85
+          },
+          "hypsometric_m": {
+            "type": "number",
+            "title": "Hypsometric M",
+            "default": 2.0
+          },
+          "failure_mode": {
+            "type": "string",
+            "title": "Failure Mode",
+            "default": "overtopping"
+          },
+          "erodibility": {
+            "type": "string",
+            "title": "Erodibility",
+            "default": "erosion_resistant"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "river",
+          "chainage_km",
+          "dam_height_m",
+          "storage_m3",
+          "crest_elevation_m",
+          "bed_elevation_m",
+          "spillway_capacity_m3s"
+        ],
+        "title": "DamStructurePayload",
+        "description": "Specification of dam geometry and hydraulic properties for cascade evaluation."
+      },
+      "DamageRequest": {
+        "properties": {
+          "villages": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Villages"
+          },
+          "depth_unit_cost_inr": {
+            "type": "number",
+            "title": "Depth Unit Cost Inr",
+            "default": 120000.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "villages"
+        ],
+        "title": "DamageRequest"
+      },
+      "DatasetCatalogEntry": {
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "title": "Dataset Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "retrieval_date": {
+            "type": "string",
+            "title": "Retrieval Date"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "licence": {
+            "type": "string",
+            "title": "Licence"
+          },
+          "attribution": {
+            "type": "string",
+            "title": "Attribution"
+          },
+          "spatial_coverage": {
+            "type": "string",
+            "title": "Spatial Coverage"
+          },
+          "resolution": {
+            "type": "string",
+            "title": "Resolution"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset_id",
+          "name",
+          "category",
+          "source_url",
+          "retrieval_date",
+          "sha256",
+          "licence",
+          "attribution",
+          "spatial_coverage",
+          "resolution",
+          "description"
+        ],
+        "title": "DatasetCatalogEntry",
+        "description": "Metadata record for open data or reference datasets in the PravahX inventory."
+      },
+      "Delft3DFMConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "cell_size_m": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Cell Size M",
+            "description": "Mesh cell sizes in metres: 'coarse' for floodplain, 'fine' for channel.",
+            "default": {
+              "coarse": 100.0,
+              "fine": 30.0
+            }
+          },
+          "horizon_h": {
+            "type": "number",
+            "maximum": 168.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Horizon H",
+            "description": "Simulation horizon in hours.",
+            "default": 12.0
+          },
+          "mode": {
+            "$ref": "#/components/schemas/Delft3DFMMode",
+            "description": "Execution mode: cpu, remote, or precomputed.",
+            "default": "cpu"
+          },
+          "precomputed_dir": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "path"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precomputed Dir",
+            "description": "Directory with precomputed results (when mode=precomputed)."
+          },
+          "precomputed_run_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precomputed Run Date",
+            "description": "ISO date when precomputed results were generated."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Delft3DFMConfig",
+        "description": "Delft3D Flexible Mesh engine settings."
+      },
+      "Delft3DFMMode": {
+        "type": "string",
+        "enum": [
+          "cpu",
+          "remote",
+          "precomputed"
+        ],
+        "title": "Delft3DFMMode",
+        "description": "Delft3D FM adapter execution mode."
+      },
+      "DomainConfig": {
+        "properties": {
+          "reach_length_km": {
+            "type": "number",
+            "maximum": 500.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Reach Length Km",
+            "description": "Length of the river reach downstream of the source, in km.",
+            "default": 60
+          },
+          "buffer_km": {
+            "type": "number",
+            "maximum": 50.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Buffer Km",
+            "description": "Buffer width on each side of the reach, in km.",
+            "default": 5
+          },
+          "crs": {
+            "type": "string",
+            "title": "Crs",
+            "description": "CRS as EPSG code or 'auto' for local UTM.",
+            "default": "auto"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DomainConfig",
+        "description": "Spatial extent of the simulation."
+      },
+      "DualSPHysicsConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "particle_spacing_m": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Particle Spacing M",
+            "description": "Inter-particle distance in metres.",
+            "default": 2.0
+          },
+          "near_field_km": {
+            "type": "number",
+            "maximum": 20.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Near Field Km",
+            "description": "Near-field domain extent downstream of the dam, in km.",
+            "default": 2.0
+          },
+          "mode": {
+            "$ref": "#/components/schemas/DualSPHysicsMode",
+            "description": "Execution mode: cpu, remote_gpu, or precomputed.",
+            "default": "cpu"
+          },
+          "precomputed_dir": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "path"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precomputed Dir",
+            "description": "Directory with precomputed results (when mode=precomputed)."
+          },
+          "precomputed_run_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precomputed Run Date",
+            "description": "ISO date when precomputed results were generated."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DualSPHysicsConfig",
+        "description": "DualSPHysics engine settings."
+      },
+      "DualSPHysicsMode": {
+        "type": "string",
+        "enum": [
+          "cpu",
+          "remote_gpu",
+          "precomputed"
+        ],
+        "title": "DualSPHysicsMode",
+        "description": "SPH adapter execution mode (constraint A)."
+      },
+      "EnsembleQuantile": {
+        "type": "string",
+        "enum": [
+          "p10",
+          "p50",
+          "p90"
+        ],
+        "title": "EnsembleQuantile",
+        "description": "Ensemble quantile labels."
+      },
+      "EvacuationRequest": {
+        "properties": {
+          "villages": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Villages"
+          },
+          "shelters": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Shelters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "villages",
+          "shelters"
+        ],
+        "title": "EvacuationRequest"
+      },
+      "ExportFormat": {
+        "type": "string",
+        "enum": [
+          "shp",
+          "kml",
+          "cog",
+          "netcdf",
+          "geojson",
+          "csv",
+          "pdf"
+        ],
+        "title": "ExportFormat",
+        "description": "Supported export formats."
+      },
+      "ExposureRequest": {
+        "properties": {
+          "villages": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Villages"
+          },
+          "assets": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "villages"
+        ],
+        "title": "ExposureRequest"
+      },
+      "FailureMode": {
+        "type": "string",
+        "enum": [
+          "overtopping",
+          "piping"
+        ],
+        "title": "FailureMode",
+        "description": "Dam-break failure mechanism."
+      },
+      "GEEConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": false
+          },
+          "event_dates": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Dates",
+            "description": "Before and after ranges: {'before': [start, end], 'after': [start, end]}."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "GEEConfig",
+        "description": "Google Earth Engine settings."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HazardRequest": {
+        "properties": {
+          "depth_m": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Depth M",
+            "description": "Inundation water depth in metres"
+          },
+          "velocity_m_s": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Velocity M S",
+            "description": "Flow velocity in metres per second"
+          },
+          "debris_factor": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debris Factor",
+            "description": "Optional debris factor DF"
+          }
+        },
+        "type": "object",
+        "required": [
+          "depth_m",
+          "velocity_m_s"
+        ],
+        "title": "HazardRequest"
+      },
+      "HazardResponse": {
+        "properties": {
+          "hazard_rating": {
+            "type": "number",
+            "title": "Hazard Rating"
+          },
+          "hazard_class": {
+            "type": "string",
+            "title": "Hazard Class"
+          },
+          "danger_description": {
+            "type": "string",
+            "title": "Danger Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hazard_rating",
+          "hazard_class",
+          "danger_description"
+        ],
+        "title": "HazardResponse"
+      },
+      "ImpactConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ImpactConfig",
+        "description": "Impact analysis settings."
+      },
+      "InputsConfig": {
+        "properties": {
+          "dem": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DEMSource"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Dem",
+            "description": "DEM source. Built-in name or 'user:<path>'.",
+            "default": "copernicus_glo30"
+          },
+          "landcover": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LandcoverSource"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Landcover",
+            "description": "Land cover source.",
+            "default": "worldcover"
+          },
+          "inflow_hydrograph": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "path"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inflow Hydrograph",
+            "description": "Optional user-supplied inflow hydrograph file."
+          },
+          "downstream_stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "path"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Downstream Stage",
+            "description": "Optional downstream boundary condition file."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "InputsConfig",
+        "description": "Data sources for the scenario."
+      },
+      "LakeObservation": {
+        "properties": {
+          "observed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Observed At"
+          },
+          "water_area_m2": {
+            "type": "number",
+            "title": "Water Area M2"
+          },
+          "water_area_km2": {
+            "type": "number",
+            "title": "Water Area Km2"
+          },
+          "sensor_platform": {
+            "type": "string",
+            "title": "Sensor Platform"
+          },
+          "cloud_cover_percent": {
+            "type": "number",
+            "title": "Cloud Cover Percent",
+            "default": 0.0
+          },
+          "quality_flag": {
+            "type": "string",
+            "title": "Quality Flag",
+            "default": "good"
+          }
+        },
+        "type": "object",
+        "required": [
+          "observed_at",
+          "water_area_m2",
+          "water_area_km2",
+          "sensor_platform"
+        ],
+        "title": "LakeObservation",
+        "description": "Single satellite observation of a monitored lake water body."
+      },
+      "LakeWatchEvaluateRequest": {
+        "properties": {
+          "lake_id": {
+            "type": "string",
+            "title": "Lake Id"
+          },
+          "lake_name": {
+            "type": "string",
+            "title": "Lake Name"
+          },
+          "lake_type": {
+            "type": "string",
+            "title": "Lake Type",
+            "default": "glacial"
+          },
+          "observations": {
+            "items": {
+              "$ref": "#/components/schemas/LakeObservation"
+            },
+            "type": "array",
+            "title": "Observations"
+          },
+          "expansion_threshold_percent": {
+            "type": "number",
+            "title": "Expansion Threshold Percent",
+            "default": 10.0
+          },
+          "drainage_threshold_percent": {
+            "type": "number",
+            "title": "Drainage Threshold Percent",
+            "default": -20.0
+          },
+          "dispatch_alerts": {
+            "type": "boolean",
+            "title": "Dispatch Alerts",
+            "default": true
+          },
+          "webhook_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Url"
+          },
+          "email_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email To"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lake_id",
+          "lake_name"
+        ],
+        "title": "LakeWatchEvaluateRequest",
+        "description": "Payload for evaluating lake surface area time-series and anomaly risk."
+      },
+      "LakeWatchRequest": {
+        "properties": {
+          "observations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Observations",
+            "description": "List of historical lake observations with date and area_km2"
+          },
+          "baseline_window": {
+            "type": "integer",
+            "title": "Baseline Window",
+            "default": 5
+          }
+        },
+        "type": "object",
+        "required": [
+          "observations"
+        ],
+        "title": "LakeWatchRequest"
+      },
+      "LandcoverSource": {
+        "type": "string",
+        "enum": [
+          "worldcover"
+        ],
+        "title": "LandcoverSource",
+        "description": "Built-in land cover sources."
+      },
+      "MfaVerifyRequest": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "MfaVerifyRequest"
+      },
+      "RefreshTokenRequest": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "RefreshTokenRequest",
+        "description": "Payload to refresh an expired access token."
+      },
+      "RunCreate": {
+        "properties": {
+          "scenario_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Id"
+          },
+          "resume": {
+            "type": "boolean",
+            "title": "Resume",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "RunCreate",
+        "description": "Payload to dispatch a new simulation run."
+      },
+      "RunListResponse": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RunResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "RunListResponse",
+        "description": "List of simulation runs."
+      },
+      "RunResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "scenario_id": {
+            "type": "string",
+            "title": "Scenario Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "progress_percent": {
+            "type": "number",
+            "title": "Progress Percent"
+          },
+          "current_stage": {
+            "type": "string",
+            "title": "Current Stage"
+          },
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid",
+            "default": true
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "manifest": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest"
+          },
+          "precomputed": {
+            "type": "boolean",
+            "title": "Precomputed",
+            "default": false
+          },
+          "computed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computed At"
+          },
+          "demo": {
+            "type": "boolean",
+            "title": "Demo",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "scenario_id",
+          "status",
+          "progress_percent",
+          "current_stage",
+          "created_at"
+        ],
+        "title": "RunResponse",
+        "description": "Simulation run details and status."
+      },
+      "SatelliteScoringRequest": {
+        "properties": {
+          "simulated_depth_path": {
+            "type": "string",
+            "title": "Simulated Depth Path"
+          },
+          "observed_mask_path": {
+            "type": "string",
+            "title": "Observed Mask Path"
+          },
+          "depth_threshold_m": {
+            "type": "number",
+            "title": "Depth Threshold M",
+            "default": 0.15
+          }
+        },
+        "type": "object",
+        "required": [
+          "simulated_depth_path",
+          "observed_mask_path"
+        ],
+        "title": "SatelliteScoringRequest",
+        "description": "Payload to score simulated raster against satellite observed flood raster."
+      },
+      "ScenarioCloneRequest": {
+        "properties": {
+          "new_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Id"
+          },
+          "new_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Name"
+          }
+        },
+        "type": "object",
+        "title": "ScenarioCloneRequest",
+        "description": "Payload to clone an existing scenario."
+      },
+      "ScenarioConfig": {
+        "properties": {
+          "scenario": {
+            "$ref": "#/components/schemas/ScenarioHeader"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceConfig"
+          },
+          "domain": {
+            "$ref": "#/components/schemas/DomainConfig"
+          },
+          "inputs": {
+            "$ref": "#/components/schemas/InputsConfig"
+          },
+          "breach": {
+            "$ref": "#/components/schemas/BreachConfig"
+          },
+          "tiers": {
+            "$ref": "#/components/schemas/TiersConfig"
+          },
+          "compare": {
+            "$ref": "#/components/schemas/CompareConfig"
+          },
+          "cascade": {
+            "$ref": "#/components/schemas/CascadeConfig"
+          },
+          "gee": {
+            "$ref": "#/components/schemas/GEEConfig"
+          },
+          "impact": {
+            "$ref": "#/components/schemas/ImpactConfig"
+          },
+          "exports": {
+            "items": {
+              "$ref": "#/components/schemas/ExportFormat"
+            },
+            "type": "array",
+            "title": "Exports",
+            "description": "Export formats to produce.",
+            "default": [
+              "shp",
+              "kml",
+              "cog",
+              "pdf"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "scenario",
+          "source",
+          "breach"
+        ],
+        "title": "ScenarioConfig",
+        "description": "Complete scenario configuration (Section 6 of the build spec).\n\nDrives every tier. Loaded from YAML, validated with clear errors.\nsecure_mode is NOT included here \u2014 it is a system-level env var.\nSee docs/DECISIONS.md #D001."
+      },
+      "ScenarioCreate": {
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/ScenarioConfig"
+          }
+        },
+        "type": "object",
+        "required": [
+          "config"
+        ],
+        "title": "ScenarioCreate",
+        "description": "Payload to create or import a scenario."
+      },
+      "ScenarioHeader": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$",
+            "title": "Id",
+            "description": "Unique scenario identifier (alphanumeric, hyphens, underscores)."
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Name",
+            "description": "Human-readable scenario name."
+          },
+          "type": {
+            "$ref": "#/components/schemas/ScenarioType",
+            "description": "Scenario type."
+          },
+          "failure_mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FailureMode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Failure mechanism (required for dam_break type only)."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "type"
+        ],
+        "title": "ScenarioHeader",
+        "description": "Top-level scenario identification."
+      },
+      "ScenarioListResponse": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "ScenarioListResponse",
+        "description": "Paginated list of scenarios."
+      },
+      "ScenarioResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "scenario_type": {
+            "type": "string",
+            "title": "Scenario Type"
+          },
+          "failure_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Mode"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "default": 1
+          },
+          "parent_scenario_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Scenario Id"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "scenario_type",
+          "failure_mode",
+          "config",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ScenarioResponse",
+        "description": "Scenario response including metadata, versioning, and configuration."
+      },
+      "ScenarioType": {
+        "type": "string",
+        "enum": [
+          "dam_break",
+          "release",
+          "blockage",
+          "lake_outburst",
+          "live_event"
+        ],
+        "title": "ScenarioType",
+        "description": "Allowed scenario types (Section 1.2)."
+      },
+      "ScenarioUpdate": {
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/ScenarioConfig"
+          }
+        },
+        "type": "object",
+        "required": [
+          "config"
+        ],
+        "title": "ScenarioUpdate",
+        "description": "Payload to update an existing scenario."
+      },
+      "ShareCreateRequest": {
+        "properties": {
+          "expires_in_hours": {
+            "type": "integer",
+            "maximum": 720.0,
+            "minimum": 1.0,
+            "title": "Expires In Hours",
+            "default": 48
+          }
+        },
+        "type": "object",
+        "title": "ShareCreateRequest",
+        "description": "Payload to generate a signed read-only share token."
+      },
+      "ShareCreateResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "share_url": {
+            "type": "string",
+            "title": "Share Url"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "token",
+          "share_url",
+          "expires_at"
+        ],
+        "title": "ShareCreateResponse",
+        "description": "Response containing signed share token and access URL."
+      },
+      "SourceConfig": {
+        "properties": {
+          "dam_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dam Id",
+            "description": "Dam register ID. Mutually exclusive with point/polygon."
+          },
+          "point": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Point",
+            "description": "(longitude, latitude) of the dam or blockage."
+          },
+          "polygon": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "path"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Polygon",
+            "description": "Path to a GeoJSON polygon for a lake or blockage."
+          },
+          "dam_height_m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dam Height M",
+            "description": "Optional override: dam height in metres."
+          },
+          "storage_m3": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Storage M3",
+            "description": "Optional override: reservoir storage in m\u00b3."
+          },
+          "volume_method": {
+            "$ref": "#/components/schemas/VolumeMethod",
+            "default": "auto"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SourceConfig",
+        "description": "Where the water comes from."
+      },
+      "Tier0Config": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Tier0Config",
+        "description": "HAND-based rapid envelope settings."
+      },
+      "TiersConfig": {
+        "properties": {
+          "tier0": {
+            "$ref": "#/components/schemas/Tier0Config"
+          },
+          "delft3d_fm": {
+            "$ref": "#/components/schemas/Delft3DFMConfig"
+          },
+          "dualsphysics": {
+            "$ref": "#/components/schemas/DualSPHysicsConfig"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TiersConfig",
+        "description": "Engine tier settings."
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "refresh_token"
+        ],
+        "title": "TokenResponse",
+        "description": "JWT token pair response."
+      },
+      "UserCreate": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "title": "Password"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name",
+            "default": ""
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "analyst",
+              "viewer"
+            ],
+            "title": "Role",
+            "default": "analyst"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "UserCreate",
+        "description": "Payload for registering a new user."
+      },
+      "UserResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "full_name",
+          "role",
+          "is_active",
+          "created_at"
+        ],
+        "title": "UserResponse",
+        "description": "User account response without sensitive fields."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VolumeMethod": {
+        "type": "string",
+        "enum": [
+          "register",
+          "satellite",
+          "user",
+          "auto"
+        ],
+        "title": "VolumeMethod",
+        "description": "How to determine reservoir volume."
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "/api/v1/auth/token"
+          }
+        }
+      }
+    }
+  }
+}

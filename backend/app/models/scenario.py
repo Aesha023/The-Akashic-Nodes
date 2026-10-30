@@ -6,7 +6,7 @@ import datetime
 from typing import Any
 
 from geoalchemy2 import Geometry
-from sqlalchemy import DateTime, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.models.base import Base
@@ -29,6 +29,7 @@ class Scenario(Base):
         Geometry(geometry_type="GEOMETRY", srid=4326, spatial_index=True),
         nullable=True,
     )
+    demo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.datetime.now(datetime.UTC),

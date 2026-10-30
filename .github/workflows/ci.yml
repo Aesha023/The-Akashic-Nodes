@@ -36,6 +36,20 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      minio:
+        image: minio/minio:RELEASE.2024-01-18T22-51-28Z
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadminpassword
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd "curl -f http://localhost:9000/minio/health/live"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        command: server /data
+
     steps:
       - uses: actions/checkout@v4
 

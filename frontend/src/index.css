@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: #FFFFFF;
+    --bg-subtle: #F7F8FA;
+    --bg-muted: #EFF1F5;
+    --surface: #FFFFFF;
+    --surface-glass: rgba(255, 255, 255, 0.72);
+    --border: #E4E7EC;
+    --border-strong: #D0D5DD;
+    --text-primary: #0B1220;
+    --text-secondary: #475467;
+    --text-tertiary: #667085;
+    --brand: #0A66FF;
+    --brand-hover: #0052CC;
+    --brand-soft: #EAF2FF;
+  }
+
+  body {
+    background-color: #FFFFFF;
+    color: #0B1220;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  /* Accessible focus ring */
+  *:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(10, 102, 255, 0.35);
+  }
+}
+
+/* Glass panel styling from PRAVAHX_DESIGN_LIGHT.md */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(228, 231, 236, 0.85);
+}
+
+.glass-panel-elevated {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(228, 231, 236, 0.95);
+  box-shadow: 0 24px 48px -12px rgba(16, 24, 40, 0.12);
+}
+
+/* Tabular figures for tables and metrics */
+.tabular-nums {
+  font-feature-settings: "cv11", "ss01", "tnum";
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D0D5DD;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #98A2B3;
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

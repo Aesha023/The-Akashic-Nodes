@@ -1,0 +1,43 @@
+{
+  "demo": true,
+  "disclaimer": "DEMO · illustrative data. Fictional emergency alert fixtures.",
+  "items": [
+    {
+      "id": "demo_alt_001",
+      "severity": "critical",
+      "title": "GLOF Early Warning: Rapid Area Expansion",
+      "target_name": "Demo Moraine Reservoir Delta",
+      "target_type": "lake",
+      "message": "Automated Sentinel-2 radar threshold triggered: Area increased +12.3% in past 30 days. Freeboard reduced to 2.1 m.",
+      "trigger_rule": "Freeboard < 3.0 m OR RateOfChange > 10% / month",
+      "status": "active",
+      "created_at": "2026-10-29T08:50:00Z",
+      "demo": true
+    },
+    {
+      "id": "demo_alt_002",
+      "severity": "warning",
+      "title": "Spillway Discharge Advisory",
+      "target_name": "Demo Reservoir Alpha",
+      "target_type": "reservoir",
+      "message": "Inflow forecast exceeds rated auxiliary spillway capacity (4,200 m3/s vs 3,800 m3/s threshold). Controlled surcharge routing advised.",
+      "trigger_rule": "ProjectedInflow > 90% RatedSpillwayCapacity",
+      "status": "active",
+      "created_at": "2026-10-29T06:15:00Z",
+      "demo": true
+    },
+    {
+      "id": "demo_alt_003",
+      "severity": "info",
+      "title": "Sentinel SAR Pass Ingested",
+      "target_name": "Demo River Reach 4",
+      "target_type": "river_reach",
+      "message": "Cloud-penetrating synthetic aperture radar image ingested and auto-calibrated. Zero anomalous river blockages detected.",
+      "trigger_rule": "Periodic Satellite Pass Verification",
+      "status": "resolved",
+      "created_at": "2026-10-28T18:00:00Z",
+      "resolved_at": "2026-10-28T19:30:00Z",
+      "demo": true
+    }
+  ]
+}

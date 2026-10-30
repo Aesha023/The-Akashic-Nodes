@@ -36,20 +36,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-      minio:
-        image: quay.io/minio/minio:latest
-        env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadminpassword
-        ports:
-          - 9000:9000
-        options: >-
-          --health-cmd "curl -f http://localhost:9000/minio/health/live"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        command: server /data
-
     steps:
       - uses: actions/checkout@v4
 
@@ -78,6 +64,12 @@ jobs:
 
       - name: Validate documentation table consistency
         run: python scripts/check_engine_table.py
+
+      - name: Validate zero banned strings
+        run: python scripts/check_banned_strings.py
+
+      - name: Validate generated TypeScript client
+        run: python scripts/check_generated_client.py
 
       - name: Unit tests
         run: pytest tests/unit/ --cov=core/pravahx --cov-report=term-missing --junitxml=test-results.xml

@@ -111,4 +111,3 @@ async def test_validation_benchmarks_endpoint() -> None:
         # Martin & Moyce
         assert "martin_moyce" in benchmarks
         assert benchmarks["martin_moyce"]["status"] == "NOT RUN"
-

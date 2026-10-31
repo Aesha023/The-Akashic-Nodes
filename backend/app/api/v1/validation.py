@@ -36,17 +36,20 @@ def get_ritter_profile_points() -> list[dict[str, float]]:
         else:
             h_theory = 0.0
 
-        # Simulated profile matches Delft3D FM fine mesh (dx=2.5m) with RMSE=0.042m and thin-film tip
+        # Simulated profile matches Delft3D FM fine mesh (dx=2.5m)
+        # with RMSE=0.042m and thin-film tip
         noise = math.sin(x / 45.0) * 0.024
         if x_front - 30.0 < x < x_front + 80.0:
-            noise = 0.07 * math.exp(-((x - x_front) / 35.0) ** 2)
+            noise = 0.07 * math.exp(-(((x - x_front) / 35.0) ** 2))
         h_sim = max(0.0, h_theory + noise)
 
-        points.append({
-            "x": round(x, 1),
-            "h_theory": round(h_theory, 3),
-            "h_sim": round(h_sim, 3),
-        })
+        points.append(
+            {
+                "x": round(x, 1),
+                "h_theory": round(h_theory, 3),
+                "h_sim": round(h_sim, 3),
+            }
+        )
     return points
 
 
@@ -61,7 +64,7 @@ async def get_validation_benchmarks() -> dict[str, Any]:
                 "id": "ritter_1892",
                 "badge": "1892",
                 "title": "Analytical Dam Break Benchmark (Ritter 1892)",
-                "subtitle": "Exact dry horizontal bed shallow water equation analytical solution",
+                "subtitle": ("Exact dry horizontal bed shallow water equation analytical solution"),
                 "status": "RUN AND PASSED",
                 "status_variant": "pass",
                 "citation": "VALIDATION.md §8.2",
@@ -69,15 +72,19 @@ async def get_validation_benchmarks() -> dict[str, Any]:
                     "Evaluated at dimensionless time t = 30s following instantaneous gate removal "
                     "with reservoir depth h_0 = 10m. Demonstrates exact mass conservation "
                     "(500,000 -> 500,000 m3) and spatial convergence under mesh refinement "
-                    "(refining cell resolution from dx = 5.0m to 2.5m reduces water depth RMSE from "
-                    "0.059m to 0.042m, representing ~45% error reduction relative to the 0.5m pass tolerance)."
+                    "(refining cell size from dx = 5.0m to 2.5m reduces water depth RMSE from "
+                    "0.059m to 0.042m, representing ~45% error reduction relative to "
+                    "the 0.5m pass tolerance)."
                 ),
                 "metrics": [
                     {"label": "Analytical Gate Depth", "value": "4.44 m (4/9 h_0)"},
                     {"label": "Simulated Depth (dx=2.5m)", "value": "4.42 m"},
                     {"label": "RMSE (Coarse dx=5.0m)", "value": "0.059 m"},
                     {"label": "RMSE (Refined dx=2.5m)", "value": "0.042 m (PASS)"},
-                    {"label": "Mass Conservation", "value": "500,000 -> 500,000 m3 (0.0% error)"},
+                    {
+                        "label": "Mass Conservation",
+                        "value": "500,000 -> 500,000 m3 (0.0% error)",
+                    },
                     {"label": "Wave Front Gate", "value": "FAIL vs 5% (thin-film artefact)"},
                 ],
                 "chart": {
@@ -93,36 +100,45 @@ async def get_validation_benchmarks() -> dict[str, Any]:
                 "id": "kuttanad_sentinel1",
                 "badge": "SAR",
                 "title": "Kuttanad Inundation Mapping (Copernicus Sentinel-1 SAR)",
-                "subtitle": "Google Earth Engine Otsu thresholding on VV polarization GRD backscatter",
+                "subtitle": (
+                    "Google Earth Engine Otsu thresholding on VV polarization GRD backscatter"
+                ),
                 "status": "RUN AND PASSED",
                 "status_variant": "pass",
                 "citation": "VALIDATION.md §10",
                 "description": (
-                    "Autonomous Google Earth Engine script ingestion extracting 40.52 km2 of flooded "
-                    "surface water across the Kuttanad delta during the peak Kerala August 2018 monsoon event. "
-                    "The resulting mapped extent is qualitatively consistent with published Kerala 2018 flood "
-                    "extent studies (no synthetic contingency matrix or CSI calculated)."
+                    "Autonomous GEE script ingestion extracting 40.52 km2 of flooded "
+                    "surface water across the Kuttanad delta during peak Kerala August 2018 event. "
+                    "The resulting mapped extent is qualitatively consistent with published "
+                    "Kerala 2018 flood extent studies (no synthetic contingency matrix or CSI)."
                 ),
                 "metrics": [
                     {"label": "Sensor Granule", "value": "Sentinel-1A IW GRDH"},
                     {"label": "Mapped Extent", "value": "40.52 km2"},
                     {"label": "Method", "value": "GEE Otsu Thresholding (VV)"},
-                    {"label": "Agreement", "value": "Qualitatively Consistent (Tiwari et al. 2020)"},
+                    {
+                        "label": "Agreement",
+                        "value": "Qualitatively Consistent (Tiwari et al. 2020)",
+                    },
                 ],
             },
             {
                 "id": "delft3d_ganga",
                 "badge": "2D",
                 "title": "Delft3D Flexible Mesh 2D (Ganga Reach near Rishikesh)",
-                "subtitle": "Sub-grid shallow water equation simulation on steep Himalayan bathymetry (t = 3,600s)",
+                "subtitle": (
+                    "Sub-grid shallow water equation simulation on steep Himalayan "
+                    "bathymetry (t = 3,600s)"
+                ),
                 "status": "PENDING / RUN AND FAILED",
                 "status_variant": "warning",
                 "citation": "VALIDATION.md §9",
                 "description": (
-                    "Simulation completed on Google Colab CPU environment. Failed numerical stability gates d/e "
-                    "on steep Himalayan bathymetry due to perched canyon boundary cells; 25m mesh resolves canyon "
-                    "thalweg and admits full inflow. Engine mass balance exact (5,801,809 m3); subgrid bathymetry "
-                    "interpolation and intercomparison calibration pending."
+                    "Simulation completed on Google Colab CPU environment. Failed numerical "
+                    "stability gates d/e on steep Himalayan bathymetry due to perched canyon "
+                    "boundary cells; 25m mesh resolves canyon thalweg and admits full inflow. "
+                    "Engine mass balance exact (5,801,809 m3); subgrid bathymetry interpolation "
+                    "and intercomparison calibration pending."
                 ),
                 "reason": (
                     "Failed numerical stability gates d/e on steep Himalayan bathymetry; "
@@ -144,10 +160,11 @@ async def get_validation_benchmarks() -> dict[str, Any]:
                 "status_variant": "neutral",
                 "citation": "VALIDATION.md §9",
                 "description": (
-                    "Initial GPU particle dispatch verified on synthetic canyon reach (314,801 particles, "
-                    "2.0s sim, 389s wall time, 41 PARTs, sha256 461646b67d4954f52dcfca0000a36f41a0). "
-                    "Formal quantitative validation against laboratory flume pressure transducers will occur "
-                    "upon completion of hardware cluster provisioning (paywalled experimental comparison not verified)."
+                    "Initial GPU particle dispatch verified on synthetic canyon reach "
+                    "(314,801 particles, 2.0s sim, 389s wall time, 41 PARTs, sha256 461646b6...). "
+                    "Formal quantitative validation against laboratory flume pressure "
+                    "transducers will occur upon completion of hardware cluster provisioning "
+                    "(paywalled experimental comparison not verified)."
                 ),
                 "notes": "Colab T4 run verified; physical flume comparison not yet validated.",
                 "metrics": [
@@ -166,10 +183,12 @@ async def get_validation_benchmarks() -> dict[str, Any]:
                 "status_variant": "muted",
                 "citation": "VALIDATION.md §7.2",
                 "description": (
-                    "Status: NOT RUN. Sensor coordinate mapping against flume wall cameras is deferred "
-                    "until Phase 8 physical calibration campaign."
+                    "Status: NOT RUN. Sensor coordinate mapping against flume wall cameras is "
+                    "deferred until Phase 8 physical calibration campaign."
                 ),
-                "reason": "Reference paper behind paywall (HTTP 403). Sensor coordinate mapping deferred.",
+                "reason": (
+                    "Reference paper behind paywall (HTTP 403). Sensor coordinate mapping deferred."
+                ),
                 "metrics": [
                     {"label": "Physical Benchmark", "value": "Water Column Collapse (1952)"},
                     {"label": "Status", "value": "NOT RUN"},

@@ -74,3 +74,41 @@ async def test_validation_status_endpoint() -> None:
             hashes["ganga_tier0_brief.pdf"]
             == "acdaad391f768c5c41dbb9b2b6569e13a20fcbbdfc3c623bf715eac02b0f8866"
         )
+
+
+@pytest.mark.asyncio
+async def test_validation_benchmarks_endpoint() -> None:
+    """Test validation benchmarks endpoint returning 5 empirical benchmarks with Ritter chart points."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get("/api/v1/validation/benchmarks")
+        assert res.status_code == 200
+        data = res.json()
+
+        assert "title" in data
+        assert "benchmarks" in data
+        benchmarks = {b["id"]: b for b in data["benchmarks"]}
+        assert len(benchmarks) == 5
+
+        # Ritter 1892
+        assert "ritter_1892" in benchmarks
+        ritter = benchmarks["ritter_1892"]
+        assert ritter["status"] == "RUN AND PASSED"
+        assert "chart" in ritter
+        assert len(ritter["chart"]["points"]) > 20
+
+        # Kuttanad
+        assert "kuttanad_sentinel1" in benchmarks
+        assert benchmarks["kuttanad_sentinel1"]["status"] == "RUN AND PASSED"
+
+        # Delft3D Ganga
+        assert "delft3d_ganga" in benchmarks
+        assert benchmarks["delft3d_ganga"]["status"] == "PENDING / RUN AND FAILED"
+
+        # DualSPHysics
+        assert "dualsphysics_3d" in benchmarks
+        assert benchmarks["dualsphysics_3d"]["status"] == "RUN · NOT YET VALIDATED"
+
+        # Martin & Moyce
+        assert "martin_moyce" in benchmarks
+        assert benchmarks["martin_moyce"]["status"] == "NOT RUN"
+

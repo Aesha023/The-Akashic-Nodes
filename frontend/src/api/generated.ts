@@ -1058,6 +1058,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/validation/benchmarks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Validation Benchmarks
+         * @description Retrieve structured scientific benchmarks strictly from VALIDATION.md.
+         */
+        get: operations["get_validation_benchmarks_api_v1_validation_benchmarks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/validation/status": {
         parameters: {
             query?: never;
@@ -4783,6 +4803,28 @@ export interface operations {
         };
     };
     system_info_api_v1_system_info_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    get_validation_benchmarks_api_v1_validation_benchmarks_get: {
         parameters: {
             query?: never;
             header?: never;

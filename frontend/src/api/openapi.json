@@ -3652,6 +3652,30 @@
         }
       }
     },
+    "/api/v1/validation/benchmarks": {
+      "get": {
+        "tags": [
+          "validation"
+        ],
+        "summary": "Get Validation Benchmarks",
+        "description": "Retrieve structured scientific benchmarks strictly from VALIDATION.md.",
+        "operationId": "get_validation_benchmarks_api_v1_validation_benchmarks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Validation Benchmarks Api V1 Validation Benchmarks Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/validation/status": {
       "get": {
         "tags": [

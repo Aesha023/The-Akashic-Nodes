@@ -26,3 +26,4 @@
 *.cpg binary
 *.prj binary
 *.nc binary
+*.csv binary

@@ -57,6 +57,7 @@ data/*
 ind_pop_test.tif
 ind_ppp_*.tif
 *.osm
+!data/ganga_inputs/osm_aoi.osm
 
 # ── Engine outputs ──
 *.nc
